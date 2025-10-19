@@ -1,0 +1,44 @@
+name: Create branch (slash command)
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  parse-base:
+    if: |
+      contains(github.event.comment.body, '/branch') &&
+      (github.event.comment.author_association == 'OWNER' ||
+       github.event.comment.author_association == 'MEMBER')
+    runs-on: ubuntu-latest
+    outputs:
+      base_ref: ${{ steps.pick.outputs.base_ref }}
+    steps:
+      - name: Pick base_ref from comment
+        id: pick
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.comment.body || ""
+            let m = body.match(/\/branch\s+([A-Za-z0-9._\-\/]+)/i)
+            if (m && m[1]) {
+              core.setOutput('base_ref', m[1])
+              return
+            }
+            core.setOutput('base_ref', 'develop')
+  call-create-branch:
+    needs: parse-base
+    if: |
+      contains(github.event.comment.body, '/branch') &&
+      (github.event.comment.author_association == 'OWNER' ||
+       github.event.comment.author_association == 'MEMBER')
+    uses: zeebra-profect/.github/.github/workflows/issue-create-branch.yml@main
+    with:
+      allowed_branch_types: feature,hotfix,release
+      base_ref: ${{ needs.parse-base.outputs.base_ref }}
+      jira_key_prefix: ZBR
+    secrets: inherit

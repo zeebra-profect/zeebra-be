@@ -1,0 +1,19 @@
+name: Create branch (label trigger)
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  call-create-branch:
+    if: github.event.label.name == 'create-branch'
+    uses: zeebra-profect/.github/.github/workflows/issue-create-branch.yml@main
+    with:
+      allowed_branch_types: feature,hotfix,release
+      base_ref: develop  
+      jira_key_prefix: ZBR
+    secrets: inherit

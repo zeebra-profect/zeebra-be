@@ -1,0 +1,17 @@
+name: Validate Jira Key
+on:
+  issues:
+    types: [opened, edited, reopened]
+
+permissions:
+  contents: read
+
+jobs:   
+  call:
+    permissions:     
+      contents: read
+      issues: write    
+    uses: zeebra-profect/.github/.github/workflows/validate-jira-key-on-issue.yml@main
+    with:
+      jira_key_prefix: ZBR
+    secrets: inherit

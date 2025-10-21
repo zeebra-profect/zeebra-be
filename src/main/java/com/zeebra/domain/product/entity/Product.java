@@ -8,6 +8,7 @@ import jakarta.persistence.Id;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
@@ -36,4 +37,6 @@ public class Product extends BaseEntity {
     private int reviewCount;
 
     private int favoriteProductCount;
+
+    private LocalDateTime deletedAt;
 }

@@ -6,10 +6,10 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
 @EnableJpaAuditing
 @SpringBootApplication
-public class ZeebraApplication {
+public class ZeebraApplicationTests {
 
-	public static void main(String[] args) {
-		SpringApplication.run(ZeebraApplication.class, args);
-	}
+    public static void main(String[] args) {
+        SpringApplication.run(ZeebraApplication.class, args);
+    }
 
 }

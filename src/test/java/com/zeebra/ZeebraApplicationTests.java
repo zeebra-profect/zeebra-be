@@ -1,13 +1,15 @@
 package com.zeebra;
 
-import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
-@SpringBootTest
-class ZeebraApplicationTests {
+@EnableJpaAuditing
+@SpringBootApplication
+public class ZeebraApplicationTests {
 
-	@Test
-	void contextLoads() {
-	}
+    public static void main(String[] args) {
+        SpringApplication.run(ZeebraApplication.class, args);
+    }
 
 }

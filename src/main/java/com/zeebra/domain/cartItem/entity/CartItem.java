@@ -26,4 +26,12 @@ public class CartItem extends BaseEntity {
     private BigDecimal snapShotPrice;
 
     private int quantity;
+
+    public CartItem(Long id, Long cartId, Long productOptionId, BigDecimal snapShotPrice, int quantity) {
+        this.id = id;
+        this.cartId = cartId;
+        this.productOptionId = productOptionId;
+        this.snapShotPrice = snapShotPrice;
+        this.quantity = quantity;
+    }
 }

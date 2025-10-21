@@ -20,4 +20,9 @@ public class ProductOption extends BaseEntity {
     private Long id;
 
     private Long productId;
+
+    public ProductOption(Long id, Long productId) {
+        this.id = id;
+        this.productId = productId;
+    }
 }

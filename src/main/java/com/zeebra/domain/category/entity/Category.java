@@ -20,4 +20,10 @@ public class Category extends BaseEntity {
     private Long parentId;
 
     private String name;
+
+    public Category(Long id, Long parentId, String name) {
+        this.id = id;
+        this.parentId = parentId;
+        this.name = name;
+    }
 }

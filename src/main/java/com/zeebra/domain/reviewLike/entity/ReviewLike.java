@@ -20,4 +20,10 @@ public class ReviewLike extends BaseEntity {
     private Long reviewId;
 
     private Long memberId;
+
+    public ReviewLike(Long id, Long reviewId, Long memberId) {
+        this.id = id;
+        this.reviewId = reviewId;
+        this.memberId = memberId;
+    }
 }

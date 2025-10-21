@@ -22,4 +22,11 @@ public class OptionName extends BaseEntity {
     private String value;
 
     private Boolean useWn;
+
+    public OptionName(Long id, String name, String value, Boolean useWn) {
+        this.id = id;
+        this.name = name;
+        this.value = value;
+        this.useWn = useWn;
+    }
 }

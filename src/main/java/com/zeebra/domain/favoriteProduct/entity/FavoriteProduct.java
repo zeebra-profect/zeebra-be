@@ -24,4 +24,11 @@ public class FavoriteProduct extends BaseEntity {
     private Long productId;
 
     private LocalDateTime deletedAt;
+
+    public FavoriteProduct(Long id, Long memberId, Long productId, LocalDateTime deletedAt) {
+        this.id = id;
+        this.memberId = memberId;
+        this.productId = productId;
+        this.deletedAt = deletedAt;
+    }
 }

@@ -32,4 +32,15 @@ public class Sales {
     private SalesStatus salesStatus;
 
     private LocalDateTime soldAt;
+
+    public Sales(Long id, Long productOptionId, Long memberId, BigDecimal price, BigDecimal soldPrice, int stock, SalesStatus salesStatus, LocalDateTime soldAt) {
+        this.id = id;
+        this.productOptionId = productOptionId;
+        this.memberId = memberId;
+        this.price = price;
+        this.soldPrice = soldPrice;
+        this.stock = stock;
+        this.salesStatus = salesStatus;
+        this.soldAt = soldAt;
+    }
 }

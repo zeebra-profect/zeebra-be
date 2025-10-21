@@ -28,4 +28,13 @@ public class Review extends BaseEntity {
     private String content;
 
     private int likeCount;
+
+    public Review(Long id, Long memberId, Long productOptionId, List<String> images, String content, int likeCount) {
+        this.id = id;
+        this.memberId = memberId;
+        this.productOptionId = productOptionId;
+        this.images = images;
+        this.content = content;
+        this.likeCount = likeCount;
+    }
 }

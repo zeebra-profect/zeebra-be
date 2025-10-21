@@ -1,0 +1,40 @@
+package com.zeebra.domain.review.entity;
+
+import com.zeebra.global.jpa.BaseEntity;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+import java.util.List;
+
+@Entity
+@Getter
+@NoArgsConstructor
+public class Review extends BaseEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private Long memberId;
+
+    private Long productOptionId;
+
+    private List<String> images;
+
+    private String content;
+
+    private int likeCount;
+
+    public Review(Long id, Long memberId, Long productOptionId, List<String> images, String content, int likeCount) {
+        this.id = id;
+        this.memberId = memberId;
+        this.productOptionId = productOptionId;
+        this.images = images;
+        this.content = content;
+        this.likeCount = likeCount;
+    }
+}

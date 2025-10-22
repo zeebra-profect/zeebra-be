@@ -1,4 +1,4 @@
-package com.zeebra.domain.optionCombination.entity;
+package com.zeebra.domain.review.entity;
 
 import com.zeebra.global.jpa.BaseEntity;
 import jakarta.persistence.Entity;
@@ -11,19 +11,19 @@ import lombok.NoArgsConstructor;
 @Entity
 @Getter
 @NoArgsConstructor
-public class OptionCombination extends BaseEntity {
+public class ReviewLike extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Long productOptionId;
+    private Long reviewId;
 
-    private Long optionNameId;
+    private Long memberId;
 
-    public OptionCombination(Long id, Long productOptionId, Long optionNameId) {
+    public ReviewLike(Long id, Long reviewId, Long memberId) {
         this.id = id;
-        this.productOptionId = productOptionId;
-        this.optionNameId = optionNameId;
+        this.reviewId = reviewId;
+        this.memberId = memberId;
     }
 }

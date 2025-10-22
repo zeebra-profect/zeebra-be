@@ -1,4 +1,4 @@
-package com.zeebra.domain.sales.entity;
+package com.zeebra.domain.product.entity;
 
 public enum SalesStatus {
     ON_SALE,

@@ -1,4 +1,4 @@
-package com.zeebra.domain.sales.entity;
+package com.zeebra.domain.product.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;

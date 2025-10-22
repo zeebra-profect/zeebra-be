@@ -1,4 +1,4 @@
-package com.zeebra.domain.cartItem.entity;
+package com.zeebra.domain.product.entity;
 
 import com.zeebra.global.jpa.BaseEntity;
 import jakarta.persistence.Entity;
@@ -8,30 +8,22 @@ import jakarta.persistence.Id;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
-
 @Entity
-@NoArgsConstructor
 @Getter
-public class CartItem extends BaseEntity {
+@NoArgsConstructor
+public class OptionCombination extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Long cartId;
-
     private Long productOptionId;
 
-    private BigDecimal snapShotPrice;
+    private Long optionNameId;
 
-    private int quantity;
-
-    public CartItem(Long id, Long cartId, Long productOptionId, BigDecimal snapShotPrice, int quantity) {
+    public OptionCombination(Long id, Long productOptionId, Long optionNameId) {
         this.id = id;
-        this.cartId = cartId;
         this.productOptionId = productOptionId;
-        this.snapShotPrice = snapShotPrice;
-        this.quantity = quantity;
+        this.optionNameId = optionNameId;
     }
 }

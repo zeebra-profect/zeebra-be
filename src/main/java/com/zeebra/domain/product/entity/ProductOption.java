@@ -1,4 +1,4 @@
-package com.zeebra.domain.productOption.entity;
+package com.zeebra.domain.product.entity;
 
 import com.zeebra.global.jpa.BaseEntity;
 import jakarta.persistence.Entity;
@@ -7,8 +7,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import java.util.List;
 
 @Getter
 @NoArgsConstructor

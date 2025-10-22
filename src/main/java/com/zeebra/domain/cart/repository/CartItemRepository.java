@@ -1,6 +1,6 @@
-package com.zeebra.domain.cartItem.repository;
+package com.zeebra.domain.cart.repository;
 
-import com.zeebra.domain.cartItem.entity.CartItem;
+import com.zeebra.domain.cart.entity.CartItem;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface CartItemRepository extends JpaRepository<CartItem, Long> {

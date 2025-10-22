@@ -1,4 +1,4 @@
-package com.zeebra.domain.optionName.entity;
+package com.zeebra.domain.product.entity;
 
 import com.zeebra.global.jpa.BaseEntity;
 import jakarta.persistence.Entity;

@@ -1,6 +1,8 @@
 package com.zeebra.domain.product.dto;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record ProductDetailResponse(
         Long productId,
@@ -10,9 +12,10 @@ public record ProductDetailResponse(
         String productDescription,
         String modelNumber,
         String ProductThumbnail,
+        List<String> images,
+        BigDecimal lowPrice,
         int reviewCount,
         int favoriteProductCount,
-        LocalDateTime createdAt,
-        LocalDateTime deletedAt
+        LocalDateTime createdAt
 ) {
 }

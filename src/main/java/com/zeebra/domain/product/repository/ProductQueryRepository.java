@@ -9,6 +9,8 @@ import com.zeebra.domain.category.entity.Category;
 import com.zeebra.domain.category.entity.QCategory;
 import com.zeebra.domain.product.entity.Product;
 import com.zeebra.domain.product.entity.QProduct;
+import com.zeebra.domain.productOption.entity.QProductOption;
+import com.zeebra.domain.sales.entity.QSales;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.data.web.SpringDataWebProperties;
 import org.springframework.data.domain.Pageable;
@@ -26,6 +28,8 @@ public class ProductQueryRepository {
     private final QProduct product = QProduct.product;
     private final QBrand brand = QBrand.brand;
     private final QCategory category = QCategory.category;
+    private final QProductOption productOption = QProductOption.productOption;
+    private final QSales sales = QSales.sales;
     private final JPAQueryFactory queryFactory;
 
     public List<Product> searchProduct(String keyword, List<Long> categoryIds,
@@ -60,6 +64,15 @@ public class ProductQueryRepository {
                                 .or(category.name.containsIgnoreCase(search))
                 )
                 .fetch();
+    }
+
+    public BigDecimal lowPriceOfProduct(Long productId) {
+        return queryFactory
+                .select(sales.price.min())
+                .from(productOption)
+                .join(sales).on(sales.productOptionId.eq(productOption.id))
+                .where(productOption.productId.eq(productId))
+                .fetchOne();
     }
 
     private BooleanExpression findByCategoryId(List<Long> categoryIds) {

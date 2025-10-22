@@ -1,10 +1,12 @@
 package com.zeebra.domain.product.controller;
 
 import com.zeebra.domain.product.dto.GetProductListRequest;
+import com.zeebra.domain.product.dto.ProductDetailResponse;
 import com.zeebra.domain.product.dto.ProductListResponse;
 import com.zeebra.domain.product.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -18,4 +20,9 @@ public class ProductRestController {
 //    public ProductListResponse getProductList(@RequestBody GetProductListRequest request) {
 //        return productService.getProductList(request);
 //    }
+
+    @GetMapping("/api/products/{productId}")
+    public ProductDetailResponse getProductDetail(@PathVariable Long productId) {
+        return productService.getProductDetail(productId);
+    }
 }

@@ -14,22 +14,20 @@ COPY . .
 RUN ./gradlew clean bootJar -x test --no-daemon
 
 # ---------- Runtime stage ----------
-# Temurin JRE 21.0.8 (Jammy)
 FROM eclipse-temurin:21.0.8_7-jre-jammy
 
-# 지역/로케일(선택)
 ENV TZ=Asia/Seoul LANG=C.UTF-8
-
 WORKDIR /app
-# fat jar만 복사
+
+# build stage에서 만든 fat jar 복사 (멀티스테이지 전제)
 COPY --from=build /home/gradle/src/build/libs/*.jar app.jar
 
-# 기본 런타임 옵션(컨테이너 메모리 친화)
+# 런타임 JVM 기본 옵션만 (필요시 env로 덮어쓰기 가능)
 ENV JAVA_OPTS="-XX:+UseG1GC -XX:MaxRAMPercentage=75 -Duser.timezone=Asia/Seoul"
-ENV SPRING_PROFILES_ACTIVE=prod
-ENV SERVER_PORT=8080
 
 EXPOSE 8080
 
-# 필요 시 환경변수로 포트/프로필만 바꿔도 됨
-ENTRYPOINT ["sh","-c","java $JAVA_OPTS -jar app.jar --server.port=${SERVER_PORT} --spring.profiles.active=${SPRING_PROFILES_ACTIVE}"]
+# dev/prod 공용: 없으면 dev/8080을 기본값으로 사용
+ENTRYPOINT ["sh","-c", "java $JAVA_OPTS -jar app.jar \
+  --server.port=${SERVER_PORT:-8080} \
+  --spring.profiles.active=${SPRING_PROFILES_ACTIVE:-dev}"]

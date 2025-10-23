@@ -40,7 +40,7 @@ public class Payment extends BaseEntity {
 
     @Column(name = "payment_status",nullable = false)
     @Enumerated(EnumType.STRING)
-    private PaymentStatus paymentStatus = PaymentStatus.PENDING;
+    private PaymentStatus paymentStatus;
 
     @Column(name = "approved_at")
     private LocalDateTime approvedAt;
@@ -50,7 +50,7 @@ public class Payment extends BaseEntity {
 
     @Column(name = "toss_response", nullable = false, columnDefinition = "jsonb")
     @JdbcTypeCode(SqlTypes.JSON)
-    private Map<String, Object> tossResponse =  new HashMap<>();
+    private Map<String, Object> tossResponse;
 
     public Payment(Long orderId, String paymentKey, String tossOrderId, BigDecimal paymentAmount,
                    PaymentMethod paymentMethod, PaymentStatus paymentStatus, LocalDateTime approvedAt, String failureReason, Map<String, Object> tossResponse) {
@@ -59,9 +59,9 @@ public class Payment extends BaseEntity {
         this.tossOrderId = tossOrderId;
         this.paymentAmount = paymentAmount;
         this.paymentMethod = paymentMethod;
-        this.paymentStatus = paymentStatus;
+        this.paymentStatus = paymentStatus != null ? paymentStatus : PaymentStatus.PENDING;
         this.approvedAt = approvedAt;
         this.failureReason = failureReason;
-        this.tossResponse = tossResponse;
+        this.tossResponse = tossResponse != null ? tossResponse : new HashMap<>();
     }
 }

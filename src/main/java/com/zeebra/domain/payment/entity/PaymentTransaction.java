@@ -34,17 +34,17 @@ public class PaymentTransaction extends BaseEntity {
 
     @Column(name = "request_data", nullable = false, columnDefinition = "jsonb")
     @JdbcTypeCode(SqlTypes.JSON)
-    private Map<String, Object> requestData = new HashMap<>();
+    private Map<String, Object> requestData;
 
     @Column(name = "response_data", nullable = false, columnDefinition = "jsonb")
     @JdbcTypeCode(SqlTypes.JSON)
-    private Map<String, Object> responseData = new HashMap<>();
+    private Map<String, Object> responseData;
 
     @Column(name = "response_code")
     private int responseCode;
 
     @Column(name = "retry_count", nullable = false)
-    private int retryCount = 0;
+    private int retryCount;
 
     @Column(name = "parent_transaction_id")
     private Long parentTransactionId;
@@ -54,8 +54,8 @@ public class PaymentTransaction extends BaseEntity {
         this.paymentId = paymentId;
         this.paymentTransactionType = paymentTransactionType;
         this.paymentTransactionStatus = paymentTransactionStatus;
-        this.requestData = requestData;
-        this.responseData = responseData;
+        this.requestData = requestData != null ? requestData : new HashMap<>();
+        this.responseData = responseData != null ? responseData : new HashMap<>();
         this.responseCode = responseCode;
         this.retryCount = retryCount;
         this.parentTransactionId = parentTransactionId;

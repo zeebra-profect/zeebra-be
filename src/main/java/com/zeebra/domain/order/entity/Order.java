@@ -28,7 +28,7 @@ public class Order extends BaseEntity {
 
     @Column(name = "order_status", nullable = false)
     @Enumerated(EnumType.STRING)
-    private OrderStatus orderStatus = OrderStatus.CREATED;
+    private OrderStatus orderStatus;
 
     @Column(name = "order_time", nullable = false)
     private LocalDateTime orderTime;
@@ -52,10 +52,11 @@ public class Order extends BaseEntity {
     public Order(int memberId, String orderNumber, OrderStatus orderStatus, LocalDateTime orderTime, int totalQuantity, BigDecimal totalPrice, BigDecimal totalAmount, int usePoint, String idempotencyKey) {
         this.memberId = memberId;
         this.orderNumber = orderNumber;
-        this.orderStatus = orderStatus;
+        this.orderStatus = orderStatus != null ? orderStatus : OrderStatus.CREATED;
         this.orderTime = orderTime;
         this.totalQuantity = totalQuantity;
         this.totalPrice = totalPrice;
+        this.totalAmount = totalAmount;
         this.usePoint = usePoint;
         this.idempotencyKey = idempotencyKey;
     }

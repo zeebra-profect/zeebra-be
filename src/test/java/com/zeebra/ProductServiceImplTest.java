@@ -23,7 +23,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class ProductServiceTest {
+class ProductServiceImplTest {
 
     @Mock
     private ProductRepository productRepository;

@@ -38,4 +38,4 @@ gradle-wrapper.jar
 # These often contain sensitive information and should not be versioned.
 # Use environment variables or other secure methods for configuration.
 application.properties
-application.yml
+.env

@@ -23,28 +23,28 @@ import java.util.List;
                 @UniqueConstraint(name = "uk_member_email", columnNames = "member_email")
         }
 )
-public class Member implements UserDetails {
+public class Member extends BaseEntity implements UserDetails {
 
     // PK: member_id int
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "member_id", nullable = false, updatable = false)
-    private Long id;
+    private int id;
 
     /** 로그인 아이디(별도 식별자) - 기존 로직 유지용 */
-    @Column(name = "user_login_id", nullable = false, unique = true, length = 60)
+    @Column(name = "user_login_id", nullable = false, unique = true, length = 20)
     private String userLoginId;
 
     /** member_name varchar */
-    @Column(name = "member_name", nullable = false, length = 60)
+    @Column(name = "member_name", nullable = false, length = 20)
     private String memberName;
 
     /** member_email varchar */
-    @Column(name = "member_email", nullable = false, length = 120)
+    @Column(name = "member_email", nullable = false, length = 80)
     private String memberEmail;
 
     /** nickname varchar */
-    @Column(name = "nickname", nullable = false, length = 60)
+    @Column(name = "nickname", nullable = false, length = 20)
     private String nickname;
 
     /** member_birth date */
@@ -69,11 +69,11 @@ public class Member implements UserDetails {
     private Role role = Role.USER;
 
     /** account_number varchar */
-    @Column(name = "account_number", length = 50)
+    @Column(name = "account_number", length = 16)
     private String accountNumber;
 
     /** account_bank varchar */
-    @Column(name = "account_bank", length = 50)
+    @Column(name = "account_bank", length = 20)
     private String accountBank;
 
     /** member_image varchar (URL) */
@@ -82,7 +82,7 @@ public class Member implements UserDetails {
 
     /** deleted_at date (soft delete용) */
     @Column(name = "deleted_at")
-    private LocalDate deletedAt;
+    private LocalDateTime deletedAt;
 
     /** create_at date */
     @Column(name = "create_at", nullable = false)

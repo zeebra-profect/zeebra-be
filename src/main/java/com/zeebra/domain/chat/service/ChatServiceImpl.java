@@ -1,19 +1,19 @@
 package com.zeebra.domain.chat.service;
 
-import com.zeebra.domain.chat.dto.ChatRoomRequestDto;
-import com.zeebra.domain.chat.dto.ChatRoomResponseDto;
-import com.zeebra.domain.chat.entity.ChatRoom;
-import com.zeebra.domain.chat.entity.ChatRoomMember;
-import com.zeebra.domain.chat.entity.ChatRoomType;
+import com.zeebra.domain.chat.dto.*;
+import com.zeebra.domain.chat.entity.*;
 import com.zeebra.domain.chat.repository.ChatMessageRepository;
 import com.zeebra.domain.chat.repository.ChatRoomMemberRepository;
 import com.zeebra.domain.chat.repository.ChatRoomRepository;
-//import com.zeebra.domain.chat.repository.TradeRepository;
+import com.zeebra.domain.chat.repository.TradeRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
 
@@ -26,6 +26,7 @@ public class ChatServiceImpl implements ChatService {
     private final ChatRoomRepository chatRoomRepository;
     private final ChatRoomMemberRepository chatRoomMemberRepository;
     private final ChatMessageRepository chatMessageRepository;
+    private final TradeRepository tradeRepository;
     //private final TradeRepository tradeRepository;
 
     @Override
@@ -97,6 +98,54 @@ public class ChatServiceImpl implements ChatService {
             throw new IllegalArgumentException("productId or saleId required");
         }
         return ChatRoomResponseDto.from(chatRoom);
+    }
+
+    @Override
+    @Transactional
+    public ChatMessageResponseDto saveMessage(ChatMessageRequestDto chatMessageRequestDto, Long currentMemberId) {
+
+        ChatRoomMember sender = chatRoomMemberRepository.findByChatRoomIdAndMemberId(
+                chatMessageRequestDto.getChatRoomId(), currentMemberId)
+                .orElseThrow(() -> new SecurityException("해당 채팅방의 멤버가 아닙니다"));
+
+        ChatMessage chatMessage = ChatMessage.builder()
+                .chatRoomMember(sender)
+                .messageType(chatMessageRequestDto.getMessageType())
+                .messageContent(chatMessageRequestDto.getContent())
+                .imageUrl(chatMessageRequestDto.getImageUrl())
+                .build();
+        ChatMessage savedMessage = chatMessageRepository.save(chatMessage);
+
+        sender.getChatRoom().updateLastMessageId(savedMessage.getId());
+
+        return ChatMessageResponseDto.from(savedMessage);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ChatMessageResponseDto> getChatHistory(Long roomId, Pageable pageable){
+        Page<ChatMessage> messagePage = chatMessageRepository.findByChatRoomMemberChatRoomId(roomId, pageable);
+        return messagePage.map(ChatMessageResponseDto::from);
+    }
+
+    @Override
+    @Transactional
+    public TradeResponseDto proposeTrade(Long chatRoomId, TradeRequestDto tradeRequestDto, Long currentMemberId) {
+        BigDecimal price = tradeRequestDto.getPrice();
+
+        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId).orElseThrow(() -> new RuntimeException("채팅방을 찾을 수 없습니다"));
+
+        Trade trade = tradeRepository.findByChatRoomId(chatRoomId)
+                .map(existingTrade -> {
+                    existingTrade.updatePrice(price);
+                    return existingTrade;
+                })
+                .orElseGet(() -> Trade.builder()
+                        .chatRoom(chatRoom)
+                        .price(price)
+                        .build());
+        Trade savedTrade = tradeRepository.save(trade);
+        return new TradeResponseDto(savedTrade.getId(), savedTrade.getChatRoom().getId(), savedTrade.getPrice());
     }
 
     private void ensureUserIsChatMember(ChatRoom chatRoom, Long currentMemberId) {

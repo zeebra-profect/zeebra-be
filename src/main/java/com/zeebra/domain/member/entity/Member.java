@@ -25,11 +25,11 @@ import java.util.List;
 )
 public class Member extends BaseEntity implements UserDetails {
 
-    // PK: member_id int
+    // PK: member_id Long
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "member_id", nullable = false, updatable = false)
-    private int id;
+    private Long id;
 
     /** 로그인 아이디(별도 식별자) - 기존 로직 유지용 */
     @Column(name = "user_login_id", nullable = false, unique = true, length = 20)

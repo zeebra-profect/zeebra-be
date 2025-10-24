@@ -5,7 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
 
-public interface MemberRepository extends JpaRepository<Member, Integer> {
+public interface MemberRepository extends JpaRepository<Member, Long> {
     // ✅ 로그인 아이디 중복 체크 (회원가입 시)
     boolean existsByUserLoginId(String userLoginId);
 

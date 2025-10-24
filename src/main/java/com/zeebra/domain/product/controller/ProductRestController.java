@@ -6,10 +6,7 @@ import com.zeebra.domain.product.service.ProductService;
 import com.zeebra.domain.product.service.ProductServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.parameters.P;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RequiredArgsConstructor
 @RestController
@@ -30,5 +27,10 @@ public class ProductRestController {
     @PostMapping("/api/favorite-products/{productId}")
     public FavoriteProductResponse addFavoriteProduct(Long memberId, @PathVariable Long productId) {
         return productService.addFavoriteProduct(memberId, productId);
+    }
+
+    @DeleteMapping("/api/favorite-products/{productId}")
+    public void deleteFavoriteProduct(Long memberId, Long productId) {
+        productService.deleteFavoriteProduct(memberId, productId);
     }
 }

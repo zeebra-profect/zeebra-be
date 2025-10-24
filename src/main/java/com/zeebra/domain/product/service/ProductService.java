@@ -8,4 +8,6 @@ public interface ProductService {
     public ProductDetailResponse getProductDetail(Long productId);
 
     public FavoriteProductResponse addFavoriteProduct(Long memberId, Long productId);
+
+    public void deleteFavoriteProduct(Long memberId, Long productId);
 }

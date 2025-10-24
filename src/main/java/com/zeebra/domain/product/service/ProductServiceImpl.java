@@ -1,11 +1,12 @@
 package com.zeebra.domain.product.service;
 
+import com.zeebra.domain.member.entity.Member;
+import com.zeebra.domain.member.repository.MemberRepository;
+import com.zeebra.domain.product.dto.FavoriteProductResponse;
 import com.zeebra.domain.product.dto.ProductDetailResponse;
+import com.zeebra.domain.product.entity.FavoriteProduct;
 import com.zeebra.domain.product.entity.Product;
-import com.zeebra.domain.product.repository.ProductOptionRepository;
-import com.zeebra.domain.product.repository.ProductQueryRepository;
-import com.zeebra.domain.product.repository.ProductRepository;
-import com.zeebra.domain.product.repository.SalesRepository;
+import com.zeebra.domain.product.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -20,6 +21,8 @@ public class ProductServiceImpl implements ProductService {
     private final ProductQueryRepository productQueryRepository;
     private final SalesRepository salesRepository;
     private final ProductOptionRepository productOptionRepository;
+    private final MemberRepository memberRepository;
+    private final FavoriteProductRepository favoriteProductRepository;
 
 //    public ProductListResponse getProductList(GetProductListRequest request) {
 //
@@ -41,6 +44,14 @@ public class ProductServiceImpl implements ProductService {
                 product.getCreatedTime());
     }
 
+    private FavoriteProductResponse toFavoriteProductResponse(FavoriteProduct favoriteProduct) {
+        return new FavoriteProductResponse(
+                favoriteProduct.getProductId(),
+                favoriteProduct.getProductId(),
+                favoriteProduct.getMemberId(),
+                favoriteProduct.getCreatedTime());
+    }
+
     @Override
     public ProductDetailResponse getProductDetail(Long productId) {
         Product product = productRepository.findById(productId).orElseThrow(
@@ -49,5 +60,18 @@ public class ProductServiceImpl implements ProductService {
         BigDecimal lowPriceOfProduct = productQueryRepository.lowPriceOfProduct(productId);
 
         return toProductDetailResponse(product, lowPriceOfProduct);
+    }
+
+    @Override
+    public FavoriteProductResponse addFavoriteProduct(Long memberId, Long productId) {
+        Member member = memberRepository.findById(memberId).orElseThrow(
+                () -> new NoSuchElementException("해당하는 사용자가 없습니다"));
+
+        Product product = productRepository.findById(productId).orElseThrow(
+                () -> new NoSuchElementException("해당하는 상품이 존재하지 않습니다."));
+
+        FavoriteProduct favoriteProduct = favoriteProductRepository.save(new FavoriteProduct(member.getId(), product.getId()));
+
+        return toFavoriteProductResponse(favoriteProduct);
     }
 }

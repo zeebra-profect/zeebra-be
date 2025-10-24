@@ -27,8 +27,8 @@ public class JwtTokenProvider {
         }
     }
 
-    // ✅ 토큰에서 memberId(Long)로 꺼내기
-    public Long getMemberId(String token) {
+    // ✅ 토큰에서 memberId(int)로 꺼내기
+    public int getMemberId(String token) {
         Claims claims = Jwts.parserBuilder().setSigningKey(key).build()
                 .parseClaimsJws(token).getBody();
         return Long.parseLong(claims.getSubject());

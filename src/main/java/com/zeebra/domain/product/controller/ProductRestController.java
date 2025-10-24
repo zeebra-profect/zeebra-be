@@ -1,14 +1,12 @@
 package com.zeebra.domain.product.controller;
 
-import com.zeebra.domain.product.dto.GetProductListRequest;
+import com.zeebra.domain.product.dto.FavoriteProductResponse;
 import com.zeebra.domain.product.dto.ProductDetailResponse;
-import com.zeebra.domain.product.dto.ProductListResponse;
 import com.zeebra.domain.product.service.ProductService;
+import com.zeebra.domain.product.service.ProductServiceImpl;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.parameters.P;
+import org.springframework.web.bind.annotation.*;
 
 @RequiredArgsConstructor
 @RestController
@@ -24,5 +22,15 @@ public class ProductRestController {
     @GetMapping("/api/products/{productId}")
     public ProductDetailResponse getProductDetail(@PathVariable Long productId) {
         return productService.getProductDetail(productId);
+    }
+
+    @PostMapping("/api/favorite-products/{productId}")
+    public FavoriteProductResponse addFavoriteProduct(Long memberId, @PathVariable Long productId) {
+        return productService.addFavoriteProduct(memberId, productId);
+    }
+
+    @DeleteMapping("/api/favorite-products/{productId}")
+    public void deleteFavoriteProduct(Long memberId, Long productId) {
+        productService.deleteFavoriteProduct(memberId, productId);
     }
 }

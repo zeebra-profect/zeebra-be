@@ -1,5 +1,6 @@
 package com.zeebra.domain.product.entity;
 
+import com.zeebra.global.jpa.BaseEntity;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -13,7 +14,7 @@ import java.time.LocalDateTime;
 @Entity
 @NoArgsConstructor
 @Getter
-public class Sales {
+public class Sales extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -33,14 +34,12 @@ public class Sales {
 
     private LocalDateTime soldAt;
 
-    public Sales(Long id, Long productOptionId, Long memberId, BigDecimal price, BigDecimal soldPrice, int stock, SalesStatus salesStatus, LocalDateTime soldAt) {
-        this.id = id;
+    public Sales(Long productOptionId, Long memberId, BigDecimal price, BigDecimal soldPrice, int stock, SalesStatus salesStatus) {
         this.productOptionId = productOptionId;
         this.memberId = memberId;
         this.price = price;
         this.soldPrice = soldPrice;
         this.stock = stock;
         this.salesStatus = salesStatus;
-        this.soldAt = soldAt;
     }
 }

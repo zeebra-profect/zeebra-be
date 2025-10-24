@@ -7,6 +7,7 @@ import com.zeebra.domain.product.dto.ProductDetailResponse;
 import com.zeebra.domain.product.entity.FavoriteProduct;
 import com.zeebra.domain.product.entity.Product;
 import com.zeebra.domain.product.repository.*;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -62,6 +63,7 @@ public class ProductServiceImpl implements ProductService {
         return toProductDetailResponse(product, lowPriceOfProduct);
     }
 
+    @Transactional
     @Override
     public FavoriteProductResponse addFavoriteProduct(Long memberId, Long productId) {
         Member member = memberRepository.findById(memberId).orElseThrow(
@@ -73,5 +75,20 @@ public class ProductServiceImpl implements ProductService {
         FavoriteProduct favoriteProduct = favoriteProductRepository.save(new FavoriteProduct(member.getId(), product.getId()));
 
         return toFavoriteProductResponse(favoriteProduct);
+    }
+
+    @Transactional
+    @Override
+    public void deleteFavoriteProduct(Long memberId, Long productId) {
+        Member member = memberRepository.findById(memberId).orElseThrow(
+                () -> new NoSuchElementException("해당하는 사용자가 없습니다"));
+
+        Product product = productRepository.findById(productId).orElseThrow(
+                () -> new NoSuchElementException("해당하는 상품이 존재하지 않습니다."));
+
+        FavoriteProduct favoriteProduct = favoriteProductRepository.findByMemberIdAndProductId(member.getId(), product.getId()).orElseThrow(
+                () -> new NoSuchElementException("해당하는 관심 상품이 없습니다."));
+
+        favoriteProductRepository.delete(favoriteProduct);
     }
 }

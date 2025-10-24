@@ -53,4 +53,8 @@ public class ChatRoom extends BaseEntity {
         this.lastMessageId = lastMessageId;
         this.roomDeletedDate = roomDeletedDate;
     }
+
+    public void updateLastMessageId(Long lastMessageId) {
+        this.lastMessageId = lastMessageId;
+    }
 }

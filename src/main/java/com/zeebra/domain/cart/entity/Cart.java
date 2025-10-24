@@ -19,8 +19,7 @@ public class Cart extends BaseEntity {
 
     private Long memberId;
 
-    public Cart(Long id, Long memberId) {
-        this.id = id;
+    public Cart(Long memberId) {
         this.memberId = memberId;
     }
 }

@@ -7,5 +7,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> {
 
-    Page<ChatMessage> findByChatRoomMember_ChatRoomId(Long chatRoomId, Pageable pageable);
+    Page<ChatMessage> findByChatRoomMemberChatRoomId(Long chatRoomId, Pageable pageable);
 }

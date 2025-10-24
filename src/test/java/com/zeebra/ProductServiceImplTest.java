@@ -188,4 +188,96 @@ class ProductServiceImplTest {
 
         verifyNoInteractions(favoriteProductRepository);
     }
+    @Test
+    @DisplayName("deleteFavoriteProduct 성공: 회원/상품/관심상품 존재 시 삭제된다")
+    void deleteFavoriteProduct_success() {
+        // given
+        FavoriteProduct fav = new FavoriteProduct(MEMBER_ID, PRODUCT_ID);
+
+        Member mockMember = mock(Member.class);
+        Product mockProduct = mock(Product.class);
+
+        // ✅ 여기 stubbing 추가
+        when(mockMember.getId()).thenReturn(MEMBER_ID);
+        when(mockProduct.getId()).thenReturn(PRODUCT_ID);
+
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(mockMember));
+        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(mockProduct));
+        when(favoriteProductRepository.findByMemberIdAndProductId(MEMBER_ID, PRODUCT_ID))
+                .thenReturn(Optional.of(fav));
+
+        // when
+        productService.deleteFavoriteProduct(MEMBER_ID, PRODUCT_ID);
+
+        // then
+        InOrder inOrder = inOrder(memberRepository, productRepository, favoriteProductRepository);
+        inOrder.verify(memberRepository).findById(MEMBER_ID);
+        inOrder.verify(productRepository).findById(PRODUCT_ID);
+        inOrder.verify(favoriteProductRepository).findByMemberIdAndProductId(MEMBER_ID, PRODUCT_ID);
+        inOrder.verify(favoriteProductRepository).delete(fav);
+        verifyNoMoreInteractions(favoriteProductRepository);
+    }
+
+    @Test
+    @DisplayName("deleteFavoriteProduct 실패: 회원 없음")
+    void deleteFavoriteProduct_fail_memberNotFound() {
+        // given
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.empty());
+
+        // when & then
+        NoSuchElementException ex = assertThrows(
+                NoSuchElementException.class,
+                () -> productService.deleteFavoriteProduct(MEMBER_ID, PRODUCT_ID)
+        );
+        assertTrue(ex.getMessage().contains("해당하는 사용자가 없습니다"));
+
+        verify(memberRepository).findById(MEMBER_ID);
+        verifyNoInteractions(productRepository, favoriteProductRepository);
+    }
+
+    @Test
+    @DisplayName("deleteFavoriteProduct 실패: 상품 없음")
+    void deleteFavoriteProduct_fail_productNotFound() {
+        // given
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(mock(Member.class)));
+        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.empty());
+
+        // when & then
+        NoSuchElementException ex = assertThrows(
+                NoSuchElementException.class,
+                () -> productService.deleteFavoriteProduct(MEMBER_ID, PRODUCT_ID)
+        );
+        assertTrue(ex.getMessage().contains("해당하는 상품이 존재하지 않습니다."));
+
+        InOrder inOrder = inOrder(memberRepository, productRepository);
+        inOrder.verify(memberRepository).findById(MEMBER_ID);
+        inOrder.verify(productRepository).findById(PRODUCT_ID);
+        verifyNoInteractions(favoriteProductRepository);
+    }
+
+    @Test
+    @DisplayName("deleteFavoriteProduct 실패: 관심상품 없음")
+    void deleteFavoriteProduct_fail_favoriteNotFound() {
+        // given
+        Member mockMember = mock(Member.class);
+        Product mockProduct = mock(Product.class);
+
+        // ✅ 여기 stubbing 추가
+        when(mockMember.getId()).thenReturn(MEMBER_ID);
+        when(mockProduct.getId()).thenReturn(PRODUCT_ID);
+
+        when(memberRepository.findById(MEMBER_ID)).thenReturn(Optional.of(mockMember));
+        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(mockProduct));
+        when(favoriteProductRepository.findByMemberIdAndProductId(MEMBER_ID, PRODUCT_ID))
+                .thenReturn(Optional.empty());
+
+        // when & then
+        NoSuchElementException ex = assertThrows(
+                NoSuchElementException.class,
+                () -> productService.deleteFavoriteProduct(MEMBER_ID, PRODUCT_ID)
+        );
+        assertTrue(ex.getMessage().contains("해당하는 관심 상품이 없습니다."));
+
+        verify(favoriteProductRepository, never()).delete(any(FavoriteProduct.class));
+    }
 }

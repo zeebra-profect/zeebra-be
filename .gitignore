@@ -39,4 +39,5 @@ gradle-wrapper.jar
 # Use environment variables or other secure methods for configuration.
 application.properties
 application-local.yml
+postgresql-compose.yml
 .env

@@ -25,8 +25,12 @@ public class Trade {
     private BigDecimal price;
 
     @Builder
-    public Trade(ChatRoom chatRoomId, BigDecimal price) {
+    public Trade(ChatRoom chatRoom, BigDecimal price) {
         this.chatRoom = chatRoom;
         this.price = price;
     }
+    public void updatePrice(BigDecimal price) {
+        this.price = price;
+    }
+
 }

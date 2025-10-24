@@ -7,7 +7,7 @@ import java.util.Optional;
 
 public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
 
-    Optional<ChatRoom> findByProductIdAndSaleId(Long productId, Long saleId);
+    Optional<ChatRoom> findByProductId(Long productId);
 
     Optional<ChatRoom> findByDmPairKey(String dmPairKey);
 

@@ -44,5 +44,6 @@ public class ChatMessage {
         this.messageType = messageType;
         this.messageContent = messageContent;
         this.imageUrl = imageUrl;
+        this.createdAt = createdAt;
     }
 }

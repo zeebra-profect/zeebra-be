@@ -22,17 +22,17 @@ public class ChatRoom extends BaseEntity {
     private Long id;
 
     // 1:1 채팅 (Sales)
-    @Column(name = "sale_id")
+    @Column(name = "sale_id", nullable = true)
     private Long saleId;
 
     // 그룹 채팅 (Product)
-    @Column(name = "product_id")
+    @Column(name = "product_id", nullable = true)
     private Long productId;
 
     //enum으로 구분
     @Enumerated(EnumType.STRING)
     @Column(name = "chat_room_type", nullable = false)
-    private ChatRoomType ChatRoomType;
+    private ChatRoomType chatRoomType;
 
     @Column(name = "dm_pair_key", unique = true)
     private String dmPairKey;
@@ -44,11 +44,11 @@ public class ChatRoom extends BaseEntity {
     private LocalDateTime roomDeletedDate;
 
     @Builder
-    public ChatRoom(long saleId, long productId, ChatRoomType chatRoomType,
-                    String dmPairKey, long lastMessageId, LocalDateTime roomDeletedDate) {
+    public ChatRoom(Long saleId, Long productId, ChatRoomType chatRoomType,
+                    String dmPairKey, Long lastMessageId, LocalDateTime roomDeletedDate) {
         this.saleId = saleId;
         this.productId = productId;
-        this.ChatRoomType = chatRoomType;
+        this.chatRoomType = chatRoomType;
         this.dmPairKey = dmPairKey;
         this.lastMessageId = lastMessageId;
         this.roomDeletedDate = roomDeletedDate;

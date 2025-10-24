@@ -1,14 +1,22 @@
 package com.zeebra.domain.order.entity;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+import org.hibernate.annotations.Comment;
+
 import com.zeebra.global.jpa.BaseEntity;
-import jakarta.persistence.*;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.Comment;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 @Entity
 @Getter
@@ -21,7 +29,7 @@ public class Order extends BaseEntity {
     private Long id;
 
     @Column(name = "member_id", nullable = false)
-    private int memberId;
+    private Long memberId;
 
     @Column(name = "order_number", nullable = false, length = 20, unique = true)
     private String orderNumber;
@@ -49,7 +57,7 @@ public class Order extends BaseEntity {
     @Column(name = "idempotency_key", nullable = false,  length = 100, unique = true)
     private String idempotencyKey;
 
-    public Order(int memberId, String orderNumber, OrderStatus orderStatus, LocalDateTime orderTime, int totalQuantity, BigDecimal totalPrice, BigDecimal totalAmount, int usePoint, String idempotencyKey) {
+    public Order(Long memberId, String orderNumber, OrderStatus orderStatus, LocalDateTime orderTime, int totalQuantity, BigDecimal totalPrice, BigDecimal totalAmount, int usePoint, String idempotencyKey) {
         this.memberId = memberId;
         this.orderNumber = orderNumber;
         this.orderStatus = orderStatus != null ? orderStatus : OrderStatus.CREATED;

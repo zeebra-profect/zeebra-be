@@ -1,0 +1,121 @@
+package com.zeebra.domain.chat.service;
+
+import com.zeebra.domain.chat.dto.ChatRoomRequestDto;
+import com.zeebra.domain.chat.dto.ChatRoomResponseDto;
+import com.zeebra.domain.chat.entity.ChatRoom;
+import com.zeebra.domain.chat.entity.ChatRoomMember;
+import com.zeebra.domain.chat.entity.ChatRoomType;
+import com.zeebra.domain.chat.repository.ChatMessageRepository;
+import com.zeebra.domain.chat.repository.ChatRoomMemberRepository;
+import com.zeebra.domain.chat.repository.ChatRoomRepository;
+//import com.zeebra.domain.chat.repository.TradeRepository;
+import org.springframework.transaction.annotation.Transactional;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Objects;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class ChatServiceImpl implements ChatService {
+
+    private final ChatRoomRepository chatRoomRepository;
+    private final ChatRoomMemberRepository chatRoomMemberRepository;
+    private final ChatMessageRepository chatMessageRepository;
+    //private final TradeRepository tradeRepository;
+
+    @Override
+    @Transactional
+    public ChatRoomResponseDto createOrGetChatRoom(ChatRoomRequestDto chatRoomRequestDto, Long currentMemberId) {
+
+        ChatRoom chatRoom;
+
+        if (chatRoomRequestDto.getProductId() != null) {
+            Long productId = chatRoomRequestDto.getProductId();
+
+             chatRoom = chatRoomRepository.findByProductId(productId).orElseGet(() -> {
+                 ChatRoom newRoom = ChatRoom.builder().productId(productId).chatRoomType(ChatRoomType.GROUP).build();
+
+                 ChatRoom savedRoom = chatRoomRepository.save(newRoom);
+
+                 ensureUserIsChatMember(savedRoom, currentMemberId);
+
+                 return savedRoom;
+            });
+
+
+
+        } else if (chatRoomRequestDto.getSaleId() != null) {
+            Long saleId = chatRoomRequestDto.getSaleId();
+
+            //Sale 서비스 호출해서 판매자 ID 가져오기
+            //Long user1 = saleServiceApi.getSellerIdBySaleId(saleId);
+            Long user1 = 123L; // 임시
+            Long user2 = currentMemberId;
+
+            if (Objects.equals(user1, user2)) {
+                throw new IllegalArgumentException("자신과 1:1 채팅을 할 수 없습니다.");
+            }
+
+            // 1:1 채팅방 중복 찾기
+            String dmPairKey = createDmPairKey(saleId, user1, user2);
+
+            chatRoom = chatRoomRepository.findByDmPairKey(dmPairKey)
+                    .orElseGet(() -> {
+                        ChatRoom newRoom = ChatRoom.builder()
+                                .saleId(saleId)
+                                .chatRoomType(ChatRoomType.DM)
+                                .dmPairKey(dmPairKey)
+                                .build();
+
+                        chatRoomRepository.save(newRoom);
+
+                        // 1:1 채팅방은 생성 시 구매자와 판매자를 바로 멤버로 추가
+                        // (MSA) Member 서비스를 호출해서 각자의 닉네임도 가져와야 함
+                        // String buyerName = memberServiceApi.getMemberName(buyerId);
+                        // String sellerName = memberServiceApi.getMemberName(sellerId);
+
+                        ChatRoomMember dmUser1 = ChatRoomMember.builder()
+                                .chatRoom(newRoom)
+                                .memberId(user1)
+                                .memberName("user1") //임시
+                                .build();
+                        ChatRoomMember dmUser2 = ChatRoomMember.builder()
+                                .chatRoom(newRoom)
+                                .memberId(user2)
+                                .memberName("user2") //임시
+                                .build();
+                        chatRoomMemberRepository.saveAll(List.of(dmUser1, dmUser2));
+
+                        return newRoom;
+                    });
+        } else {
+            throw new IllegalArgumentException("productId or saleId required");
+        }
+        return ChatRoomResponseDto.from(chatRoom);
+    }
+
+    private void ensureUserIsChatMember(ChatRoom chatRoom, Long currentMemberId) {
+        chatRoomMemberRepository.findByChatRoomIdAndMemberId(chatRoom.getId(), currentMemberId)
+                .orElseGet(() -> {
+                    // Member 서비스에서 닉네임 조회
+                    // String memberName = memberService.Api.getMemberName(memberId);
+                    ChatRoomMember newMember   = ChatRoomMember.builder()
+                            .chatRoom(chatRoom)
+                            .memberId(currentMemberId)
+                            .memberName("임시 닉네임")
+                            .build();
+                    return chatRoomMemberRepository.save(newMember);
+                });
+    }
+
+    private String createDmPairKey(Long saleId, Long dmUser1, Long dmUser2) {
+        Long user1 = Math.min(dmUser1, dmUser2);
+        Long user2 = Math.max(dmUser1, dmUser2);
+        return String.format("sale:%d-user:%d-user:%d", saleId, user1, user2);
+    }
+}

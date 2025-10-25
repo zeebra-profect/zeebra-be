@@ -13,10 +13,12 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import com.zeebra.global.ApiResponse;
 import com.zeebra.global.ErrorCode.CommonErrorCode;
 
+import io.swagger.v3.oas.annotations.Hidden;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RestControllerAdvice
+@Hidden
 public class GlobalExceptionHandler {
 
 	@ExceptionHandler({MethodArgumentNotValidException.class, BindException.class})

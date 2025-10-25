@@ -86,7 +86,7 @@ jobs:
           AWS_REGION: ${{ secrets.AWS_REGION }}
           ECR_REPO: ${{ secrets.ECR_REPO_BE_DEV }}
           IMAGE_TAG: ${{ env.IMAGE_TAG }}
-          PARAM_PATH: "/"                      # SSM 파라미터 경로 (trailing slash 유지)
+          PARAM_PATH: ${{ secrets.SSM_PARAM_PATH }} # SSM 파라미터 경로 (trailing slash 유지)
           CONTAINER_NAME: "zeebra-be"
           HOST_PORT: "8080"
           CONTAINER_PORT: "8080"

@@ -4,8 +4,9 @@ import com.zeebra.domain.auth.dto.LoginRequest;
 import com.zeebra.domain.auth.dto.LoginSuccess;
 
 public interface AuthService {
-	public LoginSuccess login(LoginRequest request);
-	// public void logout();
+	LoginSuccess login(LoginRequest request);
+
+	void logout(String accessToken, String refreshToken);
 	// public boolean isLogin();
 	// public String getEmail();
 	// public String getNickname();

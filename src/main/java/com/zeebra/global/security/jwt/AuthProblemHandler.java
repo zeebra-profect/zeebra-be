@@ -7,8 +7,6 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.access.AccessDeniedHandler;
-import org.springframework.security.web.csrf.InvalidCsrfTokenException;
-import org.springframework.security.web.csrf.MissingCsrfTokenException;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -35,14 +33,8 @@ public class AuthProblemHandler implements AuthenticationEntryPoint, AccessDenie
 
 	@Override
 	public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException ex) throws IOException {
-		AuthErrorCode errorCode;
-		if (ex instanceof MissingCsrfTokenException) {
-			errorCode = AuthErrorCode.CSRF_TOKEN_MISSING;
-		} else if (ex instanceof InvalidCsrfTokenException) {
-			errorCode = AuthErrorCode.CSRF_TOKEN_INVALID;
-		} else {
-			errorCode = AuthErrorCode.ACCOUNT_UNAVAILABLE;
-		}
+		AuthErrorCode errorCode = (AuthErrorCode) request.getAttribute("AUTH_ERROR_CODE");
+		if (errorCode == null) errorCode = AuthErrorCode.ACCESS_DENIED;
 		write(response, errorCode);
 	}
 

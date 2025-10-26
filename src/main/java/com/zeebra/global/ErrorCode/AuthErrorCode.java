@@ -29,17 +29,11 @@ public enum AuthErrorCode implements ErrorCode {
 		"인증 정보가 유효하지 않습니다. 다시 로그인해주세요."),
 
 
-	ACCOUNT_UNAVAILABLE("E403_ACCOUNT_UNAVAILABLE", HttpStatus.FORBIDDEN,
-		"계정을 사용할 수 없습니다. 고객센터에 문의해주세요."),
-	CSRF_TOKEN_MISSING("E403_CSRF_TOKEN_MISSING", HttpStatus.FORBIDDEN, "CSRF 토큰이 포함되지 않았습니다."),
-	CSRF_TOKEN_INVALID("E403_CSRF_TOKEN_INVALID", HttpStatus.FORBIDDEN, "CSRF 토큰이 유효하지 않습니다."),
-
+	ACCESS_DENIED("E403_ACCESS_DENIED", HttpStatus.FORBIDDEN,"접근 권한이 없습니다."),
 
 	DUPLICATE_LOGIN_ID("E409_DUPLICATE_LOGIN_ID", HttpStatus.CONFLICT, "이미 사용 중인 아이디입니다."),
 	DUPLICATE_EMAIL("E409_DUPLICATE_EMAIL", HttpStatus.CONFLICT, "이미 사용 중인 이메일입니다."),
 	DUPLICATE_NICKNAME("E409_DUPLICATE_NICKNAME", HttpStatus.CONFLICT, "이미 사용 중인 닉네임입니다."),
-
-	UNSUPPORTED_MEDIA_TYPE("E415_UNSUPPORTED_MEDIA_TYPE", HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Content-Type은 application/json 이어야 합니다."),
 
 	RATE_LIMIT_EXCEEDED("E429_RATE_LIMIT_EXCEEDED", HttpStatus.TOO_MANY_REQUESTS, "로그인 시도가 너무 많습니다. 잠시 후 다시 시도하세요."),
 

@@ -57,21 +57,21 @@ public class JwtFilter extends OncePerRequestFilter {
 						setAuthError(request, AuthErrorCode.TOKEN_EXPIRED);
 					}
 				} else {
-					setAuthError(request, AuthErrorCode.TOKEN_MALFORMED);
+					setAuthError(request, AuthErrorCode.TOKEN_INVALID);
 				}
 
 			} else {
 				boolean refreshed = tryRefreshUsingRefreshToken(request, response);
 				if (!refreshed) {
-					setAuthError(request, AuthErrorCode.AUTH_COOKIE_MISSING);
+					setAuthError(request, AuthErrorCode.TOKEN_INVALID);
 				}
 			}
 		} catch (ExpiredJwtException e) {
 			setAuthError(request, AuthErrorCode.TOKEN_EXPIRED);
 		} catch (SignatureException e) {
-			setAuthError(request, AuthErrorCode.TOKEN_SIGNATURE_INVALID);
+			setAuthError(request, AuthErrorCode.TOKEN_INVALID);
 		} catch (JwtException e) {
-			setAuthError(request, AuthErrorCode.TOKEN_MALFORMED);
+			setAuthError(request, AuthErrorCode.TOKEN_INVALID);
 		}
 
 		filterChain.doFilter(request, response);
@@ -80,22 +80,22 @@ public class JwtFilter extends OncePerRequestFilter {
 	private boolean tryRefreshUsingRefreshToken(HttpServletRequest request, HttpServletResponse response) {
 		String refreshToken = readCookie(request, RT_COOKIE);
 		if (refreshToken == null) {
-			setAuthError(request, AuthErrorCode.AUTH_COOKIE_MISSING);
+			setAuthError(request, AuthErrorCode.TOKEN_INVALID);
 			return false;
 		}
 
 		if (!jwtProvider.isValid(refreshToken)) {
-			setAuthError(request, AuthErrorCode.REFRESH_TOKEN_INVALID);
+			setAuthError(request, AuthErrorCode.TOKEN_INVALID);
 			return false;
 		}
 		if (!jwtProvider.isRefreshToken(refreshToken)) {
-			setAuthError(request, AuthErrorCode.TOKEN_TYPE_INVALID);
+			setAuthError(request, AuthErrorCode.TOKEN_INVALID);
 			return false;
 		}
 
 		Long memberId = jwtProvider.getSubjectAsLong(refreshToken); // JwtProvider에 헬퍼 추가
 		if (memberId == null) {
-			setAuthError(request, AuthErrorCode.REFRESH_TOKEN_INVALID);
+			setAuthError(request, AuthErrorCode.TOKEN_INVALID);
 			return false;
 		}
 

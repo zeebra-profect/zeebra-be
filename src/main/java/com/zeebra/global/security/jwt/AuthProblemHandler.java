@@ -41,7 +41,7 @@ public class AuthProblemHandler implements AuthenticationEntryPoint, AccessDenie
 		} else if (ex instanceof InvalidCsrfTokenException) {
 			errorCode = AuthErrorCode.CSRF_TOKEN_INVALID;
 		} else {
-			errorCode = AuthErrorCode.ACCOUNT_DISABLED; // 프로젝트의 공통 403 코드로 교체 가능
+			errorCode = AuthErrorCode.ACCOUNT_UNAVAILABLE;
 		}
 		write(response, errorCode);
 	}

@@ -3,6 +3,7 @@ package com.zeebra.global.exception;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.validation.BindException;
@@ -21,11 +22,21 @@ import lombok.extern.slf4j.Slf4j;
 @Hidden
 public class GlobalExceptionHandler {
 
+	@Value("${spring.profiles.active:prod}")
+	private String activeProfile;
+
 	@ExceptionHandler({MethodArgumentNotValidException.class, BindException.class})
 	public ResponseEntity<ApiResponse<ErrorData>> handleValidation(BindException ex) {
 		log.warn("[파라미터 오류] {}", ex.getMessage());
 		
 		CommonErrorCode errorCode = CommonErrorCode.INVALID_PARAMETER;
+
+		if (isDevelopment()) {
+			log.debug("Error details - code: {}, message: {}",
+				errorCode.getCode(),
+				errorCode.getMessage(),
+				ex);
+		}
 
 		List<ErrorDetail> errorDetails = ex.getBindingResult().getFieldErrors().stream()
 			.map(error -> new ErrorDetail(
@@ -34,7 +45,6 @@ public class GlobalExceptionHandler {
 			))
 			.collect(Collectors.toList());
 		
-		// ErrorData: code + details(List<ErrorDetail>)
 		ErrorData errorData = new ErrorData(errorCode.getCode(), errorDetails);
 		
 		return ResponseEntity
@@ -47,8 +57,14 @@ public class GlobalExceptionHandler {
 		log.warn("[권한 거부] {}", ex.getMessage());
 		
 		CommonErrorCode errorCode = CommonErrorCode.FORBIDDEN;
-		
-		// ErrorData: code + details(String)
+
+		if (isDevelopment()) {
+			log.debug("Error details - code: {}, message: {}",
+				errorCode.getCode(),
+				errorCode.getMessage(),
+				ex);
+		}
+
 		ErrorData errorData = new ErrorData(errorCode.getCode(), "접근 권한이 없습니다.");
 		
 		return ResponseEntity
@@ -62,7 +78,14 @@ public class GlobalExceptionHandler {
 
 		log.error("[비즈니스 예외] 발생: 코드 = {}, 메시지 = {}",
 			errorCode.getCode(), errorCode.getMessage());
-		
+
+		if (isDevelopment()) {
+			log.debug("Error details - code: {}, message: {}",
+				errorCode.getCode(),
+				errorCode.getMessage(),
+				ex);
+		}
+
 		ErrorData errorData = new ErrorData(errorCode.getCode(), ex.getMessage());
 
 		return ResponseEntity
@@ -76,10 +99,21 @@ public class GlobalExceptionHandler {
 		
 		CommonErrorCode errorCode = CommonErrorCode.INTERNAL_SERVER_ERROR;
 
+		if (isDevelopment()) {
+			log.debug("Error details - code: {}, message: {}",
+				errorCode.getCode(),
+				errorCode.getMessage(),
+				ex);
+		}
+
 		ErrorData errorData = new ErrorData(errorCode.getCode(), ex.getMessage());
 
 		return ResponseEntity
 			.status(errorCode.getHttpStatus())
 			.body(ApiResponse.error(errorData, errorCode.getMessage()));
+	}
+
+	private boolean isDevelopment() {
+		return "dev".equals(activeProfile) || "local".equals(activeProfile);
 	}
 }

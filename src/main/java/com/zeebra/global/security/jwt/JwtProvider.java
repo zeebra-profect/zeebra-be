@@ -94,15 +94,23 @@ public class JwtProvider {
 		}
 	}
 
+	public String getTokenType(String token) {
+		try {
+			return parse(token).getBody().get(CLAIM_TYPE, String.class);
+		} catch (JwtException e) {
+			return null;
+		}
+	}
+
 	public boolean isAccessToken(String token) {
 		try {
-			return "AccessToken".equals(parse(token).getBody().get("type", String.class));
+			return TYPE_ACCESS.equals(getTokenType(token));
 		} catch (JwtException e) { return false; }
 	}
 
 	public boolean isRefreshToken(String token) {
 		try {
-			return "RefreshToken".equals(parse(token).getBody().get("type", String.class));
+			return TYPE_REFRESH.equals(getTokenType(token));
 		} catch (JwtException e) { return false; }
 	}
 
@@ -117,13 +125,21 @@ public class JwtProvider {
 		}
 	}
 
-
 	public Long getSubjectAsLong(String token) {
 		try {
 			Jws<Claims> jws = parse(token);
 			String subject = jws.getBody().getSubject();
 			return subject != null ? Long.parseLong(subject) : null;
 		} catch (JwtException | NumberFormatException e) {
+			return null;
+		}
+	}
+
+	public Date getExpirationDate(String token) {
+		try {
+			Jws<Claims> jws = parse(token);
+			return jws.getBody().getExpiration();
+		} catch (JwtException e) {
 			return null;
 		}
 	}

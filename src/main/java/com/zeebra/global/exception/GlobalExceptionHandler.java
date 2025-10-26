@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.zeebra.global.ApiResponse;
 import com.zeebra.global.ErrorCode.CommonErrorCode;
+import com.zeebra.global.ErrorCode.RedisErrorCode;
 
 import io.swagger.v3.oas.annotations.Hidden;
 import lombok.extern.slf4j.Slf4j;
@@ -106,6 +107,18 @@ public class GlobalExceptionHandler {
 				ex);
 		}
 
+		ErrorData errorData = new ErrorData(errorCode.getCode(), ex.getMessage());
+
+		return ResponseEntity
+			.status(errorCode.getHttpStatus())
+			.body(ApiResponse.error(errorData, errorCode.getMessage()));
+	}
+
+	@ExceptionHandler(RedisException.class)
+	public ResponseEntity<ApiResponse<ErrorData>> handleRedisConnectionException(RedisException ex) {
+		log.error("Redis error: {}", ex.getMessage(), ex);
+
+		RedisErrorCode errorCode = ex.getErrorCode();
 		ErrorData errorData = new ErrorData(errorCode.getCode(), ex.getMessage());
 
 		return ResponseEntity

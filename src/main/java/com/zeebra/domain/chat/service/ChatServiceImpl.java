@@ -27,7 +27,7 @@ public class ChatServiceImpl implements ChatService {
     private final ChatRoomMemberRepository chatRoomMemberRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final TradeRepository tradeRepository;
-    //private final TradeRepository tradeRepository;
+
 
     @Override
     @Transactional
@@ -127,6 +127,11 @@ public class ChatServiceImpl implements ChatService {
         Page<ChatMessage> messagePage = chatMessageRepository.findByChatRoomMemberChatRoomId(roomId, pageable);
         return messagePage.map(ChatMessageResponseDto::from);
     }
+
+    @Override
+    @Transactional
+    public void leaveChatRoom
+
 
     @Override
     @Transactional

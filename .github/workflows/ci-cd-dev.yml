@@ -102,7 +102,7 @@ jobs:
             --comment "Deploy ${IMAGE_URI}" \
             $TARGET_OPT \
             --parameters commands='[
-              "set -euo pipefail",
+              "set -eu",
               "sudo mkdir -p /opt/app && sudo mkdir -p /opt/env && sudo chown -R ubuntu:ubuntu /opt",
               "aws ecr get-login-password --region '"$AWS_REGION"' | docker login --username AWS --password-stdin '"$ECR_REPO"'",
 

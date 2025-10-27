@@ -12,6 +12,7 @@ import com.zeebra.domain.product.repository.ProductQueryRepository;
 import com.zeebra.domain.product.repository.ProductRepository;
 import com.zeebra.domain.product.repository.SalesRepository;
 import com.zeebra.domain.product.service.ProductServiceImpl;
+import com.zeebra.global.ApiResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,18 +36,24 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class ProductServiceImplTest {
 
-    @Mock private ProductRepository productRepository;
-    @Mock private ProductQueryRepository productQueryRepository;
-    @Mock private SalesRepository salesRepository;
-    @Mock private ProductOptionRepository productOptionRepository;
-    @Mock private MemberRepository memberRepository;
-    @Mock private FavoriteProductRepository favoriteProductRepository;
+    @Mock
+    private ProductRepository productRepository;
+    @Mock
+    private ProductQueryRepository productQueryRepository;
+    @Mock
+    private SalesRepository salesRepository;
+    @Mock
+    private ProductOptionRepository productOptionRepository;
+    @Mock
+    private MemberRepository memberRepository;
+    @Mock
+    private FavoriteProductRepository favoriteProductRepository;
 
     @InjectMocks
     private ProductServiceImpl productService;
 
     private static final Long PRODUCT_ID = 1L;
-    private static final Long MEMBER_ID  = 7L;
+    private static final Long MEMBER_ID = 7L;
     private static final BigDecimal LOW_PRICE = new BigDecimal("29900");
 
     private Product createMockProduct() {
@@ -77,17 +84,17 @@ class ProductServiceImplTest {
         when(productQueryRepository.lowPriceOfProduct(PRODUCT_ID)).thenReturn(LOW_PRICE);
 
         // when
-        ProductDetailResponse response = productService.getProductDetail(PRODUCT_ID);
+        ApiResponse<ProductDetailResponse> productDetail = productService.getProductDetail(PRODUCT_ID);
 
         // then
-        assertNotNull(response);
-        assertEquals(PRODUCT_ID, response.productId());
-        assertEquals(1L, response.brandId());
-        assertEquals(1L, response.categoryId());
-        assertEquals("에어포스 1", response.productName());
-        assertEquals(LOW_PRICE, response.lowPrice());
-        assertEquals(150, response.reviewCount());
-        assertEquals(3200, response.favoriteProductCount());
+        assertNotNull(productDetail);
+        assertEquals(PRODUCT_ID, productDetail.getData().productId());
+        assertEquals(1L, productDetail.getData().brandId());
+        assertEquals(1L, productDetail.getData().categoryId());
+        assertEquals("에어포스 1", productDetail.getData().productName());
+        assertEquals(LOW_PRICE, productDetail.getData().lowPrice());
+        assertEquals(150, productDetail.getData().reviewCount());
+        assertEquals(3200, productDetail.getData().favoriteProductCount());
 
         verify(productRepository).findById(PRODUCT_ID);
         verify(productQueryRepository).lowPriceOfProduct(PRODUCT_ID);
@@ -130,7 +137,7 @@ class ProductServiceImplTest {
                 .thenAnswer(inv -> inv.getArgument(0));
 
         // when
-        FavoriteProductResponse resp = productService.addFavoriteProduct(MEMBER_ID, PRODUCT_ID);
+        ApiResponse<FavoriteProductResponse> favoriteProductResponseApiResponse = productService.addFavoriteProduct(MEMBER_ID, PRODUCT_ID);
 
         // then - 저장 인수 검증
         FavoriteProduct saved = captor.getValue();
@@ -138,9 +145,9 @@ class ProductServiceImplTest {
         assertEquals(PRODUCT_ID, saved.getProductId());
 
         // then - 반환 DTO(현 구현 기준: productId가 두 번 들어감)에 대한 최소 검증
-        assertNotNull(resp);
-        assertEquals(PRODUCT_ID, resp.productId());
-        assertEquals(MEMBER_ID, resp.memberId());
+        assertNotNull(favoriteProductResponseApiResponse);
+        assertEquals(PRODUCT_ID, favoriteProductResponseApiResponse.getData().productId());
+        assertEquals(MEMBER_ID, favoriteProductResponseApiResponse.getData().memberId());
 
         // 상호작용 검증
         InOrder inOrder = inOrder(memberRepository, productRepository, favoriteProductRepository);
@@ -188,6 +195,7 @@ class ProductServiceImplTest {
 
         verifyNoInteractions(favoriteProductRepository);
     }
+
     @Test
     @DisplayName("deleteFavoriteProduct 성공: 회원/상품/관심상품 존재 시 삭제된다")
     void deleteFavoriteProduct_success() {

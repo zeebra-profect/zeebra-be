@@ -14,6 +14,7 @@ import com.zeebra.domain.product.repository.OptionCombinationRepository;
 import com.zeebra.domain.product.repository.ProductOptionRepository;
 import com.zeebra.domain.product.repository.SalesQueryRepository;
 import com.zeebra.global.ApiResponse;
+import lombok.Locked;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -68,6 +69,25 @@ public class CartServiceImp implements CartService {
             return ApiResponse.error(null, e.getMessage());
         } catch (Exception e) {
             return ApiResponse.error(null, "장바구니에 상품을 담는 과정에서 오류가 발생했습니다.");
+        }
+    }
+
+    @Override
+    @Transactional
+    public ApiResponse<Void> deleteCartItem(Long memberId, Long cartItemId) {
+        try {
+            Member member = memberRepository.findById(memberId).orElseThrow(
+                    () -> new NoSuchElementException("해당하는 사용자가 없습니다."));
+
+            CartItem cartItem = cartItemRepository.findById(cartItemId).orElseThrow(
+                    () -> new NoSuchElementException("해당하는 장바구니 상품이 없습니다."));
+
+            cartItemRepository.delete(cartItem);
+            return ApiResponse.successMessage("장바구니에서 상품을 삭제하는데 성공했습니다.");
+        } catch (NoSuchElementException e) {
+            return ApiResponse.error(null, e.getMessage());
+        } catch (Exception e) {
+            return ApiResponse.error(null, "장바구니에서 상품을 삭제하는 과정에서 오류가 발생했습니다.");
         }
     }
 }

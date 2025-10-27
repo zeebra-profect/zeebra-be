@@ -13,6 +13,7 @@ import com.zeebra.domain.product.entity.ProductOption;
 import com.zeebra.domain.product.repository.OptionCombinationRepository;
 import com.zeebra.domain.product.repository.ProductOptionRepository;
 import com.zeebra.domain.product.repository.SalesQueryRepository;
+import com.zeebra.global.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -33,21 +34,40 @@ public class CartServiceImp implements CartService {
     private final ProductOptionRepository productOptionRepository;
     private final SalesQueryRepository salesQueryRepository;
 
-    @Transactional
-    @Override
-    public CartResponse addCartItem(Long memberId, Long productOptionId, CartRequest request) {
-        Member member = memberRepository.findById(memberId).orElseThrow(
-                () -> new NoSuchElementException("해당하는 사용자가 존재하지 않습니다."));
-        Cart cart = cartRepository.findByMemberId(member.getId()).orElseThrow(
-                () -> new NoSuchElementException("해당하는 장바구니가 존재하지 않습니다."));
-        ProductOption productOption = productOptionRepository.findById(productOptionId).orElseThrow(
-                () -> new NoSuchElementException("해당하는 상품 옵션이 없습니다."));
-        BigDecimal snapShotPrice = salesQueryRepository.cheapestSalesPrice(productOption.getId());
-        CartItem cartItem = cartItemRepository.save(new CartItem(
+    private CartResponse toCartResponse(CartItem cartItem) {
+        return new CartResponse(cartItem.getCartId());
+    }
+
+    private CartItem toCartItem(Cart cart, ProductOption productOption, BigDecimal snapShotPrice, CartRequest request) {
+        return new CartItem(
                 cart.getId(),
                 productOption.getId(),
                 snapShotPrice,
-                request.quantity()));
-        return new CartResponse(cartItem.getCartId());
+                request.quantity());
+    }
+
+    @Transactional
+    @Override
+    public ApiResponse<CartResponse> addCartItem(Long memberId, Long productOptionId, CartRequest request) {
+        try {
+            Member member = memberRepository.findById(memberId).orElseThrow(
+                    () -> new NoSuchElementException("해당하는 사용자가 존재하지 않습니다."));
+
+            Cart cart = cartRepository.findByMemberId(member.getId()).orElseThrow(
+                    () -> new NoSuchElementException("해당하는 장바구니가 존재하지 않습니다."));
+
+            ProductOption productOption = productOptionRepository.findById(productOptionId).orElseThrow(
+                    () -> new NoSuchElementException("해당하는 상품 옵션이 없습니다."));
+
+            BigDecimal snapShotPrice = salesQueryRepository.cheapestSalesPrice(productOption.getId());
+
+            CartItem cartItem = toCartItem(cart, productOption, snapShotPrice, request);
+
+            return ApiResponse.success(toCartResponse(cartItem));
+        } catch (NoSuchElementException e) {
+            return ApiResponse.error(null, e.getMessage());
+        } catch (Exception e) {
+            return ApiResponse.error(null, "장바구니에 상품을 담는 과정에서 오류가 발생했습니다.");
+        }
     }
 }

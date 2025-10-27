@@ -1,21 +1,32 @@
 package com.zeebra.domain.chat.service;
 
-import com.zeebra.domain.chat.dto.*;
-import com.zeebra.domain.chat.entity.*;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Objects;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.zeebra.domain.chat.dto.ChatMessageRequestDto;
+import com.zeebra.domain.chat.dto.ChatMessageResponseDto;
+import com.zeebra.domain.chat.dto.ChatRoomRequestDto;
+import com.zeebra.domain.chat.dto.ChatRoomResponseDto;
+import com.zeebra.domain.chat.dto.TradeRequestDto;
+import com.zeebra.domain.chat.dto.TradeResponseDto;
+import com.zeebra.domain.chat.entity.ChatMessage;
+import com.zeebra.domain.chat.entity.ChatRoom;
+import com.zeebra.domain.chat.entity.ChatRoomMember;
+import com.zeebra.domain.chat.entity.ChatRoomType;
+import com.zeebra.domain.chat.entity.Trade;
 import com.zeebra.domain.chat.repository.ChatMessageRepository;
 import com.zeebra.domain.chat.repository.ChatRoomMemberRepository;
 import com.zeebra.domain.chat.repository.ChatRoomRepository;
 import com.zeebra.domain.chat.repository.TradeRepository;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.transaction.annotation.Transactional;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Objects;
 
 @Slf4j
 @Service
@@ -100,7 +111,6 @@ public class ChatServiceImpl implements ChatService {
         return ChatRoomResponseDto.from(chatRoom);
     }
 
-    @Override
     @Transactional
     public ChatMessageResponseDto saveMessage(ChatMessageRequestDto chatMessageRequestDto, Long currentMemberId) {
 
@@ -121,14 +131,12 @@ public class ChatServiceImpl implements ChatService {
         return ChatMessageResponseDto.from(savedMessage);
     }
 
-    @Override
     @Transactional(readOnly = true)
     public Page<ChatMessageResponseDto> getChatHistory(Long roomId, Pageable pageable){
         Page<ChatMessage> messagePage = chatMessageRepository.findByChatRoomMemberChatRoomId(roomId, pageable);
         return messagePage.map(ChatMessageResponseDto::from);
     }
 
-    @Override
     @Transactional
     public void leaveChatRoom
 

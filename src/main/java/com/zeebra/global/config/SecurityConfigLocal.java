@@ -11,7 +11,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 
 import com.zeebra.global.security.jwt.AuthProblemHandler;
 import com.zeebra.global.security.jwt.JwtFilter;
@@ -22,8 +21,8 @@ import lombok.RequiredArgsConstructor;
 @EnableWebSecurity
 @EnableMethodSecurity
 @RequiredArgsConstructor
-@Profile("!local")
-public class SecurityConfig {
+@Profile("local")
+public class SecurityConfigLocal {
 
 	private static final String[] SWAGGER_WHITELIST = {
 		"/swagger-ui.html",
@@ -42,9 +41,12 @@ public class SecurityConfig {
 		http
 			.authorizeHttpRequests(auth -> auth
 				.requestMatchers(SWAGGER_WHITELIST).permitAll()
-				.requestMatchers("/api/auth/**", "/api/products", "/api/products/**").permitAll()
-				.anyRequest().authenticated())
-			.csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
+				// .requestMatchers("/api/auth/**", "/api/products", "/api/products/**").permitAll()
+				// 임시로 모든 api 허용
+				.requestMatchers("/api/**").permitAll()
+				.anyRequest().authenticated()
+			)
+			.csrf(AbstractHttpConfigurer::disable)
 			.formLogin(AbstractHttpConfigurer::disable)
 			.httpBasic(AbstractHttpConfigurer::disable)
 			.exceptionHandling(ex -> ex

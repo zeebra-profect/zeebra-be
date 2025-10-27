@@ -26,7 +26,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @EqualsAndHashCode(of = "id")
 @Table(name = "members")
-public class Member extends BaseEntity {
+public class Member extends BaseEntity{
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -75,7 +75,7 @@ public class Member extends BaseEntity {
     private Integer totalPoint = 0;
 
 	@Builder
-	public Member(String userLoginId, String memberName, String memberEmail, String nickname, LocalDate birth, Gender gender, String passwordHash, Role role,String memberImage, Integer totalPoint){
+	public Member(String userLoginId, String memberName, String memberEmail, String nickname, LocalDate birth, Gender gender, String passwordHash, Role role, String memberImage, Integer totalPoint){
 		this.userLoginId = userLoginId;
 		this.memberName = memberName;
 		this.memberEmail = memberEmail;
@@ -113,5 +113,13 @@ public class Member extends BaseEntity {
 
 	public void softDelete() {
 		this.deletedAt = LocalDateTime.now();
+	}
+
+	public boolean isDeleted() {
+		return this.deletedAt != null;
+	}
+
+	public boolean isActive() {
+		return this.deletedAt == null;
 	}
 }

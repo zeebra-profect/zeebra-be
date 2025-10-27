@@ -2,6 +2,8 @@ package com.zeebra.domain.product.controller;
 
 import com.zeebra.domain.product.dto.FavoriteProductResponse;
 import com.zeebra.domain.product.dto.ProductDetailResponse;
+import com.zeebra.domain.product.dto.ProductRequest;
+import com.zeebra.domain.product.dto.ProductResponse;
 import com.zeebra.domain.product.service.ProductService;
 import com.zeebra.domain.product.service.ProductServiceImpl;
 import com.zeebra.global.ApiResponse;
@@ -28,14 +30,23 @@ public class ProductRestController {
     }
 
     @PostMapping("/api/favorite-products/{productId}")
-    public ApiResponse<FavoriteProductResponse> addFavoriteProduct(@AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal, @PathVariable Long productId) {
+    public ApiResponse<FavoriteProductResponse> addFavoriteProduct(@AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal,
+                                                                   @PathVariable Long productId) {
         Long memberId = principal.getMemberId();
         return productService.addFavoriteProduct(memberId, productId);
     }
 
     @DeleteMapping("/api/favorite-products/{productId}")
-    public ApiResponse<Void> deleteFavoriteProduct(@AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal, Long productId) {
+    public ApiResponse<Void> deleteFavoriteProduct(@AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal,
+                                                   @PathVariable Long productId) {
         Long memberId = principal.getMemberId();
         return productService.deleteFavoriteProduct(memberId, productId);
+    }
+
+    @PostMapping("/api/products")
+    public ApiResponse<ProductResponse> createProduct(@AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal
+            , @RequestBody ProductRequest request) {
+        Long memberId = principal.getMemberId();
+        return productService.createProduct(memberId, request);
     }
 }

@@ -40,9 +40,8 @@ public class Product extends BaseEntity {
 
     private LocalDateTime deletedAt;
 
-    public Product(Long id, Long brandId, Long categoryId, String name, String description, String modelNumber,
-                   String thumbnail, List<String> images, int reviewCount, int favoriteProductCount, LocalDateTime deletedAt) {
-        this.id = id;
+    public Product(Long brandId, Long categoryId, String name, String description, String modelNumber,
+                   String thumbnail, List<String> images) {
         this.brandId = brandId;
         this.categoryId = categoryId;
         this.name = name;
@@ -50,8 +49,5 @@ public class Product extends BaseEntity {
         this.modelNumber = modelNumber;
         this.thumbnail = thumbnail;
         this.images = images;
-        this.reviewCount = reviewCount;
-        this.favoriteProductCount = favoriteProductCount;
-        this.deletedAt = deletedAt;
     }
 }

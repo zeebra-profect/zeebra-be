@@ -1,0 +1,29 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      password: ${SPRING_DATA_REDIS_PASSWORD:}
+
+  server:
+    port: 8080
+
+jwt:
+  secret-key: ${JWT_SECRET}
+  issuer: ${JWT_ISSUER}
+  clockSkewSec: ${JWT_CLOCK_SKEW_SEC}
+
+logging:
+  level:
+    org.springdoc: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.http.converter: DEBUG
+
+springdoc:
+  packages-to-scan: com.zeebra

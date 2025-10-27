@@ -26,8 +26,8 @@ public class CartRestController {
 
     @DeleteMapping("/api/carts/{cartItemId}")
     public ApiResponse<Void> deleteCartItem(@AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal,
-                                            @PathVariable Long cartItemId) {
+                                            @PathVariable Long productOptionId) {
         Long memberId = principal.getMemberId();
-        return cartService.deleteCartItem(memberId, cartItemId);
+        return cartService.deleteCartItem(memberId, productOptionId);
     }
 }

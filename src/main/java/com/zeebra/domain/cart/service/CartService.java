@@ -8,5 +8,6 @@ public interface CartService {
 
     public ApiResponse<CartResponse> addCartItem(Long memberId, Long productOptionId, CartRequest request);
 
+    public ApiResponse<Void> deleteCartItem(Long memberId, Long cartItemId);
 }
 

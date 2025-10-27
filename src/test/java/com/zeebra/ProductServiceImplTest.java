@@ -58,17 +58,13 @@ class ProductServiceImplTest {
 
     private Product createMockProduct() {
         return new Product(
-                PRODUCT_ID,
                 1L,
                 1L,
                 "에어포스 1",
                 "클래식 스니커즈",
                 "CW2288-111",
                 "https://example.com/thumbnail.jpg",
-                List.of("img1.jpg", "img2.jpg"),
-                150,
-                3200,
-                LocalDateTime.now()
+                List.of("img1.jpg", "img2.jpg")
         );
     }
 

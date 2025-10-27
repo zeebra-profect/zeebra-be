@@ -1,15 +1,19 @@
 package com.zeebra.domain.product.service;
 
 import com.zeebra.domain.member.entity.Member;
+import com.zeebra.domain.member.entity.Role;
 import com.zeebra.domain.member.repository.MemberRepository;
 import com.zeebra.domain.product.dto.FavoriteProductResponse;
 import com.zeebra.domain.product.dto.ProductDetailResponse;
+import com.zeebra.domain.product.dto.ProductRequest;
+import com.zeebra.domain.product.dto.ProductResponse;
 import com.zeebra.domain.product.entity.FavoriteProduct;
 import com.zeebra.domain.product.entity.Product;
 import com.zeebra.domain.product.repository.*;
 import com.zeebra.global.ApiResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -52,6 +56,31 @@ public class ProductServiceImpl implements ProductService {
                 favoriteProduct.getProductId(),
                 favoriteProduct.getMemberId(),
                 favoriteProduct.getCreatedTime());
+    }
+
+    private Product toProduct(ProductRequest request) {
+        return new Product(
+                request.brandId(),
+                request.categoryId(),
+                request.productName(),
+                request.productDescription(),
+                request.modelName(),
+                request.productThumbnail(),
+                request.productImages()
+        );
+    }
+
+    private ProductResponse toProductResponse(Product product) {
+        return new ProductResponse(
+                product.getId(),
+                product.getBrandId(),
+                product.getCategoryId(),
+                product.getName(),
+                product.getDescription(),
+                product.getModelNumber(),
+                product.getThumbnail(),
+                product.getImages(),
+                product.getCreatedTime());
     }
 
     @Override
@@ -109,6 +138,24 @@ public class ProductServiceImpl implements ProductService {
             return ApiResponse.error(null, e.getMessage());
         } catch (Exception e) {
             return ApiResponse.error(null, "상품 삭제 과정에서 오류가 발생했습니다.");
+        }
+    }
+
+    @Override
+    @Transactional
+    public ApiResponse<ProductResponse> createProduct(Long memberId, ProductRequest request) {
+        try {
+            Member member = memberRepository.findById(memberId).orElseThrow(
+                    () -> new NoSuchElementException("해당하는 사용자가 없습니다."));
+            if (member.getRole() != Role.ADMIN) {
+                return ApiResponse.error(null, "상품은 관리자만 생성할 수 있습니다.");
+            }
+            Product product = productRepository.save(toProduct(request));
+            return ApiResponse.success(toProductResponse(product));
+        } catch (NoSuchElementException e) {
+            return ApiResponse.error(null, e.getMessage());
+        } catch (Exception e) {
+            return ApiResponse.error(null, "상품을 등록하는 과정에서 오류가 발생했습니다.");
         }
     }
 }

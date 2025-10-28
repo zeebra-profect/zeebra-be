@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @Slf4j
-public class CategoryRestController {
+public class CategoryController {
 
     private final CategoryService categoryService;
 

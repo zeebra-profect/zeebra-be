@@ -5,17 +5,15 @@ import com.zeebra.domain.product.dto.ProductDetailResponse;
 import com.zeebra.domain.product.dto.ProductRequest;
 import com.zeebra.domain.product.dto.ProductResponse;
 import com.zeebra.domain.product.service.ProductService;
-import com.zeebra.domain.product.service.ProductServiceImpl;
 import com.zeebra.global.ApiResponse;
 import com.zeebra.global.security.jwt.JwtProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
 @RequiredArgsConstructor
 @RestController
-public class ProductRestController {
+public class ProductController {
 
     private final ProductService productService;
 

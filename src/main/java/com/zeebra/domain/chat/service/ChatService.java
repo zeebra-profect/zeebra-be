@@ -26,7 +26,7 @@ public interface ChatService {
     /**
      * 채팅방 메세지 조회
      */
-    Page<ChatMessageResponseDto> getChatHistory(Long chatRoomId, Pageable pageable);
+    Page<ChatMessageResponseDto> getChatHistory(Long chatRoomId, Long currentMemberId, Pageable pageable);
 
     /**
      * 채팅방 나가기

@@ -4,6 +4,13 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
 
+import com.sun.jdi.connect.IllegalConnectorArgumentsException;
+import com.zeebra.domain.member.entity.Member;
+import com.zeebra.domain.member.repository.MemberRepository;
+import com.zeebra.domain.product.entity.Sales;
+import com.zeebra.domain.product.repository.ProductRepository;
+import com.zeebra.domain.product.repository.SalesRepository;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -39,6 +46,10 @@ public class ChatServiceImpl implements ChatService {
     private final ChatMessageRepository chatMessageRepository;
     private final TradeRepository tradeRepository;
 
+    private final MemberRepository memberRepository;
+    private final ProductRepository productRepository;
+    private final SalesRepository salesRepository;
+
 
     @Override
     @Transactional
@@ -64,9 +75,12 @@ public class ChatServiceImpl implements ChatService {
         } else if (chatRoomRequestDto.getSaleId() != null) {
             Long saleId = chatRoomRequestDto.getSaleId();
 
-            //Sale 서비스 호출해서 판매자 ID 가져오기
+            //추후 MSA 패턴 고도화 시 Sale 서비스 호출해서 판매자 ID 가져오기
             //Long user1 = saleServiceApi.getSellerIdBySaleId(saleId);
-            Long user1 = 123L; // 임시
+            Sales sales = salesRepository.findById(saleId)
+                    .orElseThrow(() -> new EntityNotFoundException("판매 글을 찾을 수 없습니다."));
+
+            Long user1 = sales.getMemberId();
             Long user2 = currentMemberId;
 
             if (Objects.equals(user1, user2)) {
@@ -91,15 +105,22 @@ public class ChatServiceImpl implements ChatService {
                         // String buyerName = memberServiceApi.getMemberName(buyerId);
                         // String sellerName = memberServiceApi.getMemberName(sellerId);
 
+                        Member memberUser1 = memberRepository.findByIdAndDeletedAtIsNull(user1)
+                                .orElseThrow(() -> new EntityNotFoundException("유저를 찾을 수 없습니다."));
+                        Member memberUser2 = memberRepository. findByIdAndDeletedAtIsNull(user2)
+                                .orElseThrow(() -> new EntityNotFoundException("유저를 찾을 수 없습니다."));
+
+
+
                         ChatRoomMember dmUser1 = ChatRoomMember.builder()
                                 .chatRoom(newRoom)
                                 .memberId(user1)
-                                .memberName("user1") //임시
+                                .memberName(memberUser1.getNickname()) //임시
                                 .build();
                         ChatRoomMember dmUser2 = ChatRoomMember.builder()
                                 .chatRoom(newRoom)
                                 .memberId(user2)
-                                .memberName("user2") //임시
+                                .memberName(memberUser2.getNickname()) //임시
                                 .build();
                         chatRoomMemberRepository.saveAll(List.of(dmUser1, dmUser2));
 
@@ -132,13 +153,21 @@ public class ChatServiceImpl implements ChatService {
     }
 
     @Transactional(readOnly = true)
-    public Page<ChatMessageResponseDto> getChatHistory(Long roomId, Pageable pageable){
+    public Page<ChatMessageResponseDto> getChatHistory(Long roomId, Long currentUserId, Pageable pageable){
         Page<ChatMessage> messagePage = chatMessageRepository.findByChatRoomMemberChatRoomId(roomId, pageable);
         return messagePage.map(ChatMessageResponseDto::from);
     }
 
     @Transactional
-    public void leaveChatRoom
+    public void leaveChatRoom(Long chatRoomId, Long currentMemberId) {
+        ChatRoomMember member = chatRoomMemberRepository.findByChatRoomIdAndMemberId(chatRoomId, currentMemberId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 채팅방의 멤버가 아닙니다"));
+
+        if (member.getChatRoom().getChatRoomType() == ChatRoomType.GROUP) {
+            throw new IllegalArgumentException("그룹 채팅방은 나갈 수 없습니다.");
+        }
+        member.leave();
+    }
 
 
     @Override
@@ -166,6 +195,9 @@ public class ChatServiceImpl implements ChatService {
                 .orElseGet(() -> {
                     // Member 서비스에서 닉네임 조회
                     // String memberName = memberService.Api.getMemberName(memberId);
+                    Member member = memberRepository.findByIdAndDeletedAtIsNull(currentMemberId)
+                            .orElseThrow(() -> new EntityNotFoundException("멤버 정보를 찾을 수 없습니다."));
+
                     ChatRoomMember newMember   = ChatRoomMember.builder()
                             .chatRoom(chatRoom)
                             .memberId(currentMemberId)

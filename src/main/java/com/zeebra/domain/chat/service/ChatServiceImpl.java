@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
 
-import com.sun.jdi.connect.IllegalConnectorArgumentsException;
 import com.zeebra.domain.member.entity.Member;
 import com.zeebra.domain.member.repository.MemberRepository;
 import com.zeebra.domain.product.entity.Sales;
@@ -201,7 +200,7 @@ public class ChatServiceImpl implements ChatService {
                     ChatRoomMember newMember   = ChatRoomMember.builder()
                             .chatRoom(chatRoom)
                             .memberId(currentMemberId)
-                            .memberName("임시 닉네임")
+                            .memberName(member.getNickname())
                             .build();
                     return chatRoomMemberRepository.save(newMember);
                 });

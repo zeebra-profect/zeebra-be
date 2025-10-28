@@ -11,12 +11,12 @@ spring:
       port: ${SPRING_DATA_REDIS_PORT:6379}
       password: ${SPRING_DATA_REDIS_PASSWORD:}
 
-  server:
-    port: 8080
+server:
+  port: 8080
 
 jwt:
   secret-key: ${JWT_SECRET}
-  issuer: ${JWT_ISSUER}
+  issuer: ${JWT_ISSUER:zeebra-auth}
   clockSkewSec: ${JWT_CLOCK_SKEW_SEC}
 
 logging:
@@ -27,3 +27,10 @@ logging:
 
 springdoc:
   packages-to-scan: com.zeebra
+
+spring.jpa:
+  hibernate.ddl-auto: update
+  open-in-view: false
+  properties:
+    hibernate.format_sql: true
+  show-sql: false

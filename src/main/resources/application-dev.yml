@@ -15,4 +15,22 @@ server:
   port: 8080
 
 jwt:
-  secret-key: ${JWT_SECRET_KEY}
+  secret-key: ${JWT_SECRET}
+  issuer: ${JWT_ISSUER:zeebra-auth}
+  clockSkewSec: ${JWT_CLOCK_SKEW_SEC}
+
+logging:
+  level:
+    org.springdoc: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.http.converter: DEBUG
+
+springdoc:
+  packages-to-scan: com.zeebra
+
+spring.jpa:
+  hibernate.ddl-auto: update
+  open-in-view: false
+  properties:
+    hibernate.format_sql: true
+  show-sql: false

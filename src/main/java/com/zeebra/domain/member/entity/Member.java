@@ -26,7 +26,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @EqualsAndHashCode(of = "id")
 @Table(name = "members")
-public class Member extends BaseEntity{
+public class Member extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -74,52 +74,56 @@ public class Member extends BaseEntity{
     @Column(name = "total_point", nullable = false)
     private Integer totalPoint = 0;
 
-	@Builder
-	public Member(String userLoginId, String memberName, String memberEmail, String nickname, LocalDate birth, Gender gender, String passwordHash, Role role, String memberImage, Integer totalPoint){
-		this.userLoginId = userLoginId;
-		this.memberName = memberName;
-		this.memberEmail = memberEmail;
-		this.nickname = nickname;
-		this.birth = birth;
-		this.gender = gender;
-		this.passwordHash = passwordHash;
-		this.role = role != null ? role : Role.USER;
-		this.memberImage = memberImage;
-		this.totalPoint = totalPoint != null ? totalPoint : 0;
-	}
+    @Builder
+    public Member(String userLoginId, String memberName, String memberEmail, String nickname, LocalDate birth, Gender gender, String passwordHash, Role role, String memberImage, Integer totalPoint) {
+        this.userLoginId = userLoginId;
+        this.memberName = memberName;
+        this.memberEmail = memberEmail;
+        this.nickname = nickname;
+        this.birth = birth;
+        this.gender = gender;
+        this.passwordHash = passwordHash;
+        this.role = role != null ? role : Role.USER;
+        this.memberImage = memberImage;
+        this.totalPoint = totalPoint != null ? totalPoint : 0;
+    }
 
-	public static Member createMember(String userLoginId, String memberName, String memberEmail, String nickname, LocalDate birth, Gender gender, String passwordHash) {
-		return Member.builder()
-				.userLoginId(userLoginId)
-				.memberName(memberName)
-				.memberEmail(memberEmail)
-				.nickname(nickname)
-				.birth(birth)
-				.gender(gender)
-				.passwordHash(passwordHash)
-				.role(Role.USER)
-				.build();
-	}
+    public static Member createMember(String userLoginId, String memberName, String memberEmail, String nickname, LocalDate birth, Gender gender, String passwordHash) {
+        return Member.builder()
+                .userLoginId(userLoginId)
+                .memberName(memberName)
+                .memberEmail(memberEmail)
+                .nickname(nickname)
+                .birth(birth)
+                .gender(gender)
+                .passwordHash(passwordHash)
+                .role(Role.USER)
+                .build();
+    }
 
-	private static String normalizeEmail(String email) {
-		return (email == null) ? null : email.trim().toLowerCase();
-	}
+    private static String normalizeEmail(String email) {
+        return (email == null) ? null : email.trim().toLowerCase();
+    }
 
-	@PrePersist
-	@PreUpdate
-	private void onPersistOrUpdate() {
-		this.memberEmail = normalizeEmail(this.memberEmail);
-	}
+    @PrePersist
+    @PreUpdate
+    private void onPersistOrUpdate() {
+        this.memberEmail = normalizeEmail(this.memberEmail);
+    }
 
-	public void softDelete() {
-		this.deletedAt = LocalDateTime.now();
-	}
+    public void softDelete() {
+        this.deletedAt = LocalDateTime.now();
+    }
 
-	public boolean isDeleted() {
-		return this.deletedAt != null;
-	}
+    public boolean isDeleted() {
+        return this.deletedAt != null;
+    }
 
-	public boolean isActive() {
-		return this.deletedAt == null;
-	}
+    public boolean isActive() {
+        return this.deletedAt == null;
+    }
+
+    public boolean isAdmin() {
+        return this.role == Role.ADMIN;
+    }
 }

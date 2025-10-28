@@ -14,7 +14,7 @@ COPY . .
 RUN ./gradlew clean bootJar -x test --no-daemon
 
 # ---------- Runtime stage ----------
-FROM eclipse-temurin:21.0.8_7-jre-jammy
+FROM eclipse-temurin:21-jre-jammy
 
 ENV TZ=Asia/Seoul LANG=C.UTF-8
 WORKDIR /app

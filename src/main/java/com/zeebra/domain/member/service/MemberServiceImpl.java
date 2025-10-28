@@ -1,5 +1,7 @@
 package com.zeebra.domain.member.service;
 
+import com.zeebra.domain.notification.event.MemberSignUpEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +21,7 @@ public class MemberServiceImpl implements MemberService{
 
 	private final MemberRepository memberRepository;
 	private final PasswordEncoder passwordEncoder;
+    private final ApplicationEventPublisher eventPublisher;
 
 	@Transactional
 	public SignupResponse register(SignupRequest request) {
@@ -45,6 +48,7 @@ public class MemberServiceImpl implements MemberService{
 			request.nickname(), request.memberBirth(), request.memberGender(), encodedPassword);
 
 		Member saved = memberRepository.save(member);
+        eventPublisher.publishEvent(new MemberSignUpEvent(member.getId(), member.getNickname()));
 
 		return SignupResponse.of(saved);
 	}

@@ -2,9 +2,14 @@ package com.zeebra.domain.product.controller;
 
 import com.zeebra.domain.product.dto.FavoriteProductResponse;
 import com.zeebra.domain.product.dto.ProductDetailResponse;
+import com.zeebra.domain.product.dto.ProductRequest;
+import com.zeebra.domain.product.dto.ProductResponse;
 import com.zeebra.domain.product.service.ProductService;
 import com.zeebra.domain.product.service.ProductServiceImpl;
+import com.zeebra.global.ApiResponse;
+import com.zeebra.global.security.jwt.JwtProvider;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,17 +25,28 @@ public class ProductRestController {
 //    }
 
     @GetMapping("/api/products/{productId}")
-    public ProductDetailResponse getProductDetail(@PathVariable Long productId) {
+    public ApiResponse<ProductDetailResponse> getProductDetail(@PathVariable Long productId) {
         return productService.getProductDetail(productId);
     }
 
     @PostMapping("/api/favorite-products/{productId}")
-    public FavoriteProductResponse addFavoriteProduct(Long memberId, @PathVariable Long productId) {
+    public ApiResponse<FavoriteProductResponse> addFavoriteProduct(@AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal,
+                                                                   @PathVariable Long productId) {
+        Long memberId = principal.getMemberId();
         return productService.addFavoriteProduct(memberId, productId);
     }
 
     @DeleteMapping("/api/favorite-products/{productId}")
-    public void deleteFavoriteProduct(Long memberId, Long productId) {
-        productService.deleteFavoriteProduct(memberId, productId);
+    public ApiResponse<Void> deleteFavoriteProduct(@AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal,
+                                                   @PathVariable Long productId) {
+        Long memberId = principal.getMemberId();
+        return productService.deleteFavoriteProduct(memberId, productId);
+    }
+
+    @PostMapping("/api/products")
+    public ApiResponse<ProductResponse> createProduct(@AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal
+            , @RequestBody ProductRequest request) {
+        Long memberId = principal.getMemberId();
+        return productService.createProduct(memberId, request);
     }
 }

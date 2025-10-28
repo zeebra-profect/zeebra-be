@@ -23,7 +23,7 @@ public class Review extends BaseEntity {
 
     private Long productOptionId;
 
-    private List<String> images;
+    private List<String> images; //현재 이코드는 정규화상 문제가 있음
 
     private String content;
 

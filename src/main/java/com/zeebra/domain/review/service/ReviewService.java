@@ -4,16 +4,20 @@ import com.zeebra.domain.member.entity.Member;
 import com.zeebra.domain.member.repository.MemberRepository;
 import com.zeebra.domain.product.entity.ProductOption;
 import com.zeebra.domain.product.repository.ProductOptionRepository;
+import com.zeebra.domain.review.dto.ReviewFindReqDto;
 import com.zeebra.domain.review.dto.ReviewRequest;
 import com.zeebra.domain.review.dto.ReviewResponse;
 import com.zeebra.domain.review.entity.Review;
 import com.zeebra.domain.review.repository.ReviewLikeRepository;
 import com.zeebra.domain.review.repository.ReviewRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.NoSuchElementException;
+import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ReviewService {
@@ -31,7 +35,30 @@ public class ReviewService {
                 () -> new NoSuchElementException("해당하는 사용자가 없습니다."));
         Review review = new Review(member.getId(), productOption.getId(), request.images(), request.content());
         reviewRepository.save(review);
-        return new ReviewResponse (review.getId(),member.getId(),review.getImages(),review.getContent(),review.getCreatedTime());
+
+        // 이미지 넣기 추가하기 (추후에)
+        ReviewResponse reviewResponse = new ReviewResponse (review.getId(),member.getId(),review.getProductOptionId(), review.getImages(), review.getContent(), review.getLikeCount(), review.getCreatedTime());
+
+        log.info("review 결과 : { }", reviewResponse);
+        return reviewResponse;
+    }
+
+    //리뷰 상세 조회
+    //1. 파라미터를 정의한다
+    //2. 리뷰 리포지토리(테이블)에서 reviewid기반으로 단건 조회한다.
+    //select * from review where id = 10;
+    //3. 리뷰를 리뷰 응답 dto로 변환해서 리턴한다.
+
+    public ReviewResponse findReview(ReviewFindReqDto dto){
+
+        Review review = reviewRepository.findById(dto.reviewId()).orElseThrow(
+                () -> new NoSuchElementException("해당하는 리뷰가 없습니다."));
+
+        //토큰 검증하고 온거면 이미 유저가 잇다고 식별이된거에요
+        Member member = memberRepository.findById(dto.memberId()).orElseThrow(
+                () -> new NoSuchElementException("해당하는 유저가 없습니다."));
+
+        return new ReviewResponse(dto.reviewId(),dto.memberId(), review.getProductOptionId(), review.getImages(), review.getContent(), review.getLikeCount(), review.getCreatedTime());
     }
 
 }

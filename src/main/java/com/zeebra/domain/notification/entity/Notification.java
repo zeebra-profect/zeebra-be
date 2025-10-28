@@ -21,10 +21,11 @@ public class Notification extends BaseEntity {
     private boolean isRead;
 
     @Builder
-    public Notification(NotificationType notificationType, Long memberId)
-    {
+    public Notification(NotificationType notificationType, Long memberId) {
         this.memberId = memberId;
         this.notificationType = notificationType;
         this.isRead = false;
     }
+
+
 }

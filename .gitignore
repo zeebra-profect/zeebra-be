@@ -45,3 +45,4 @@ application-local.yml
 db-compose.yml
 .env
 *.env
+/src/main/generated/*

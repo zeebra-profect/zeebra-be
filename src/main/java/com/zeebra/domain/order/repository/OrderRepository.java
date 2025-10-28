@@ -1,7 +1,13 @@
 package com.zeebra.domain.order.repository;
 
-import com.zeebra.domain.order.entity.Order;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import com.zeebra.domain.order.entity.Order;
+
 public interface OrderRepository extends JpaRepository<Order, Long> {
+	boolean existsByOrderNumber(String orderNumber);
+
+	Optional<Order> findByIdempotencyKey(String clientRequestId);
 }

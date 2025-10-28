@@ -1,6 +1,6 @@
 package com.zeebra.domain.review.dto;
 
-public record ReviewFindReqDto(
+public record ReviewFindReq(
         Long reviewId,
         Long memberId
 ) {

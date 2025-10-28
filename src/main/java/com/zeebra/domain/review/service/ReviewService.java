@@ -4,18 +4,18 @@ import com.zeebra.domain.member.entity.Member;
 import com.zeebra.domain.member.repository.MemberRepository;
 import com.zeebra.domain.product.entity.ProductOption;
 import com.zeebra.domain.product.repository.ProductOptionRepository;
-import com.zeebra.domain.review.dto.ReviewFindReqDto;
+import com.zeebra.domain.review.dto.ReviewDelReq;
+import com.zeebra.domain.review.dto.ReviewFindReq;
 import com.zeebra.domain.review.dto.ReviewRequest;
 import com.zeebra.domain.review.dto.ReviewResponse;
 import com.zeebra.domain.review.entity.Review;
-import com.zeebra.domain.review.repository.ReviewLikeRepository;
 import com.zeebra.domain.review.repository.ReviewRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.NoSuchElementException;
-import java.util.Optional;
 
 @Slf4j
 @Service
@@ -37,10 +37,7 @@ public class ReviewService {
         reviewRepository.save(review);
 
         // 이미지 넣기 추가하기 (추후에)
-        ReviewResponse reviewResponse = new ReviewResponse (review.getId(),member.getId(),review.getProductOptionId(), review.getImages(), review.getContent(), review.getLikeCount(), review.getCreatedTime());
-
-        log.info("review 결과 : { }", reviewResponse);
-        return reviewResponse;
+        return new ReviewResponse (review.getId(),member.getId(),review.getProductOptionId(), review.getImages(), review.getContent(), review.getLikeCount(), review.getCreatedTime());
     }
 
     //리뷰 상세 조회
@@ -49,7 +46,7 @@ public class ReviewService {
     //select * from review where id = 10;
     //3. 리뷰를 리뷰 응답 dto로 변환해서 리턴한다.
 
-    public ReviewResponse findReview(ReviewFindReqDto dto){
+    public ReviewResponse findReview(ReviewFindReq dto){
 
         Review review = reviewRepository.findById(dto.reviewId()).orElseThrow(
                 () -> new NoSuchElementException("해당하는 리뷰가 없습니다."));
@@ -59,6 +56,20 @@ public class ReviewService {
                 () -> new NoSuchElementException("해당하는 유저가 없습니다."));
 
         return new ReviewResponse(dto.reviewId(),dto.memberId(), review.getProductOptionId(), review.getImages(), review.getContent(), review.getLikeCount(), review.getCreatedTime());
+    }
+
+    @Transactional
+    public void deleteReview(Long reviewId, Long memberId) {
+
+        Review review = reviewRepository.findById(reviewId).orElseThrow(
+                () -> new NoSuchElementException("해당하는 리뷰가 없습니다."));
+
+        boolean isOwner = review.getMemberId().equals(memberId);
+        if (!isOwner) {
+            throw new org.springframework.security.access.AccessDeniedException("리뷰 삭제 권한이 없습니다.");
+        }
+
+        reviewRepository.deleteById(reviewId);
     }
 
 }

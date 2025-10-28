@@ -1,7 +1,14 @@
 package com.zeebra.domain.order.entity;
 
 import com.zeebra.global.jpa.BaseEntity;
-import jakarta.persistence.*;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -31,4 +38,8 @@ public class OrderHistory extends BaseEntity {
         this.orderStatus = orderStatus;
         this.idempotencyKey = idempotencyKey;
     }
+
+	public static OrderHistory createOrderHistory(Long orderId, OrderStatus orderStatus, String idempotencyKey){
+		return new OrderHistory(orderId, orderStatus, idempotencyKey);
+	}
 }

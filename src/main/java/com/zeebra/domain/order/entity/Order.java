@@ -16,6 +16,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -31,7 +32,7 @@ public class Order extends BaseEntity {
     private Long id;
 
     @Column(name = "member_id", nullable = false)
-    private int memberId;
+    private Long memberId;
 
     @Column(name = "order_number", nullable = false, length = 20, unique = true)
     private String orderNumber;
@@ -59,7 +60,8 @@ public class Order extends BaseEntity {
     @Column(name = "idempotency_key", nullable = false,  length = 100, unique = true)
     private String idempotencyKey;
 
-    public Order(int memberId, String orderNumber, OrderStatus orderStatus, LocalDateTime orderTime, int totalQuantity, BigDecimal totalPrice, BigDecimal totalAmount, int usePoint, String idempotencyKey) {
+	@Builder
+    public Order(Long memberId, String orderNumber, OrderStatus orderStatus, LocalDateTime orderTime, int totalQuantity, BigDecimal totalPrice, BigDecimal totalAmount, int usePoint, String idempotencyKey) {
         this.memberId = memberId;
         this.orderNumber = orderNumber;
         this.orderStatus = orderStatus != null ? orderStatus : OrderStatus.CREATED;
@@ -70,4 +72,22 @@ public class Order extends BaseEntity {
         this.usePoint = usePoint;
         this.idempotencyKey = idempotencyKey;
     }
+
+	public static Order createOrder(Long memberId, String orderNumber, LocalDateTime orderTime, int totalQuantity, BigDecimal totalPrice, BigDecimal totalAmount, int usePoint, String idempotencyKey) {
+		return Order.builder()
+			.memberId(memberId)
+			.orderNumber(orderNumber)
+			.orderStatus(OrderStatus.CREATED)
+			.orderTime(orderTime)
+			.totalQuantity(totalQuantity)
+			.totalPrice(totalPrice)
+			.totalAmount(totalAmount)
+			.usePoint(usePoint)
+			.idempotencyKey(idempotencyKey)
+			.build();
+	}
+
+	public void updateOrderStatus(OrderStatus orderStatus) {
+		this.orderStatus = orderStatus;
+	}
 }

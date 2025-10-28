@@ -74,15 +74,22 @@ public class CartServiceImp implements CartService {
 
     @Override
     @Transactional
-    public ApiResponse<Void> deleteCartItem(Long memberId, Long cartItemId) {
+    public ApiResponse<Void> deleteCartItem(Long memberId, Long productOptionId) {
         try {
             Member member = memberRepository.findById(memberId).orElseThrow(
                     () -> new NoSuchElementException("해당하는 사용자가 없습니다."));
 
-            CartItem cartItem = cartItemRepository.findById(cartItemId).orElseThrow(
+            ProductOption productOption = productOptionRepository.findById(productOptionId).orElseThrow(
+                    () -> new NoSuchElementException("해당하는 상품 상세가 없습니다."));
+
+            Cart cart = cartRepository.findByMemberId(member.getId()).orElseThrow(
+                    () -> new NoSuchElementException("해당하는 장바구니가 없습니다."));
+
+            CartItem cartItem = cartItemRepository.findByCartIdAndProductOptionId(cart.getId(), productOption.getId()).orElseThrow(
                     () -> new NoSuchElementException("해당하는 장바구니 상품이 없습니다."));
 
             cartItemRepository.delete(cartItem);
+
             return ApiResponse.successMessage("장바구니에서 상품을 삭제하는데 성공했습니다.");
         } catch (NoSuchElementException e) {
             return ApiResponse.error(null, e.getMessage());

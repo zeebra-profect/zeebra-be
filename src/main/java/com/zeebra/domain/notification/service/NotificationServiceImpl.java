@@ -1,5 +1,6 @@
 package com.zeebra.domain.notification.service;
 
+import com.zeebra.domain.auth.dto.MemberInfo;
 import com.zeebra.domain.notification.dto.NotificationResponse;
 import com.zeebra.domain.notification.dto.NotificationsResponse;
 import com.zeebra.domain.notification.entity.Notification;
@@ -18,7 +19,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class NotificationServiceImpl implements NotificationService {
     private final NotificationRepository notificationRepository;
-    private NotificationHandler notificationHandler;
+    private final NotificationHandler notificationHandler;
 
     @EventListener
     @Transactional
@@ -30,19 +31,32 @@ public class NotificationServiceImpl implements NotificationService {
                 .build();
 
         notificationRepository.save(notification);
-        NotificationResponse notificationResponse = new NotificationResponse(notification.getNotificationType(), false);
-        notificationHandler.sendNotification(member.getMemberId(), notificationResponse);
+        NotificationResponse notificationResponse = new NotificationResponse(notification.getNotificationType(), false, notification.getNotificationType().getNoticeText(), notification.getCreatedTime());
+        List<NotificationResponse> notificationResponses = new ArrayList<>();
+        notificationResponses.add(notificationResponse);
+        notificationHandler.sendNotification(member.getMemberId(), notificationResponses);
     }
 
-    public NotificationsResponse getNotifications(Long memberId) {
-        List<Notification> notifications = notificationRepository.findByMemberIdOrderByCreatedTimeDesc(memberId);
 
+    public NotificationsResponse getNotifications(MemberInfo member) {
 
+        List<Notification> notifications = notificationRepository.findByMemberIdOrderByCreatedTimeDesc(member.memberId());
         NotificationsResponse responses = new NotificationsResponse(new ArrayList<>());
         for (Notification notification : notifications) {
             responses.dtos().add(NotificationResponse.of(notification));
         }
+        notificationHandler.sendNotification(member.memberId(), responses.dtos());
+        return responses;
+    }
+
+    public NotificationsResponse sendNotifications(NotificationsResponse responses) {
 
         return responses;
+    }
+
+    @EventListener
+    public void getNotification(Object event) {
+//        System.out.println("event : " + event);
+//        System.out.println("여기까지 오는지???");
     }
 }

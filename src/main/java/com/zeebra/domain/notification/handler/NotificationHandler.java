@@ -11,6 +11,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -25,8 +26,17 @@ public class NotificationHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
-        // 연결될 때 실행
-        System.out.println("웹소켓 연결 확인 : " + session.getId());
+        String token = (String) session.getAttributes().get("accessToken");
+
+        if (token != null) {
+            Long memberId = jwtProvider.getSubjectAsLong(token);
+            if (memberId != null) {
+                userSessions.put(memberId, session);
+                System.out.println("✅ 유저 " + memberId + " 인증 완료");
+            }
+        }
+
+
     }
 
     @Override
@@ -56,17 +66,17 @@ public class NotificationHandler extends TextWebSocketHandler {
     }
 
     // 알림 보내는 메서드
-    public void sendNotification(Long memberId, NotificationResponse response) {
+    public void sendNotification(Long memberId, List<NotificationResponse> response) {
         WebSocketSession session = userSessions.get(memberId);
-        if (memberId != null && session.isOpen()) {
+        if (session != null && session.isOpen()) {
             try {
                 String json = objectMapper.writeValueAsString(response);
                 session.sendMessage(new TextMessage(json));
             } catch (Exception e) {
                 System.err.println("알림 전송 실패: " + e.getMessage());
             }
-        }
-        System.out.println("인증 실패");
+        } else
+            System.out.println("인증 실패");
     }
 
     @Override

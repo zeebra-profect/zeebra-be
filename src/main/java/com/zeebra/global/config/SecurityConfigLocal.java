@@ -3,10 +3,12 @@ package com.zeebra.global.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -37,21 +39,26 @@ public class SecurityConfigLocal {
 	@Bean
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
-		// 임시로 모든 api 열어둠
 		http
+			.headers(headers -> headers
+				.contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'self'; script-src 'self' "))
+				.frameOptions(frameOptions -> frameOptions.deny()))
+			.cors(AbstractHttpConfigurer::disable)
 			.authorizeHttpRequests(auth -> auth
 				.requestMatchers(SWAGGER_WHITELIST).permitAll()
-				// .requestMatchers("/api/auth/**", "/api/products", "/api/products/**").permitAll()
-				// 임시로 모든 api 허용
-				.requestMatchers("/api/**").permitAll()
-				.anyRequest().authenticated()
-			)
+				.requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**").permitAll()
+				.requestMatchers("/api/auth/**").permitAll()
+				// 로컬 개발 환경: 추가로 모든 API 허용 (필요시 주석 비활성화)
+				// .requestMatchers("/api/**").permitAll()
+				.anyRequest().authenticated())
 			.csrf(AbstractHttpConfigurer::disable)
 			.formLogin(AbstractHttpConfigurer::disable)
 			.httpBasic(AbstractHttpConfigurer::disable)
 			.exceptionHandling(ex -> ex
 				.authenticationEntryPoint(authProblemHandler)
 				.accessDeniedHandler(authProblemHandler))
+			.sessionManagement(session -> 
+				session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 			.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 		return http.build();
 	}

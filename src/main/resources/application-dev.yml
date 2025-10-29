@@ -35,8 +35,3 @@ spring.jpa:
   properties:
     hibernate.format_sql: true
   show-sql: false
-
-auth:
-  cookie:
-    secure: true
-    same-site: Lax

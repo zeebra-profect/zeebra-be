@@ -1,4 +1,4 @@
-package com.zeebra.domain.member.dto;
+package com.zeebra.domain.auth.dto;
 
 import com.zeebra.domain.member.entity.Member;
 

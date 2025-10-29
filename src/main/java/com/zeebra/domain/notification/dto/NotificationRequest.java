@@ -1,13 +1,14 @@
 package com.zeebra.domain.notification.dto;
 
-import com.zeebra.domain.member.dto.MemberInfo;
+import java.time.LocalDateTime;
+
+import com.zeebra.domain.auth.dto.MemberInfo;
 import com.zeebra.domain.notification.entity.NotificationType;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.time.LocalDateTime;
 
 @Getter
 @Setter

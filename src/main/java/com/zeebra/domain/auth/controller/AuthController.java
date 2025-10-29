@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.zeebra.domain.auth.dto.LoginRequest;
 import com.zeebra.domain.auth.dto.LoginResponse;
 import com.zeebra.domain.auth.dto.LoginSuccess;
+import com.zeebra.domain.auth.dto.SignupRequest;
+import com.zeebra.domain.auth.dto.SignupResponse;
 import com.zeebra.domain.auth.service.AuthService;
 import com.zeebra.global.ApiResponse;
 import com.zeebra.global.web.CookieUtil;
@@ -26,7 +28,6 @@ import lombok.RequiredArgsConstructor;
 public class AuthController {
 	private static final String ACCESS_TOKEN_COOKIE_NAME = "__Host-AT";
 	private static final String REFRESH_TOKEN_COOKIE_NAME = "__Host-RT";
-
 
 	private final AuthService authService;
 
@@ -59,5 +60,12 @@ public class AuthController {
 		CookieUtil.clearAuthCookies(response);
 
 		return ApiResponse.success("Logged out");
+	}
+
+	@Operation(summary = "회원가입", description = "회원가입을 합니다. 비밀번호 길이는 8~20자, 영문자, 숫자, 특수문자 .*[!@#$%^&*()_+=- 가 포함되어야 합니다.")
+	@PostMapping("/signup")
+	public ApiResponse<SignupResponse> signup(@RequestBody @Valid SignupRequest request) {
+
+		return ApiResponse.success(authService.register(request));
 	}
 }

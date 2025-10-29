@@ -1,13 +1,9 @@
 package com.zeebra.domain.member.service;
 
-import com.zeebra.domain.member.dto.SignupRequest;
-import com.zeebra.domain.member.dto.SignupResponse;
-
 public interface MemberService {
-	SignupResponse register(SignupRequest request);
-	// public void login(String email, String password);
-	// public void logout();
-	// public void updateNickname(String nickname);
-	// public void updatePassword(String password);
-	// public void deleteAccount();
+	// 향후 추가될 메소드들
+	// MemberDetailResponse getMemberInfo(Long memberId);
+	// void updateNickname(Long memberId, String nickname);
+	// void updatePassword(Long memberId, String oldPassword, String newPassword);
+	// void deleteAccount(Long memberId);
 }

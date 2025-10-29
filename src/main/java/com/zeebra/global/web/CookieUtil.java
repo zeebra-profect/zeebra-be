@@ -16,10 +16,11 @@ public final class CookieUtil {
 	private static final String REFRESH_TOKEN_COOKIE_NAME = "__Host-RT";
 
 	private static final boolean HTTP_ONLY = true;
-	private static final String SAME_SITE = "Lax";
 	private static final String PATH = "/";
-
-	private static boolean secure = true;
+	@Value("${auth.cookie.sameSite}")
+	private static String SAME_SITE;
+	@Value("${auth.cookie.secure}")
+	private static boolean secure;
 
 	private CookieUtil() {}
 

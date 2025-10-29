@@ -15,6 +15,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 
 @Tag(name = "Chat API", description = "채팅방 생성 및 관리 API")
 @RestController
@@ -49,6 +51,15 @@ public class ChatController {
         return ApiResponse.success(chatHistory);
     }
 
+    @Operation(summary = "1:1 채팅방 목록")
+    @GetMapping("/rooms/dm")
+    public ApiResponse<List<ChatRoomList>> getChatRooms(
+            @AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal
+    ) {
+        Long currentUserId = principal.getMemberId();
+        List<ChatRoomList> myDm = chatService.getMyChatRooms(currentUserId);
+        return ApiResponse.success(myDm);
+    }
 
     @Operation(summary = "1:1 채팅방 나가기")
     @DeleteMapping("/rooms/{roomId}/leave")

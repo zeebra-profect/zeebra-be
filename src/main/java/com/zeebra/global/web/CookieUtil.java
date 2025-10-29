@@ -3,13 +3,14 @@ package com.zeebra.global.web;
 import java.time.Duration;
 import java.util.Arrays;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseCookie;
+import org.springframework.stereotype.Component;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+@Component
 public final class CookieUtil {
 
 	private static final String ACCESS_TOKEN_COOKIE_NAME = "__Host-AT";
@@ -17,10 +18,8 @@ public final class CookieUtil {
 
 	private static final boolean HTTP_ONLY = true;
 	private static final String PATH = "/";
-	@Value("${auth.cookie.sameSite}")
-	private static String SAME_SITE;
-	@Value("${auth.cookie.secure}")
-	private static boolean secure;
+	private static final boolean secure = true;
+	private static final String SAME_SITE = "Lax";
 
 	private CookieUtil() {}
 
@@ -86,10 +85,5 @@ public final class CookieUtil {
 
 		response.addHeader("Set-Cookie", refreshToken.toString());
 		response.addHeader("Set-Cookie", accessToken.toString());
-	}
-
-	@Value("${cookie.secure:true}")
-	public void setSecure(boolean secureValue) {
-		secure = secureValue;
 	}
 }

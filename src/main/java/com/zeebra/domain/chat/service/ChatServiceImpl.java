@@ -1,13 +1,15 @@
 package com.zeebra.domain.chat.service;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
+import com.zeebra.domain.chat.dto.*;
 import com.zeebra.domain.member.entity.Member;
 import com.zeebra.domain.member.repository.MemberRepository;
 import com.zeebra.domain.product.entity.Sales;
-import com.zeebra.domain.product.repository.ProductRepository;
 import com.zeebra.domain.product.repository.SalesRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.Page;
@@ -15,12 +17,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.zeebra.domain.chat.dto.ChatMessageRequestDto;
-import com.zeebra.domain.chat.dto.ChatMessageResponseDto;
-import com.zeebra.domain.chat.dto.ChatRoomRequestDto;
-import com.zeebra.domain.chat.dto.ChatRoomResponseDto;
-import com.zeebra.domain.chat.dto.TradeRequestDto;
-import com.zeebra.domain.chat.dto.TradeResponseDto;
 import com.zeebra.domain.chat.entity.ChatMessage;
 import com.zeebra.domain.chat.entity.ChatRoom;
 import com.zeebra.domain.chat.entity.ChatRoomMember;
@@ -46,7 +42,6 @@ public class ChatServiceImpl implements ChatService {
     private final TradeRepository tradeRepository;
 
     private final MemberRepository memberRepository;
-    private final ProductRepository productRepository;
     private final SalesRepository salesRepository;
 
 
@@ -145,17 +140,85 @@ public class ChatServiceImpl implements ChatService {
                 .imageUrl(chatMessageRequestDto.getImageUrl())
                 .build();
         ChatMessage savedMessage = chatMessageRepository.save(chatMessage);
-
         sender.getChatRoom().updateLastMessageId(savedMessage.getId());
 
-        return ChatMessageResponseDto.from(savedMessage);
+        Member member = memberRepository.findByIdAndDeletedAtIsNull(currentMemberId)
+                .orElse(null);
+
+        return ChatMessageResponseDto.from(savedMessage, member);
     }
 
     @Transactional(readOnly = true)
     public Page<ChatMessageResponseDto> getChatHistory(Long roomId, Long currentUserId, Pageable pageable){
         Page<ChatMessage> messagePage = chatMessageRepository.findByChatRoomMemberChatRoomId(roomId, pageable);
-        return messagePage.map(ChatMessageResponseDto::from);
+
+        return messagePage.map(message -> {
+           Long senderMemberId = message.getChatRoomMember().getMemberId();
+           Member member = memberRepository.findByIdAndDeletedAtIsNull(senderMemberId)
+                   .orElse(null);
+           return ChatMessageResponseDto.from(message, member);
+        });
     }
+
+    @Transactional(readOnly = true)
+    public List<ChatRoomList> getMyChatRooms(Long currentMemberId) {
+        List<ChatRoomMember> myMemberships = chatRoomMemberRepository.findByMemberIdAndDeletedAtIsNull(currentMemberId);
+
+        return myMemberships.stream()
+                .filter(member -> member.getChatRoom().getChatRoomType() == ChatRoomType.DM)
+                .map(member -> {
+                    ChatRoom room = member.getChatRoom();
+                    Long roomLastMessageId = room.getLastMessageId();
+                    Long myLastReadId = member.getLastReadMessageId();
+
+                    String roomName = "";
+                    String roomProfileImageUrl = null;
+
+
+                    List<ChatRoomMember> membersInRoom = chatRoomMemberRepository.findByChatRoomIdAndDeletedAtIsNull((room.getId()));
+
+                    Optional<ChatRoomMember> opponent = membersInRoom.stream()
+                            .filter(m -> !m.getMemberId().equals(currentMemberId))
+                            .findFirst();
+
+                    if (opponent.isPresent()) {
+                        Optional<Member> opponentMember = memberRepository.findByIdAndDeletedAtIsNull(opponent.get().getMemberId());
+                        if (opponentMember.isPresent()) {
+                            roomName = opponentMember.get().getNickname();
+                            roomProfileImageUrl = opponentMember.get().getMemberImage();
+                        }
+                    }
+
+                    long unreadCount = 0;
+                    if (roomLastMessageId != null) {
+                        if (myLastReadId == null) {
+                            unreadCount = chatMessageRepository.countByChatRoomMember_ChatRoomIdAndIdGreaterThan(room.getId(), 0L);
+                        } else if (roomLastMessageId > myLastReadId) {
+                            unreadCount = chatMessageRepository.countByChatRoomMember_ChatRoomIdAndIdGreaterThan(room.getId(), myLastReadId);
+                        }
+                    }
+
+                    String lastMessageContent = "";
+                    LocalDateTime lastMessageTime = null;
+                    if (room.getLastMessageId() != null) {
+                        Optional<ChatMessage> lastMsg = chatMessageRepository.findById(room.getLastMessageId());
+                        if (lastMsg.isPresent()) {
+                            lastMessageContent = lastMsg.get().getMessageContent();
+                            lastMessageTime = lastMsg.get().getCreatedAt();
+                        }
+                    }
+
+                    return ChatRoomList.builder()
+                            .chatRoomId(room.getId())
+                            .unreadCount(unreadCount)
+                            .roomName(roomName)
+                            .roomProfileImageUrl(roomProfileImageUrl)
+                            .lastMessageContent(lastMessageContent)
+                            .lastMessageTime(lastMessageTime)
+                            .build();
+                }).toList();
+    }
+
 
     @Transactional
     public void leaveChatRoom(Long chatRoomId, Long currentMemberId) {

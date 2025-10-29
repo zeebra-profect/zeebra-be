@@ -1,32 +1,36 @@
 package com.zeebra.domain.chat.dto;
 
 import com.zeebra.domain.chat.entity.ChatMessage;
+import com.zeebra.domain.chat.entity.ChatRoomMember;
 import com.zeebra.domain.chat.entity.MessageType;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
+import com.zeebra.domain.member.entity.Member;
 
 
 import java.time.LocalDateTime;
 
-@Getter
-@AllArgsConstructor
-public class ChatMessageResponseDto {
+public record ChatMessageResponseDto (
 
-    private Long messageId;
-    private Long roomId;
-    private Long senderMemberId;
-    private String senderName;
-    private MessageType messageType;
-    private String content;
-    private String imageUrl;
-    private LocalDateTime createTime;
+    Long messageId,
+    Long roomId,
+    Long senderMemberId,
+    String senderName,
+    String profileImageUrl,
+    MessageType messageType,
+    String content,
+    String imageUrl,
+    LocalDateTime createTime
+){
+    public static ChatMessageResponseDto from(ChatMessage chatMessage, Member member) {
+        ChatRoomMember sender = chatMessage.getChatRoomMember();
 
-    public static ChatMessageResponseDto from(ChatMessage chatMessage) {
+        String profileImageUrl = (member != null) ? member.getMemberImage() : null;
+
         return new ChatMessageResponseDto(
                 chatMessage.getId(),
                 chatMessage.getChatRoomMember().getChatRoom().getId(),
                 chatMessage.getChatRoomMember().getMemberId(),
                 chatMessage.getChatRoomMember().getMemberName(),
+                profileImageUrl,
                 chatMessage.getMessageType(),
                 chatMessage.getMessageContent(),
                 chatMessage.getImageUrl(),

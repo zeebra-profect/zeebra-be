@@ -1,5 +1,6 @@
 package com.zeebra.domain.auth.dto;
 
+import com.zeebra.domain.member.dto.MemberInfo;
 import com.zeebra.domain.member.entity.Member;
 
 public record SignupResponse(MemberInfo member) {

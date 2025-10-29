@@ -1,6 +1,18 @@
 package com.zeebra.domain.auth.service;
 
-import com.zeebra.domain.auth.dto.*;
+import java.util.Date;
+import java.util.Optional;
+
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.zeebra.domain.auth.dto.LoginRequest;
+import com.zeebra.domain.auth.dto.LoginSuccess;
+import com.zeebra.domain.auth.dto.SignupRequest;
+import com.zeebra.domain.auth.dto.SignupResponse;
+import com.zeebra.domain.member.dto.MemberInfo;
 import com.zeebra.domain.member.entity.Member;
 import com.zeebra.domain.member.repository.MemberRepository;
 import com.zeebra.domain.notification.event.MemberSignUpEvent;
@@ -9,14 +21,8 @@ import com.zeebra.global.ErrorCode.MemberErrorCode;
 import com.zeebra.global.exception.BusinessException;
 import com.zeebra.global.redis.RedisService;
 import com.zeebra.global.security.jwt.JwtProvider;
-import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Date;
-import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -116,11 +122,4 @@ public class AuthServiceImpl implements AuthService {
         } catch (Exception e) {
         }
     }
-
-    public MemberInfo findById(Long id) {
-        memberRepository.findById(id);
-        return MemberInfo.of(memberRepository.findById(id).get());
-    }
-
-    ;
 }

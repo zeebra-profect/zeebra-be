@@ -1,22 +1,27 @@
 package com.zeebra.domain.product.service;
 
+import com.zeebra.domain.brand.dto.BrandResponse;
+import com.zeebra.domain.brand.entity.Brand;
+import com.zeebra.domain.category.dto.CategorySearchResponse;
+import com.zeebra.domain.category.entity.Category;
 import com.zeebra.domain.member.entity.Member;
 import com.zeebra.domain.member.entity.Role;
 import com.zeebra.domain.member.repository.MemberRepository;
-import com.zeebra.domain.product.dto.FavoriteProductResponse;
-import com.zeebra.domain.product.dto.ProductDetailResponse;
-import com.zeebra.domain.product.dto.ProductRequest;
-import com.zeebra.domain.product.dto.ProductResponse;
+import com.zeebra.domain.product.dto.*;
 import com.zeebra.domain.product.entity.FavoriteProduct;
 import com.zeebra.domain.product.entity.Product;
+import com.zeebra.domain.product.entity.ProductSort;
 import com.zeebra.domain.product.repository.*;
 import com.zeebra.global.ApiResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 
+import org.springframework.data.domain.Pageable;
+
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.NoSuchElementException;
 
 @Service
@@ -30,9 +35,24 @@ public class ProductServiceImpl implements ProductService {
     private final MemberRepository memberRepository;
     private final FavoriteProductRepository favoriteProductRepository;
 
-//    public ProductListResponse getProductList(GetProductListRequest request) {
-//
-//    }
+    private List<ProductDetailResponse> toProductDetailResponse(List<Product> products) {
+        return products.stream()
+                .map(product -> new ProductDetailResponse(
+                        product.getId(),
+                        product.getBrandId(),
+                        product.getCategoryId(),
+                        product.getName(),
+                        product.getDescription(),
+                        product.getModelNumber(),
+                        product.getThumbnail(),
+                        product.getImages(),
+                        productQueryRepository.lowPriceOfProduct(product.getId()),
+                        product.getReviewCount(),
+                        product.getFavoriteProductCount(),
+                        product.getCreatedTime()
+                ))
+                .toList();
+    }
 
     private ProductDetailResponse toProductDetailResponse(Product product, BigDecimal lowPriceOfProduct) {
         return new ProductDetailResponse(
@@ -81,6 +101,40 @@ public class ProductServiceImpl implements ProductService {
                 product.getThumbnail(),
                 product.getImages(),
                 product.getCreatedTime());
+    }
+
+    private List<BrandResponse> toBrandListResponse(List<Brand> brands) {
+        return brands.stream()
+                .map(brand -> new BrandResponse(brand.getId(), brand.getName()))
+                .toList();
+    }
+
+    private List<CategorySearchResponse> toCategorySearchResponseList(List<Category> categories) {
+        return categories.stream()
+                .map(category -> new CategorySearchResponse(category.getId(), category.getName()))
+                .toList();
+    }
+
+    private SearchProductResponse toSearchProductResponse(List<ProductDetailResponse> productDetailResponseList,
+                                                          List<BrandResponse> brandListResponse,
+                                                          List<CategorySearchResponse> categorySearchResponseList,
+                                                          Pagination pagination) {
+        return new SearchProductResponse(productDetailResponseList,
+                categorySearchResponseList,
+                brandListResponse,
+                pagination);
+    }
+
+    private ProductSort parseProductSort(String productSort) {
+        if (productSort == null || productSort.isBlank()) {
+            return ProductSort.REVIEW_COUNT_MOST;
+        }
+
+        return switch (productSort.trim().toLowerCase()) {
+            case "most_reviewed" -> ProductSort.REVIEW_COUNT_MOST;
+            case "least_reviewed" -> ProductSort.REVIEW_COUNT_LEAST;
+            default -> ProductSort.REVIEW_COUNT_MOST;
+        };
     }
 
     @Override
@@ -157,5 +211,38 @@ public class ProductServiceImpl implements ProductService {
         } catch (Exception e) {
             return ApiResponse.error(null, "상품을 등록하는 과정에서 오류가 발생했습니다.");
         }
+    }
+
+    @Override
+    public ApiResponse<SearchProductResponse> searchProduct(String keyWord,
+                                                            List<Long> categoryIds,
+                                                            List<Long> brandIds,
+                                                            Pageable pageable,
+                                                            String productSort) {
+        ProductSort parseProductSort = parseProductSort(productSort);
+
+        List<Product> products = productQueryRepository.searchProduct(keyWord, categoryIds, brandIds, pageable, parseProductSort);
+
+        List<Brand> brands = productQueryRepository.filteredBrand(keyWord, categoryIds, brandIds);
+
+        List<Category> categories = productQueryRepository.filteredCategory(keyWord, categoryIds, brandIds);
+
+        List<ProductDetailResponse> productDetailResponseList = toProductDetailResponse(products);
+
+        List<BrandResponse> brandListResponse = toBrandListResponse(brands);
+
+        List<CategorySearchResponse> categorySearchResponseList = toCategorySearchResponseList(categories);
+
+        long totalCount = productQueryRepository.countFiltered(keyWord, categoryIds, brandIds);
+
+        int totalPage = (int) Math.ceil((double) totalCount / pageable.getPageSize());
+
+        Pagination pagination = new Pagination(pageable.getPageNumber(), pageable.getPageSize(), totalCount, totalPage);
+        SearchProductResponse searchProductResponse = toSearchProductResponse(
+                productDetailResponseList,
+                brandListResponse,
+                categorySearchResponseList,
+                pagination);
+        return ApiResponse.success(searchProductResponse);
     }
 }

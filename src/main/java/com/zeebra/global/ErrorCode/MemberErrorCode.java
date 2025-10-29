@@ -18,11 +18,11 @@ public enum MemberErrorCode implements ErrorCode {
 	INVALID_GENDER("E400_INVALID_GENDER", HttpStatus.BAD_REQUEST, "성별 정보가 올바르지 않습니다."),
 	INVALID_BIRTH("E400_INVALID_BIRTH", HttpStatus.BAD_REQUEST, "생년월일이 유효하지 않습니다."),
 
+	MEMBER_NOT_FOUND("E404_MEMBER_NOT_FOUND",HttpStatus.NOT_FOUND,"존재하지 않는 회원입니다."),
+
 	DUPLICATE_LOGIN_ID("E409_DUPLICATE_LOGIN_ID", HttpStatus.CONFLICT, "이미 사용 중인 아이디입니다."),
 	DUPLICATE_EMAIL("E409_DUPLICATE_EMAIL", HttpStatus.CONFLICT, "이미 사용 중인 이메일입니다."),
 	DUPLICATE_NICKNAME("E409_DUPLICATE_NICKNAME", HttpStatus.CONFLICT, "이미 사용 중인 닉네임입니다."),
-	SOFT_DELETED_EMAIL_CONFLICT("E409_SOFT_DELETED_EMAIL_CONFLICT", HttpStatus.CONFLICT, "삭제된 계정에서 사용 중인 이메일입니다."),
-	SOFT_DELETED_NICKNAME_CONFLICT("E409_SOFT_DELETED_NICKNAME_CONFLICT", HttpStatus.CONFLICT, "삭제된 계정에서 사용 중인 닉네임입니다."),
 
 	EMAIL_SEND_FAILED("E500_EMAIL_SEND_FAILED", HttpStatus.INTERNAL_SERVER_ERROR, "이메일 발송에 실패했습니다."),
 	DATABASE_ERROR("E500_DATABASE_ERROR", HttpStatus.INTERNAL_SERVER_ERROR, "데이터베이스 처리 중 오류가 발생했습니다."),

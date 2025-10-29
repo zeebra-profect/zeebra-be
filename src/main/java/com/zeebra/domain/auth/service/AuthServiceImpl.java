@@ -10,9 +10,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.zeebra.domain.auth.dto.LoginRequest;
 import com.zeebra.domain.auth.dto.LoginSuccess;
-import com.zeebra.domain.auth.dto.MemberInfo;
 import com.zeebra.domain.auth.dto.SignupRequest;
 import com.zeebra.domain.auth.dto.SignupResponse;
+import com.zeebra.domain.member.dto.MemberInfo;
 import com.zeebra.domain.member.entity.Member;
 import com.zeebra.domain.member.repository.MemberRepository;
 import com.zeebra.domain.notification.event.MemberSignUpEvent;

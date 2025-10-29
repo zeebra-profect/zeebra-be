@@ -2,9 +2,12 @@ package com.zeebra.domain.chat.service;
 
 
 import com.zeebra.domain.chat.dto.*;
+import com.zeebra.domain.chat.entity.ChatRoom;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+
+import java.util.List;
 
 public interface ChatService {
     /**
@@ -27,6 +30,11 @@ public interface ChatService {
      * 채팅방 메세지 조회
      */
     Page<ChatMessageResponseDto> getChatHistory(Long chatRoomId, Long currentMemberId, Pageable pageable);
+
+    /**
+     * @param currentMemberId
+     */
+    List<ChatRoomList> getMyChatRooms(Long currentMemberId);
 
     /**
      * 채팅방 나가기

@@ -7,6 +7,7 @@ public record NotificationResponse(
         NotificationType notificationType,
         boolean isRead
 ) {
+
     public static NotificationResponse of(Notification notification) {
         return new NotificationResponse(notification.getNotificationType(), notification.isRead());
     }

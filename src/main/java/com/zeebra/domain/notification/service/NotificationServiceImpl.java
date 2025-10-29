@@ -4,6 +4,7 @@ import com.zeebra.domain.notification.dto.NotificationResponse;
 import com.zeebra.domain.notification.dto.NotificationsResponse;
 import com.zeebra.domain.notification.entity.Notification;
 import com.zeebra.domain.notification.event.MemberSignUpEvent;
+import com.zeebra.domain.notification.handler.NotificationHandler;
 import com.zeebra.domain.notification.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
@@ -17,6 +18,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class NotificationServiceImpl implements NotificationService {
     private final NotificationRepository notificationRepository;
+    private NotificationHandler notificationHandler;
 
     @EventListener
     @Transactional
@@ -28,7 +30,8 @@ public class NotificationServiceImpl implements NotificationService {
                 .build();
 
         notificationRepository.save(notification);
-        System.out.println("notification:" + notification);
+        NotificationResponse notificationResponse = new NotificationResponse(notification.getNotificationType(), false);
+        notificationHandler.sendNotification(member.getMemberId(), notificationResponse);
     }
 
     public NotificationsResponse getNotifications(Long memberId) {

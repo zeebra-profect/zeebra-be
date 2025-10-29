@@ -3,16 +3,21 @@ package com.zeebra.domain.auth.service;
 import java.util.Date;
 import java.util.Optional;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.zeebra.domain.auth.dto.LoginRequest;
 import com.zeebra.domain.auth.dto.LoginSuccess;
-import com.zeebra.domain.member.dto.MemberInfo;
+import com.zeebra.domain.auth.dto.MemberInfo;
+import com.zeebra.domain.auth.dto.SignupRequest;
+import com.zeebra.domain.auth.dto.SignupResponse;
 import com.zeebra.domain.member.entity.Member;
 import com.zeebra.domain.member.repository.MemberRepository;
+import com.zeebra.domain.notification.event.MemberSignUpEvent;
 import com.zeebra.global.ErrorCode.AuthErrorCode;
+import com.zeebra.global.ErrorCode.MemberErrorCode;
 import com.zeebra.global.exception.BusinessException;
 import com.zeebra.global.redis.RedisService;
 import com.zeebra.global.security.jwt.JwtProvider;
@@ -27,6 +32,43 @@ public class AuthServiceImpl implements AuthService{
 	private final PasswordEncoder passwordEncoder;
 	private final JwtProvider jwtProvider;
 	private final RedisService redisService;
+	private final ApplicationEventPublisher eventPublisher;
+
+	@Transactional
+	public SignupResponse register(SignupRequest request) {
+
+		String email = request.memberEmail().trim().toLowerCase();
+
+		if(memberRepository.existsByUserLoginIdAndDeletedAtIsNull(request.userLoginId())){
+			throw new BusinessException(MemberErrorCode.DUPLICATE_LOGIN_ID);
+		}
+
+		if(memberRepository.existsByMemberEmailAndDeletedAtIsNull(email)){
+			throw new BusinessException(MemberErrorCode.DUPLICATE_EMAIL);
+		}
+
+		if(memberRepository.existsByNicknameAndDeletedAtIsNull(request.nickname())){
+			throw new BusinessException(MemberErrorCode.DUPLICATE_NICKNAME);
+		}
+
+		String rawPassword = request.password();
+
+		String encodedPassword = passwordEncoder.encode(rawPassword);
+
+		Member member = Member.createMember(
+			request.userLoginId(),
+			request.memberName(),
+			request.memberEmail(),
+			request.nickname(),
+			request.memberBirth(),
+			request.memberGender(),
+			encodedPassword);
+
+		Member saved = memberRepository.save(member);
+		eventPublisher.publishEvent(new MemberSignUpEvent(member.getId(), member.getNickname()));
+
+		return SignupResponse.of(saved);
+	}
 
 	@Transactional
 	public LoginSuccess login(LoginRequest request){

@@ -25,6 +25,13 @@ import lombok.RequiredArgsConstructor;
 @Component
 @RequiredArgsConstructor
 public class JwtFilter extends OncePerRequestFilter {
+    
+    private static final String[] PUBLIC_PATHS = {
+        "/api/auth/login",
+		"/api/auth/signup",
+        "/swagger-ui",
+        "/v3/api-docs"
+    };
 	private static final String ACCESS_TOKEN_COOKIE_NAME = "__Host-AT";
 	private static final String REFRESH_TOKEN_COOKIE_NAME = "__Host-RT";
 	private static final long ACCESS_TOKEN_EXPIRATION_MINUTES = 60L;
@@ -34,9 +41,23 @@ public class JwtFilter extends OncePerRequestFilter {
 	private final RedisService redisService;
 
 	@Override
-	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws
-		ServletException, IOException {
-		try {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws
+        ServletException, IOException {
+        
+        String requestPath = request.getRequestURI();
+		String method = request.getMethod();
+        
+        if (isPublicPath(requestPath)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+		if (requestPath.startsWith("/api/products") && "GET".equals(method)) {
+			filterChain.doFilter(request, response);
+			return;
+		}
+        
+        try {
 			String accessToken = CookieUtil.getCookieValue(request, ACCESS_TOKEN_COOKIE_NAME);
 
 			if (accessToken != null && processAccessToken(accessToken)) {
@@ -56,9 +77,18 @@ public class JwtFilter extends OncePerRequestFilter {
 		} catch (Exception e) {
 			setAuthError(request, AuthErrorCode.TOKEN_INVALID);
 		}
-
-		filterChain.doFilter(request, response);
-	}
+        
+        filterChain.doFilter(request, response);
+    }
+    
+    private boolean isPublicPath(String requestPath) {
+        for (String publicPath : PUBLIC_PATHS) {
+            if (requestPath.startsWith(publicPath)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
 	private boolean processAccessToken(String accessToken) {
 		if (redisService.isBlacklisted(accessToken)) {

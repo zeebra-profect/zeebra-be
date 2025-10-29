@@ -1,4 +1,4 @@
-package com.zeebra.domain.member.dto;
+package com.zeebra.domain.auth.dto;
 
 import java.time.LocalDate;
 

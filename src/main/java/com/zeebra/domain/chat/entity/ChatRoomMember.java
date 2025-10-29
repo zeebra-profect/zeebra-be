@@ -32,6 +32,9 @@ public class ChatRoomMember extends BaseEntity {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
+    @Column(name = "last_read_message_id")
+    private Long lastReadMessageId;
+
     @Builder
     public ChatRoomMember(ChatRoom chatRoom, Long memberId, String memberName) {
         this.chatRoom = chatRoom;
@@ -41,5 +44,9 @@ public class ChatRoomMember extends BaseEntity {
 
     public void leave() {
         this.deletedAt = LocalDateTime.now();
+    }
+
+    public void updateLastReadMessageId(Long lastReadMessageId) {
+        this.lastReadMessageId = lastReadMessageId;
     }
 }

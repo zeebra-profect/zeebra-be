@@ -21,14 +21,8 @@ import com.zeebra.global.ErrorCode.MemberErrorCode;
 import com.zeebra.global.exception.BusinessException;
 import com.zeebra.global.redis.RedisService;
 import com.zeebra.global.security.jwt.JwtProvider;
-import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Date;
-import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -128,11 +122,4 @@ public class AuthServiceImpl implements AuthService {
         } catch (Exception e) {
         }
     }
-
-    public MemberInfo findById(Long id) {
-        memberRepository.findById(id);
-        return MemberInfo.of(memberRepository.findById(id).get());
-    }
-
-    ;
 }

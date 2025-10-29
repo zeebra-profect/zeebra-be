@@ -1,6 +1,9 @@
 package com.zeebra.domain.auth.service;
 
-import com.zeebra.domain.auth.dto.*;
+import com.zeebra.domain.auth.dto.LoginRequest;
+import com.zeebra.domain.auth.dto.LoginSuccess;
+import com.zeebra.domain.auth.dto.SignupRequest;
+import com.zeebra.domain.auth.dto.SignupResponse;
 
 public interface AuthService {
 
@@ -17,6 +20,4 @@ public interface AuthService {
     // public String getRefreshToken();
     // public Long getMemberId();
     // public String getMemberType();
-
-    MemberInfo findById(Long id);
 }

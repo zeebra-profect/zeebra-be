@@ -1,6 +1,6 @@
 package com.zeebra.domain.notification.service;
 
-import com.zeebra.domain.auth.dto.MemberInfo;
+import com.zeebra.domain.member.dto.MemberInfo;
 import com.zeebra.domain.notification.dto.NotificationsResponse;
 import com.zeebra.domain.notification.event.MemberSignUpEvent;
 

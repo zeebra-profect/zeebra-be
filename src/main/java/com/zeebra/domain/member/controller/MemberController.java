@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.zeebra.domain.member.dto.MemberInfo;
 import com.zeebra.domain.member.dto.MemberProfile;
-import com.zeebra.domain.member.entity.Member;
 import com.zeebra.domain.member.service.MemberService;
 import com.zeebra.global.ApiResponse;
 import com.zeebra.global.security.jwt.JwtProvider;
@@ -31,15 +30,13 @@ public class MemberController {
 
 		Long memberId = principal.getMemberId();
 
-		Member member = memberService.findById(memberId);
-
-		return ApiResponse.success(MemberInfo.of(member));
+		return ApiResponse.success(memberService.findById(memberId));
 	}
 
 	@Operation(summary = "타인 프로필 조회 API")
 	@GetMapping("/{memberId}")
 	public ApiResponse<MemberProfile> getMemberProfile(@PathVariable Long memberId){
-		Member member = memberService.findById(memberId);
+		MemberInfo member = memberService.findById(memberId);
 
 		return ApiResponse.success(MemberProfile.of(member));
 	}

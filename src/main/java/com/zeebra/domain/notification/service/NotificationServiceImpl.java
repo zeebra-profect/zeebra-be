@@ -1,19 +1,21 @@
 package com.zeebra.domain.notification.service;
 
-import com.zeebra.domain.auth.dto.MemberInfo;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.zeebra.domain.member.dto.MemberInfo;
 import com.zeebra.domain.notification.dto.NotificationResponse;
 import com.zeebra.domain.notification.dto.NotificationsResponse;
 import com.zeebra.domain.notification.entity.Notification;
 import com.zeebra.domain.notification.event.MemberSignUpEvent;
 import com.zeebra.domain.notification.handler.NotificationHandler;
 import com.zeebra.domain.notification.repository.NotificationRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.context.event.EventListener;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor

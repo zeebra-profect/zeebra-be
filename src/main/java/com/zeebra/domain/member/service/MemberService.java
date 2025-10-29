@@ -1,9 +1,9 @@
 package com.zeebra.domain.member.service;
 
-import com.zeebra.domain.member.entity.Member;
+import com.zeebra.domain.member.dto.MemberInfo;
 
 public interface MemberService {
-	Member findById(Long memberId);
+	MemberInfo findById(Long memberId);
 	// 향후 추가될 메소드들
 	// MemberDetailResponse getMemberInfo(Long memberId);
 	// void updateNickname(Long memberId, String nickname);

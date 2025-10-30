@@ -24,7 +24,7 @@ public enum CommonErrorCode implements ErrorCode {
 	CONFLICT("E409_CONFLICT", HttpStatus.CONFLICT, "Conflict with current resource state"),
 	DUPLICATE_CLIENT_REQUEST_ID("E409_DUPLICATE_CLIENT_REQUEST_ID", HttpStatus.CONFLICT, "중복된 요청입니다"),
 	DUPLICATE_IDEMPOTENCY_KEY("E409_DUPLICATE_IDEMPOTENCY_KEY", HttpStatus.CONFLICT, "이미 처리된 요청입니다"),
-	IDEMPOTENCY_CONFLICT("E409_IDEMPOTENCY_CONFLICT", HttpStatus.CONFLICT, "동일한 멱등성 키로 다른 내용의 요청이 이미 처리되었습니다"),
+	IDEMPOTENCY_CONFLICT("E409_IDEMPOTENCY_CONFLICT", HttpStatus.CONFLICT, "동일한 멱등성 키의 요청이 이미 처리되었습니다"),
 
 	UNSUPPORTED_MEDIA_TYPE("E415_UNSUPPORTED_MEDIA_TYPE", HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Unsupported media type"),
 	UNPROCESSABLE_ENTITY("E422_UNPROCESSABLE_ENTITY", HttpStatus.UNPROCESSABLE_ENTITY, "Business rule violation"),

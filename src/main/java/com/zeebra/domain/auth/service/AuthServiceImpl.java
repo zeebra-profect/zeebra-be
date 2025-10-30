@@ -1,13 +1,5 @@
 package com.zeebra.domain.auth.service;
 
-import java.util.Date;
-import java.util.Optional;
-
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.zeebra.domain.auth.dto.LoginRequest;
 import com.zeebra.domain.auth.dto.LoginSuccess;
 import com.zeebra.domain.auth.dto.SignupRequest;
@@ -15,13 +7,20 @@ import com.zeebra.domain.auth.dto.SignupResponse;
 import com.zeebra.domain.member.dto.MemberInfo;
 import com.zeebra.domain.member.entity.Member;
 import com.zeebra.domain.member.repository.MemberRepository;
+import com.zeebra.domain.notification.event.MemberLoginEvent;
 import com.zeebra.domain.notification.event.MemberSignUpEvent;
 import com.zeebra.global.ErrorCode.AuthErrorCode;
 import com.zeebra.global.ErrorCode.MemberErrorCode;
 import com.zeebra.global.exception.BusinessException;
 import com.zeebra.global.security.jwt.JwtProvider;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Date;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -90,6 +89,7 @@ public class AuthServiceImpl implements AuthService {
         String refreshToken = jwtProvider.createRefreshToken(member.getId(), member.getRole().toString(), refreshTokenDays);
 
         MemberInfo memberInfo = MemberInfo.of(member);
+        eventPublisher.publishEvent(new MemberLoginEvent(member.getId(), member.getNickname()));
 
         return new LoginSuccess(accessToken, refreshToken, accessTokenMinutes, refreshTokenDays, memberInfo);
     }

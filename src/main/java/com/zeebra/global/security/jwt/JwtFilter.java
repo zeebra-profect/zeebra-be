@@ -1,18 +1,9 @@
 package com.zeebra.global.security.jwt;
 
-import java.io.IOException;
-import java.util.Optional;
-
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Component;
-import org.springframework.web.filter.OncePerRequestFilter;
-
 import com.zeebra.domain.member.entity.Member;
 import com.zeebra.domain.member.repository.MemberRepository;
 import com.zeebra.global.ErrorCode.AuthErrorCode;
 import com.zeebra.global.web.CookieUtil;
-
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
@@ -20,6 +11,13 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -179,16 +177,17 @@ public class JwtFilter extends OncePerRequestFilter {
             return false;
         }
     }
-
+    
     private void setAuthError(HttpServletRequest request, AuthErrorCode code) {
         request.setAttribute("AUTH_ERROR_CODE", code);
     }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getRequestURI();
-        // 웹소켓 경로는 필터 건너뛰기
-        return path.startsWith("/api/notification") && !path.contains("/all");
+//        String path = request.getRequestURI();
+//        return path.startsWith("/ws")
+//                || path.startsWith("/api/auth");  // 로그인/회원가입은 인증 불필요
+        return false;
     }
 
 }

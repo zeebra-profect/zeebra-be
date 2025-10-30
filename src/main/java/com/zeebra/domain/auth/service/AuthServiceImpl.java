@@ -19,7 +19,6 @@ import com.zeebra.domain.notification.event.MemberSignUpEvent;
 import com.zeebra.global.ErrorCode.AuthErrorCode;
 import com.zeebra.global.ErrorCode.MemberErrorCode;
 import com.zeebra.global.exception.BusinessException;
-import com.zeebra.global.redis.RedisService;
 import com.zeebra.global.security.jwt.JwtProvider;
 
 import lombok.RequiredArgsConstructor;
@@ -31,7 +30,7 @@ public class AuthServiceImpl implements AuthService {
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
-    private final RedisService redisService;
+    // private final RedisService redisService;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
@@ -118,7 +117,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         try {
-            redisService.addToBlacklist(token, expirationDate.getTime(), jwtProvider.getSubjectAsLong(token));
+            // redisService.addToBlacklist(token, expirationDate.getTime(), jwtProvider.getSubjectAsLong(token));
         } catch (Exception e) {
         }
     }

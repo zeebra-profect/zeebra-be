@@ -1,10 +1,18 @@
 package com.zeebra.global.security.jwt;
 
+import java.io.IOException;
+import java.util.Optional;
+
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
 import com.zeebra.domain.member.entity.Member;
 import com.zeebra.domain.member.repository.MemberRepository;
 import com.zeebra.global.ErrorCode.AuthErrorCode;
-import com.zeebra.global.redis.RedisService;
 import com.zeebra.global.web.CookieUtil;
+
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
@@ -12,13 +20,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Component;
-import org.springframework.web.filter.OncePerRequestFilter;
-
-import java.io.IOException;
-import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -36,7 +37,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtProvider jwtProvider;
     private final MemberRepository memberRepository;
-    private final RedisService redisService;
+    // private final RedisService redisService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws
@@ -89,9 +90,9 @@ public class JwtFilter extends OncePerRequestFilter {
     }
 
     private boolean processAccessToken(String accessToken) {
-        if (redisService.isBlacklisted(accessToken)) {
-            return false;
-        }
+        // if (redisService.isBlacklisted(accessToken)) {
+        //     return false;
+        // }
 
         if (!jwtProvider.isValid(accessToken)) {
             return false;
@@ -123,10 +124,10 @@ public class JwtFilter extends OncePerRequestFilter {
             return false;
         }
 
-        if (redisService.isBlacklisted(refreshToken)) {
-            setAuthError(request, AuthErrorCode.TOKEN_INVALID);
-            return false;
-        }
+        // if (redisService.isBlacklisted(refreshToken)) {
+        //     setAuthError(request, AuthErrorCode.TOKEN_INVALID);
+        //     return false;
+        // }
 
         if (!jwtProvider.isValid(refreshToken)) {
             setAuthError(request, AuthErrorCode.TOKEN_EXPIRED);

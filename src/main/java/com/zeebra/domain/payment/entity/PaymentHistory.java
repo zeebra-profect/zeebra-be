@@ -1,7 +1,14 @@
 package com.zeebra.domain.payment.entity;
 
 import com.zeebra.global.jpa.BaseEntity;
-import jakarta.persistence.*;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -23,8 +30,16 @@ public class PaymentHistory extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private PaymentStatus paymentStatus;
 
-    public PaymentHistory(Long paymentId, PaymentStatus paymentStatus) {
+	@Column(name = "idempotency_key", nullable = false, length = 128, unique = true)
+	private String idempotencyKey;
+
+    public PaymentHistory(Long paymentId, PaymentStatus paymentStatus, String idempotencyKey) {
         this.paymentId = paymentId;
         this.paymentStatus = paymentStatus;
-    }
+    	this.idempotencyKey = idempotencyKey;
+	}
+
+	public static PaymentHistory createPaymentHistory(Long paymentId, PaymentStatus paymentStatus, String idempotencyKey) {
+		return new PaymentHistory(paymentId, paymentStatus, idempotencyKey);
+	}
 }

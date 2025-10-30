@@ -9,7 +9,7 @@ import com.zeebra.domain.order.entity.OrderStatus;
 
 public record OrderResponse(
 	Long orderId,
-	String orderName,
+	String orderNumber,
 	OrderStatus orderStatus,
 	LocalDateTime orderTime,
 	int totalQuantity,

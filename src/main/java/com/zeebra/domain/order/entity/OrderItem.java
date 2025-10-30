@@ -2,7 +2,11 @@ package com.zeebra.domain.order.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 
+import com.zeebra.global.ErrorCode.OrderErrorCode;
+import com.zeebra.global.exception.BusinessException;
 import com.zeebra.global.jpa.BaseEntity;
 
 import jakarta.persistence.Column;
@@ -96,7 +100,7 @@ public class OrderItem extends BaseEntity {
         this.orderItemPrice = orderItemPrice;
         this.orderItemQuantity = orderItemQuantity != 0 ? orderItemQuantity : 1;
         this.orderItemAmount = orderItemAmount;
-        this.orderItemStatus = orderItemStatus != null ? orderItemStatus : OrderItemStatus.ORDERED;
+        this.orderItemStatus = orderItemStatus != null ? orderItemStatus : OrderItemStatus.CREATED;
         this.refundableQuantity = refundableQuantity;
         this.refundableAmount = refundableAmount;
         this.returnedQuantity = returnedQuantity;
@@ -113,7 +117,7 @@ public class OrderItem extends BaseEntity {
 			.orderItemThumbnail(orderItemThumbnail)
 			.orderItemQuantity(orderItemQuantity)
 			.orderItemAmount(orderItemAmount)
-			.orderItemStatus(OrderItemStatus.ORDERED)
+			.orderItemStatus(OrderItemStatus.CREATED)
 			.refundableQuantity(orderItemQuantity)
 			.refundableAmount(orderItemAmount)
 			.returnedQuantity(0)
@@ -122,13 +126,135 @@ public class OrderItem extends BaseEntity {
 			.build();
 	}
 
-	public OrderItem updateOrderItemStatus(OrderItemStatus orderItemStatus) {
-		this.orderItemStatus = orderItemStatus;
-		return this;
-	}
-
 	public OrderItem updateRefundableQuantity(int refundableQuantity) {
 		this.refundableQuantity = refundableQuantity;
 		return this;
+	}
+
+	public void updateOrderItemStatus(OrderItemStatus newStatus) {
+		validateStatusTransition(newStatus);
+		this.orderItemStatus = newStatus;
+	}
+
+	public void transitionToRefundRequested() {
+		if (this.orderItemStatus != OrderItemStatus.PAID) {
+			throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
+		}
+		if (this.returnStatus != ReturnStatus.NONE) {
+			throw new BusinessException(OrderErrorCode.ALREADY_IN_PROGRESS);
+		}
+		this.orderItemStatus = OrderItemStatus.REFUND_REQUESTED;
+	}
+
+	public void transitionToRefunded() {
+		if (this.orderItemStatus != OrderItemStatus.REFUND_REQUESTED &&
+			this.orderItemStatus != OrderItemStatus.PAID) {
+			throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
+		}
+		this.orderItemStatus = OrderItemStatus.REFUNDED;
+	}
+
+	public void transitionToShipping() {
+		if (this.orderItemStatus != OrderItemStatus.PAID) {
+			throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
+		}
+		if (this.returnStatus != ReturnStatus.NONE) {
+			throw new BusinessException(OrderErrorCode.ALREADY_IN_PROGRESS);
+		}
+		this.orderItemStatus = OrderItemStatus.SHIPPING;
+	}
+
+	public void transitionToDelivered() {
+		if (this.orderItemStatus != OrderItemStatus.SHIPPING) {
+			throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
+		}
+		this.orderItemStatus = OrderItemStatus.DELIVERED;
+	}
+
+	public void transitionToCompleted() {
+		if (this.orderItemStatus != OrderItemStatus.PAID &&
+			this.orderItemStatus != OrderItemStatus.DELIVERED) {
+			throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
+		}
+		if (this.returnStatus != ReturnStatus.NONE) {
+			throw new BusinessException(OrderErrorCode.ALREADY_IN_PROGRESS);
+		}
+		this.orderItemStatus = OrderItemStatus.COMPLETED;
+	}
+
+	public void cancel() {
+		if (!canCancel()) {
+			throw new BusinessException(OrderErrorCode.CANNOT_BE_CANCELLED);
+		}
+		this.orderItemStatus = OrderItemStatus.CANCELED;
+	}
+
+	public void refund() {
+		if (!canRefund()) {
+			throw new BusinessException(OrderErrorCode.CANNOT_BE_REFUNDED);
+		}
+		this.orderItemStatus = OrderItemStatus.REFUNDED;
+	}
+
+	public boolean canCancel() {
+		return (this.orderItemStatus == OrderItemStatus.CREATED ||
+			this.orderItemStatus == OrderItemStatus.PAID) &&
+			this.returnStatus == ReturnStatus.NONE;
+	}
+
+	public boolean canRefund() {
+		return this.orderItemStatus == OrderItemStatus.PAID &&
+			this.returnStatus == ReturnStatus.NONE;
+	}
+
+	public boolean canStartShipping() {
+		return this.orderItemStatus == OrderItemStatus.PAID &&
+			this.returnStatus == ReturnStatus.NONE;
+	}
+
+	public boolean canRequestReturn() {
+		return this.orderItemStatus == OrderItemStatus.DELIVERED &&
+			this.returnStatus == ReturnStatus.NONE;
+	}
+
+	public boolean canComplete() {
+		return (this.orderItemStatus == OrderItemStatus.PAID ||
+			this.orderItemStatus == OrderItemStatus.DELIVERED) &&
+			this.returnStatus == ReturnStatus.NONE;
+	}
+
+	private void validateStatusTransition(OrderItemStatus newStatus) {
+		Map<OrderItemStatus, List<OrderItemStatus>> allowedTransitions = Map.of(
+			OrderItemStatus.CREATED, List.of(
+				OrderItemStatus.PAID,
+				OrderItemStatus.CANCELED
+			),
+			OrderItemStatus.PAID, List.of(
+				OrderItemStatus.CANCELED,
+				OrderItemStatus.REFUND_REQUESTED,
+				OrderItemStatus.REFUNDED,
+				OrderItemStatus.SHIPPING,
+				OrderItemStatus.COMPLETED
+			),
+			OrderItemStatus.REFUND_REQUESTED, List.of(
+				OrderItemStatus.REFUNDED,
+				OrderItemStatus.PAID
+			),
+			OrderItemStatus.SHIPPING, List.of(
+				OrderItemStatus.DELIVERED
+			),
+			OrderItemStatus.DELIVERED, List.of(
+				OrderItemStatus.COMPLETED
+			),
+			OrderItemStatus.COMPLETED, List.of(),
+			OrderItemStatus.CANCELED, List.of(),
+			OrderItemStatus.REFUNDED, List.of()
+		);
+
+		List<OrderItemStatus> allowed = allowedTransitions.getOrDefault(this.orderItemStatus, List.of());
+
+		if (!allowed.contains(newStatus)) {
+			throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
+		}
 	}
 }

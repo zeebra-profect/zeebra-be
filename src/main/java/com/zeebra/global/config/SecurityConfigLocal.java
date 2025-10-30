@@ -47,7 +47,7 @@ public class SecurityConfigLocal {
                 .headers(headers -> headers
                         .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'self'; script-src 'self' "))
                         .frameOptions(frameOptions -> frameOptions.deny()))
-//                .cors(AbstractHttpConfigurer::disable)
+                .cors(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(SWAGGER_WHITELIST).permitAll()
                         .requestMatchers("/api/notification").permitAll()

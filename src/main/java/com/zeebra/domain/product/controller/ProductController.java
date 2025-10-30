@@ -1,26 +1,35 @@
 package com.zeebra.domain.product.controller;
 
-import com.zeebra.domain.product.dto.FavoriteProductResponse;
-import com.zeebra.domain.product.dto.ProductDetailResponse;
-import com.zeebra.domain.product.dto.ProductRequest;
-import com.zeebra.domain.product.dto.ProductResponse;
+import com.zeebra.domain.product.dto.*;
 import com.zeebra.domain.product.service.ProductService;
 import com.zeebra.global.ApiResponse;
 import com.zeebra.global.security.jwt.JwtProvider;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.data.domain.Pageable;
+
+import java.util.List;
+
 @RequiredArgsConstructor
 @RestController
+@Tag(name = "Product API", description = "상품 관련 API")
 public class ProductController {
 
     private final ProductService productService;
 
-//    @GetMapping
-//    public ProductListResponse getProductList(@RequestBody GetProductListRequest request) {
-//        return productService.getProductList(request);
-//    }
+    @Operation(summary = "상품 목록 조회")
+    @GetMapping("/api/products")
+    public ApiResponse<SearchProductResponse> getProductList(@RequestParam(required = false) String keyWord,
+                                                             @RequestParam(required = false) List<Long> categoryIds,
+                                                             @RequestParam(required = false) List<Long> brandIds,
+                                                             @RequestParam(required = false) String productSort,
+                                                             Pageable pageable) {
+        return productService.searchProduct(keyWord, categoryIds, brandIds, pageable, productSort);
+    }
 
     @GetMapping("/api/products/{productId}")
     public ApiResponse<ProductDetailResponse> getProductDetail(@PathVariable Long productId) {

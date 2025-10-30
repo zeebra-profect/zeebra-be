@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequiredArgsConstructor
 @Slf4j
-public class CartRestController {
+public class CartController {
 
     private final CartService cartService;
 

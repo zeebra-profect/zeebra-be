@@ -40,7 +40,6 @@ public class ChatServiceImpl implements ChatService {
     private final ChatRoomMemberRepository chatRoomMemberRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final TradeRepository tradeRepository;
-
     private final MemberRepository memberRepository;
     private final SalesRepository salesRepository;
 
@@ -150,7 +149,7 @@ public class ChatServiceImpl implements ChatService {
 
     @Transactional(readOnly = true)
     public Page<ChatMessageResponseDto> getChatHistory(Long roomId, Long currentUserId, Pageable pageable){
-        Page<ChatMessage> messagePage = chatMessageRepository.findByChatRoomMemberChatRoomId(roomId, pageable);
+        Page<ChatMessage> messagePage = chatMessageRepository.findByChatRoomMember_ChatRoomId(roomId, pageable);
 
         return messagePage.map(message -> {
            Long senderMemberId = message.getChatRoomMember().getMemberId();
@@ -175,7 +174,7 @@ public class ChatServiceImpl implements ChatService {
                     String roomProfileImageUrl = null;
 
 
-                    List<ChatRoomMember> membersInRoom = chatRoomMemberRepository.findByChatRoomIdAndDeletedAtIsNull((room.getId()));
+                    List<ChatRoomMember> membersInRoom = chatRoomMemberRepository.findByChatRoomIdAndDeletedAtIsNull(room.getId());
 
                     Optional<ChatRoomMember> opponent = membersInRoom.stream()
                             .filter(m -> !m.getMemberId().equals(currentMemberId))

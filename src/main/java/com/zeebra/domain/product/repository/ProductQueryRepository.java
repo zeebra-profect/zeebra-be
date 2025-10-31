@@ -39,6 +39,7 @@ public class ProductQueryRepository {
     private final QProductSearchMv productSearchMv = QProductSearchMv.productSearchMv;
     private final QOptionCombination optionCombination = QOptionCombination.optionCombination;
     private final QOptionName optionName = QOptionName.optionName;
+    private final QFavoriteProduct favoriteProduct = QFavoriteProduct.favoriteProduct;
 
     public List<Product> searchProduct(String keyword,
                                        List<Long> categoryIds,
@@ -268,5 +269,24 @@ public class ProductQueryRepository {
 
         orderSpecifiers.add(product.id.desc());
         return orderSpecifiers.toArray(OrderSpecifier[]::new);
+    }
+
+    public List<Product> getFavoriteProducts(Long memberId) {
+        return queryFactory
+                .selectFrom(product)
+                .join(favoriteProduct).on(favoriteProduct.productId.eq(product.id))
+                .where(favoriteProduct.memberId.eq(memberId))
+                .orderBy(favoriteProduct.createdTime.desc())
+                .fetch();
+    }
+
+    public long countFavoriteProducts(Long memberId) {
+        Long count = queryFactory
+                .select(product.count())
+                .from(product)
+                .join(favoriteProduct).on(favoriteProduct.productId.eq(product.id))
+                .where(favoriteProduct.memberId.eq(memberId))
+                .fetchOne();
+        return count != null ? count : 0L;
     }
 }

@@ -4,6 +4,7 @@ import com.zeebra.domain.product.dto.*;
 import com.zeebra.global.ApiResponse;
 
 import org.springframework.data.domain.Pageable;
+
 import java.util.List;
 
 public interface ProductService {
@@ -19,4 +20,6 @@ public interface ProductService {
     public ApiResponse<ProductResponse> createProduct(Long memberId, ProductRequest request);
 
     public ApiResponse<SearchProductResponse> searchProduct(String keyWord, List<Long> categoryIds, List<Long> brandIds, Pageable pageable, String productSort);
+
+    public ApiResponse<FavoriteProductList> getFavoriteProduct(Long memberId, Pageable pageable);
 }

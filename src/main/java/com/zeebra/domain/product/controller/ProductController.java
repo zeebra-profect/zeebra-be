@@ -23,7 +23,7 @@ public class ProductController {
 
     @Operation(summary = "상품 목록 조회")
     @GetMapping("/api/products")
-    public ApiResponse<SearchProductResponse> getProductList(@RequestParam(required = false) String keyWord,
+    public ApiResponse<SearchProductResponse> getProductList(@RequestParam(required = false, defaultValue = "") String keyWord,
                                                              @RequestParam(required = false) List<Long> categoryIds,
                                                              @RequestParam(required = false) List<Long> brandIds,
                                                              @RequestParam(required = false) String productSort,
@@ -40,7 +40,7 @@ public class ProductController {
 
     @GetMapping("/api/product-options/{productId}/{colorOptionNameId}")
     public ApiResponse<SizeOptionResponseList> getProductOptionSize(@PathVariable Long productId,
-                                                                @PathVariable Long colorOptionNameId) {
+                                                                    @PathVariable Long colorOptionNameId) {
         return productService.getProductOptionSize(productId, colorOptionNameId);
     }
 
@@ -64,9 +64,11 @@ public class ProductController {
         Long memberId = principal.getMemberId();
         return productService.createProduct(memberId, request);
     }
-//
-//    @GetMapping("/api/products/{productId}/option/{optionNameId}")
-//    public void getProductSize(@PathVariable Long productId, @PathVariable String optionNameId) {
-//
-//    }
+
+    @GetMapping("/api/favorite-products")
+    public ApiResponse<FavoriteProductList> getFavoriteProduct(@AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal,
+                                                               Pageable pageable) {
+        Long memberId = principal.getMemberId();
+        return productService.getFavoriteProduct(memberId, pageable);
+    }
 }

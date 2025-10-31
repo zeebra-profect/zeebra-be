@@ -8,7 +8,9 @@ import java.util.List;
 
 public interface ProductService {
 
-    public ApiResponse<ProductDetailResponse> getProductDetail(Long productId);
+    public ApiResponse<ProductDetailResponse> getProductDetail(Long productId, Long colorOptionNameId);
+
+    public ApiResponse<SizeOptionResponseList> getProductOptionSize(Long productId, Long colorOptionNameId);
 
     public ApiResponse<FavoriteProductResponse> addFavoriteProduct(Long memberId, Long productId);
 

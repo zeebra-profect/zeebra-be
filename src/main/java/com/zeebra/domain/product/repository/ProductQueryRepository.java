@@ -12,6 +12,7 @@ import com.zeebra.domain.brand.entity.QBrand;
 import com.zeebra.domain.brand.repository.BrandRepository;
 import com.zeebra.domain.category.entity.Category;
 import com.zeebra.domain.category.entity.QCategory;
+import com.zeebra.domain.product.dto.SizeOptionResponse;
 import com.zeebra.domain.product.entity.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.data.web.SpringDataWebProperties;
@@ -36,6 +37,8 @@ public class ProductQueryRepository {
     private final QSales sales = QSales.sales;
     private final JPAQueryFactory queryFactory;
     private final QProductSearchMv productSearchMv = QProductSearchMv.productSearchMv;
+    private final QOptionCombination optionCombination = QOptionCombination.optionCombination;
+    private final QOptionName optionName = QOptionName.optionName;
 
     public List<Product> searchProduct(String keyword,
                                        List<Long> categoryIds,
@@ -194,6 +197,18 @@ public class ProductQueryRepository {
                 .from(productOption)
                 .join(sales).on(sales.productOptionId.eq(productOption.id))
                 .where(productOption.productId.eq(productId))
+                .fetchOne();
+    }
+
+    public BigDecimal lowPriceOfColor(Long productId, Long colorOptionId) {
+        return queryFactory
+                .select(sales.price.min())
+                .from(productOption)
+                .join(sales).on(sales.productOptionId.eq(productOption.id))
+                .join(optionCombination).on(optionCombination.productOptionId.eq(productOption.id))
+                .join(optionName).on(optionName.id.eq(optionCombination.optionNameId))
+                .where(productOption.productId.eq(productId),
+                        optionName.id.eq(colorOptionId))
                 .fetchOne();
     }
 

@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
-public record ProductDetailResponse(
+public record GetProductDetailResponse(
         Long productId,
         Long brandId,
         Long categoryId,
@@ -16,8 +16,6 @@ public record ProductDetailResponse(
         BigDecimal lowPrice,
         int reviewCount,
         int favoriteProductCount,
-        LocalDateTime createdAt,
-        List<ColorOptionResponse> colorOptionResponses,
-        String colorValue
+        LocalDateTime createdAt
 ) {
 }

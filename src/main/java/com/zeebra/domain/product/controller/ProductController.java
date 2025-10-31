@@ -31,9 +31,17 @@ public class ProductController {
         return productService.searchProduct(keyWord, categoryIds, brandIds, pageable, productSort);
     }
 
-    @GetMapping("/api/products/{productId}")
-    public ApiResponse<ProductDetailResponse> getProductDetail(@PathVariable Long productId) {
-        return productService.getProductDetail(productId);
+    @GetMapping({"/api/products/{productId}", "/api/products/{productId}/{colorOptionNameId}"})
+    public ApiResponse<ProductDetailResponse> getProductDetail(
+            @PathVariable Long productId,
+            @PathVariable(required = false) Long colorOptionNameId) {
+        return productService.getProductDetail(productId, colorOptionNameId);
+    }
+
+    @GetMapping("/api/product-options/{productId}/{colorOptionNameId}")
+    public ApiResponse<SizeOptionResponseList> getProductOptionSize(@PathVariable Long productId,
+                                                                @PathVariable Long colorOptionNameId) {
+        return productService.getProductOptionSize(productId, colorOptionNameId);
     }
 
     @PostMapping("/api/favorite-products/{productId}")
@@ -56,4 +64,9 @@ public class ProductController {
         Long memberId = principal.getMemberId();
         return productService.createProduct(memberId, request);
     }
+//
+//    @GetMapping("/api/products/{productId}/option/{optionNameId}")
+//    public void getProductSize(@PathVariable Long productId, @PathVariable String optionNameId) {
+//
+//    }
 }

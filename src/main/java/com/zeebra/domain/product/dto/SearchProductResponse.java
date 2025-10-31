@@ -7,7 +7,7 @@ import com.zeebra.domain.category.dto.CategorySearchResponse;
 import java.util.List;
 
 public record SearchProductResponse(
-        List<ProductDetailResponse> productDetailResponses,
+        List<GetProductDetailResponse> productDetailResponses,
         List<CategorySearchResponse> categoryResponses,
         List<BrandResponse> brandResponses,
         Pagination pagination

@@ -8,9 +8,7 @@ import com.zeebra.domain.member.entity.Member;
 import com.zeebra.domain.member.entity.Role;
 import com.zeebra.domain.member.repository.MemberRepository;
 import com.zeebra.domain.product.dto.*;
-import com.zeebra.domain.product.entity.FavoriteProduct;
-import com.zeebra.domain.product.entity.Product;
-import com.zeebra.domain.product.entity.ProductSort;
+import com.zeebra.domain.product.entity.*;
 import com.zeebra.domain.product.repository.*;
 import com.zeebra.global.ApiResponse;
 import jakarta.transaction.Transactional;
@@ -34,10 +32,12 @@ public class ProductServiceImpl implements ProductService {
     private final ProductOptionRepository productOptionRepository;
     private final MemberRepository memberRepository;
     private final FavoriteProductRepository favoriteProductRepository;
+    private final ProductOptionQueryRepository productOptionQueryRepository;
+    private final OptionNameRepository optionNameRepository;
 
-    private List<ProductDetailResponse> toProductDetailResponse(List<Product> products) {
+    private List<GetProductDetailResponse> toProductDetailResponse(List<Product> products) {
         return products.stream()
-                .map(product -> new ProductDetailResponse(
+                .map(product -> new GetProductDetailResponse(
                         product.getId(),
                         product.getBrandId(),
                         product.getCategoryId(),
@@ -54,7 +54,10 @@ public class ProductServiceImpl implements ProductService {
                 .toList();
     }
 
-    private ProductDetailResponse toProductDetailResponse(Product product, BigDecimal lowPriceOfProduct) {
+    private ProductDetailResponse toProductDetailResponse(Product product,
+                                                          BigDecimal lowPriceOfProduct,
+                                                          List<ColorOptionResponse> colorOptionResponses,
+                                                          String colorValue) {
         return new ProductDetailResponse(
                 product.getId(),
                 product.getBrandId(),
@@ -67,7 +70,9 @@ public class ProductServiceImpl implements ProductService {
                 lowPriceOfProduct,
                 product.getReviewCount(),
                 product.getFavoriteProductCount(),
-                product.getCreatedTime());
+                product.getCreatedTime(),
+                colorOptionResponses,
+                colorValue);
     }
 
     private FavoriteProductResponse toFavoriteProductResponse(FavoriteProduct favoriteProduct) {
@@ -115,7 +120,7 @@ public class ProductServiceImpl implements ProductService {
                 .toList();
     }
 
-    private SearchProductResponse toSearchProductResponse(List<ProductDetailResponse> productDetailResponseList,
+    private SearchProductResponse toSearchProductResponse(List<GetProductDetailResponse> productDetailResponseList,
                                                           List<BrandResponse> brandListResponse,
                                                           List<CategorySearchResponse> categorySearchResponseList,
                                                           Pagination pagination) {
@@ -138,19 +143,49 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public ApiResponse<ProductDetailResponse> getProductDetail(Long productId) {
+    public ApiResponse<ProductDetailResponse> getProductDetail(Long productId, Long colorOptionNameId) {
         try {
             Product product = productRepository.findById(productId).orElseThrow(
                     () -> new NoSuchElementException("해당하는 상품이 존재하지 않습니다."));
 
-            BigDecimal lowPriceOfProduct = productQueryRepository.lowPriceOfProduct(productId);
+            List<OptionName> colorOptionNames = productOptionQueryRepository.findAllOptionNames(product.getId());
 
-            return ApiResponse.success(toProductDetailResponse(product, lowPriceOfProduct));
+            List<ColorOptionResponse> colorOptionResponses = colorOptionNames.stream()
+                    .map(colorOptionName -> new ColorOptionResponse(colorOptionName.getId(), colorOptionName.getValue()))
+                    .toList();
+
+//            List<SizeOptionResponse> sizeOptionResponses = productOptionQueryRepository.findByColorOptionName(colorOptionResponses.get(0).optionNameId(), product.getId());
+
+            if (colorOptionNameId == null) {
+
+                BigDecimal lowPriceOfColor = productQueryRepository.lowPriceOfColor(product.getId(), colorOptionResponses.get(0).colorOptionNameId());
+
+                return ApiResponse.success(toProductDetailResponse(product, lowPriceOfColor, colorOptionResponses, colorOptionResponses.get(0).colorValue()));
+            } else {
+
+                BigDecimal lowPriceOfColor = productQueryRepository.lowPriceOfColor(product.getId(), colorOptionNameId);
+
+                OptionName optionName = optionNameRepository.findById(colorOptionNameId).orElseThrow(
+                        () -> new NoSuchElementException("해당하는 옵션이름이 없습니다."));
+
+                return ApiResponse.success(toProductDetailResponse(product, lowPriceOfColor, colorOptionResponses, optionName.getValue()));
+            }
         } catch (NoSuchElementException e) {
             return ApiResponse.error(null, e.getMessage());
         } catch (Exception e) {
             return ApiResponse.error(null, "상품 상세 조회 과정에 오류가 발생했습니다.");
         }
+    }
+
+    @Override
+    public ApiResponse<SizeOptionResponseList> getProductOptionSize(Long productId, Long colorOptionNameId) {
+        OptionName optionName = optionNameRepository.findById(colorOptionNameId).orElseThrow(
+                () -> new NoSuchElementException("해당하는 옵션값이 없습니다."));
+        if (optionName.getName() != "color") {
+            return ApiResponse.error(null, "색상값이 아닙니다.");
+        }
+        List<SizeOptionResponse> sizeOptionResponses = productOptionQueryRepository.findByColorOptionName(colorOptionNameId, productId);
+        return ApiResponse.success(new SizeOptionResponseList(sizeOptionResponses));
     }
 
     @Transactional
@@ -227,7 +262,7 @@ public class ProductServiceImpl implements ProductService {
 
         List<Category> categories = productQueryRepository.filteredCategory(keyWord, categoryIds, brandIds);
 
-        List<ProductDetailResponse> productDetailResponseList = toProductDetailResponse(products);
+        List<GetProductDetailResponse> productDetailResponseList = toProductDetailResponse(products);
 
         List<BrandResponse> brandListResponse = toBrandListResponse(brands);
 
@@ -245,4 +280,5 @@ public class ProductServiceImpl implements ProductService {
                 pagination);
         return ApiResponse.success(searchProductResponse);
     }
+
 }

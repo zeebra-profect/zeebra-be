@@ -21,8 +21,7 @@ public class OptionCombination extends BaseEntity {
 
     private Long optionNameId;
 
-    public OptionCombination(Long id, Long productOptionId, Long optionNameId) {
-        this.id = id;
+    public OptionCombination(Long productOptionId, Long optionNameId) {
         this.productOptionId = productOptionId;
         this.optionNameId = optionNameId;
     }

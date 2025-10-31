@@ -49,7 +49,6 @@ public class SecurityConfig {
 				.requestMatchers(SWAGGER_WHITELIST).permitAll()
 				.requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**").permitAll()
 				.requestMatchers("/api/auth/**").permitAll()
-                    .requestMatchers("/ws/chat/**").permitAll()
 				.anyRequest().authenticated())
 			.csrf(csrf -> csrf
 				.ignoringRequestMatchers("/api/auth/**", "/api/products", "/api/products/**")

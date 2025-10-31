@@ -39,10 +39,11 @@ public class ChatMessage {
 
     @Builder
     public ChatMessage(ChatRoomMember chatRoomMember, MessageType messageType,
-                       String messageContent, String imageUrl) {
+                       String messageContent, String imageUrl, LocalDateTime createdAt) {
         this.chatRoomMember = chatRoomMember;
         this.messageType = messageType;
         this.messageContent = messageContent;
         this.imageUrl = imageUrl;
+        this.createdAt = createdAt;
     }
 }

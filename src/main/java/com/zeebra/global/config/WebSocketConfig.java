@@ -25,4 +25,5 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
         System.out.println("========== WebSocket 핸들러 등록 완료 ==========");
     }
+
 }

@@ -290,4 +290,25 @@ public class ProductServiceImpl implements ProductService {
         return ApiResponse.success(searchProductResponse);
     }
 
+    @Override
+    public ApiResponse<FavoriteProductList> getFavoriteProduct(Long memberId, Pageable pageable) {
+        Member member = memberRepository.findById(memberId).orElseThrow(
+                () -> new NoSuchElementException("해당하는 사용자가 없습니다."));
+        List<Product> favoriteProducts = productQueryRepository.getFavoriteProducts(memberId);
+        List<GetFavoriteProductResponse> getFavoriteProductResponses = favoriteProducts.stream()
+                .map(product -> new GetFavoriteProductResponse(
+                        product.getId(),
+                        product.getBrandId(),
+                        product.getCategoryId(),
+                        product.getName(),
+                        product.getDescription(),
+                        product.getModelNumber(),
+                        product.getThumbnail()
+                ))
+                .toList();
+        long totalCount = productQueryRepository.countFavoriteProducts(memberId);
+        int totalPage = (int) Math.ceil((double) totalCount / pageable.getPageSize());
+        Pagination pagination = new Pagination(pageable.getPageNumber(), pageable.getPageSize(), totalCount, totalPage);
+        return ApiResponse.success(new FavoriteProductList(pagination, getFavoriteProductResponses));
+    }
 }

@@ -10,6 +10,8 @@ import com.zeebra.domain.payment.dto.ApprovePaymentRequest;
 import com.zeebra.domain.payment.dto.ApprovePaymentResponse;
 import com.zeebra.domain.payment.dto.CreatePaymentRequest;
 import com.zeebra.domain.payment.dto.CreatePaymentResponse;
+import com.zeebra.domain.payment.dto.FailPaymentRequest;
+import com.zeebra.domain.payment.dto.FailPaymentResponse;
 import com.zeebra.domain.payment.service.PaymentService;
 import com.zeebra.domain.payment.service.TossPaymentService;
 import com.zeebra.global.ApiResponse;
@@ -41,12 +43,22 @@ public class PaymentController {
 		return ApiResponse.success(response);
 	}
 
-	@Operation(summary = "결제 성공 처리 API", description = "결제창을 통한 결제가 성공하면 그 결과를 처리하고, 토스에 최종 결제 승인을 요청합니다.")
+	@Operation(summary = "결제 승인 요청 API", description = "결제창을 통한 결제 인증이 성공하면 그 결과를 처리하고, 토스에 최종 결제 승인을 요청합니다.")
 	@PostMapping("/approve")
 	public ApiResponse<ApprovePaymentResponse> approvePayment(@RequestBody @Valid ApprovePaymentRequest request, @AuthenticationPrincipal
 		JwtProvider.JwtUserPrincipal principal) {
 		Long memberId = principal.getMemberId();
 		ApprovePaymentResponse response = paymentService.approvePayment(request, memberId);
+		return ApiResponse.success(response);
+	}
+
+	@Operation(summary = "결제 실패 처리 API", description = "결제창을 통한 결제 인증이 실패하면 결과를 처리합니다.")
+	@PostMapping("/fail")
+	public ApiResponse<FailPaymentResponse> failPayment(@RequestBody @Valid FailPaymentRequest request, @AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal) {
+
+		Long memberId = principal.getMemberId();
+		FailPaymentResponse response = paymentService.failPayment(memberId, request);
+
 		return ApiResponse.success(response);
 	}
 }

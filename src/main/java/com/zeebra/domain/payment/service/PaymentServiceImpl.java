@@ -19,6 +19,8 @@ import com.zeebra.domain.payment.dto.ApprovePaymentRequest;
 import com.zeebra.domain.payment.dto.ApprovePaymentResponse;
 import com.zeebra.domain.payment.dto.CreatePaymentRequest;
 import com.zeebra.domain.payment.dto.CreatePaymentResponse;
+import com.zeebra.domain.payment.dto.FailPaymentRequest;
+import com.zeebra.domain.payment.dto.FailPaymentResponse;
 import com.zeebra.domain.payment.dto.TossApprovalResponse;
 import com.zeebra.domain.payment.entity.Payment;
 import com.zeebra.domain.payment.entity.PaymentHistory;
@@ -61,6 +63,8 @@ public class PaymentServiceImpl implements PaymentService {
 		validateOrderCanBeProcessed(order);
 		validatePaymentAmount(request, order);
 
+		// sales 상태 검증해야 함
+
 		Payment payment = savePaymentWithHistory(request, order);
 		updateOrderStatusToPending(order.orderId(), request.clientRequestId());
 
@@ -90,6 +94,23 @@ public class PaymentServiceImpl implements PaymentService {
 		Payment reloadedPayment = reloadPayment(payment.getId());
 
 		return ApprovePaymentResponse.of(reloadedPayment, orderService.getOrder(memberId, reloadedPayment.getOrderId()));
+	}
+
+	@Transactional
+	public FailPaymentResponse failPayment(Long memberId, FailPaymentRequest request) {
+		Payment payment = findPaymentByTossOrderId(request.tossOrderId());
+
+		if(payment.getPaymentStatus() == PaymentStatus.FAILED ) {
+			throw new BusinessException(PaymentErrorCode.PAYMENT_ALREADY_PROCESSED);
+		}
+
+		orderService.updateOrderStatus(payment.getOrderId(), OrderStatus.PAYMENT_FAILED, request.clientRequestId());
+		payment.updatePaymentStatus(PaymentStatus.FAILED);
+
+		PaymentHistory paymentHistory = PaymentHistory.createPaymentHistory(payment.getId(), PaymentStatus.FAILED, request.clientRequestId());
+
+		OrderInfo order = orderService.getOrder(memberId, payment.getOrderId());
+		return FailPaymentResponse.of(payment, order);
 	}
 
 	/**
@@ -211,6 +232,8 @@ public class PaymentServiceImpl implements PaymentService {
 			OrderStatus.PAID,
 			idempotencyKey + "-order-paid"
 		);
+
+		// sales 재고랑 상태 변경해줘야 함..
 
 		log.info("[Payment 승인 성공 + 이력 저장 완료] paymentId: {}, status: APPROVED", reloadedPayment.getId());
 	}

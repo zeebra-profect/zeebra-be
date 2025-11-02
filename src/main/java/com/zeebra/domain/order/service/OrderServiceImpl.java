@@ -24,6 +24,7 @@ import com.zeebra.domain.order.dto.SalesItem;
 import com.zeebra.domain.order.entity.Order;
 import com.zeebra.domain.order.entity.OrderHistory;
 import com.zeebra.domain.order.entity.OrderItem;
+import com.zeebra.domain.order.entity.OrderItemStatus;
 import com.zeebra.domain.order.entity.OrderStatus;
 import com.zeebra.domain.order.repository.OrderHistoryRepository;
 import com.zeebra.domain.order.repository.OrderItemQueryRepository;
@@ -102,6 +103,11 @@ public class OrderServiceImpl implements OrderService {
 
 		order.updateOrderStatus(orderStatus);
 		saveOrderHistory(orderId, orderStatus, idempotencyKey);
+	}
+
+	public void updateAllOrderItemsStatus(Long orderId, OrderItemStatus orderItemStatus) {
+		List<OrderItem> orderItems = orderItemRepository.findByOrderId(orderId);
+		orderItems.forEach(orderItem -> orderItem.updateOrderItemStatus(orderItemStatus));
 	}
 
 	private Optional<CreateOrderResponse> findExistingOrder(String clientRequestId, Long memberId) {

@@ -8,7 +8,7 @@ public record CreatePaymentResponse(
 	Long paymentId,
 	Amount amount,
  	String orderName,
- 	String orderId,
+ 	String tossOrderId,
 	String successUrl,
 	String failUrl
 ) {

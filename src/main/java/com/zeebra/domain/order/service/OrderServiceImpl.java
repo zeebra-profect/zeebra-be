@@ -32,6 +32,7 @@ import com.zeebra.domain.order.repository.OrderItemRepository;
 import com.zeebra.domain.order.repository.OrderRepository;
 import com.zeebra.domain.order.service.OrderService;
 import com.zeebra.domain.product.entity.Sales;
+import com.zeebra.domain.product.service.SalesService;
 import com.zeebra.global.ErrorCode.CommonErrorCode;
 import com.zeebra.global.ErrorCode.OrderErrorCode;
 import com.zeebra.global.exception.BusinessException;
@@ -55,6 +56,7 @@ public class OrderServiceImpl implements OrderService {
 	private final OrderItemRepository orderItemRepository;
 	private final OrderItemQueryRepository orderItemQueryRepository;
 	private final OrderHistoryRepository orderHistoryRepository;
+	private final SalesService salesService;
 	private final CartItemRepository cartItemRepository;
 
 	@Transactional
@@ -66,11 +68,13 @@ public class OrderServiceImpl implements OrderService {
 			return existingResponse.get();
 		}
 
-		validateOrderRequest(request.cartId(), request.salesItem(), memberId, clientRequestId);
+		validateOrderRequest(request.cartId(), request.productOptionId(), request.salesItem(), memberId, clientRequestId);
 
 		return request.cartId() != null
 			? createOrderFromCart(request.cartId(), memberId, clientRequestId)
-			: createOrderFromSalesItem(request.salesItem(), memberId, clientRequestId);
+			: request.productOptionId() != null
+				? createOrderFromProductOptionId(request.productOptionId(), memberId, clientRequestId)
+				: createOrderFromSalesItem(request.salesItem(), memberId, clientRequestId);
 	}
 
 	@Transactional(readOnly = true)
@@ -150,15 +154,15 @@ public class OrderServiceImpl implements OrderService {
 		return CreateOrderResponse.of(OrderResponse.of(order, orderItems));
 	}
 
-	private void validateOrderRequest(Long cartId, SalesItem salesItem, Long memberId, String clientRequestId) {
-		if (cartId == null && salesItem == null) {
-			log.error("[주문 생성 실패] cartId와 salesItem이 모두 null입니다. memberId: {}, clientRequestId: {}",
+	private void validateOrderRequest(Long cartId, Long productOptionId, SalesItem salesItem, Long memberId, String clientRequestId) {
+		if (cartId == null && productOptionId == null && salesItem == null) {
+			log.error("[주문 생성 실패] cartId와 productOptionId, salesItem이 모두 null입니다. memberId: {}, clientRequestId: {}",
 				memberId, clientRequestId);
 			throw new BusinessException(OrderErrorCode.INVALID_ORDER_REQUEST);
 		}
 
-		if (cartId != null && salesItem != null) {
-			log.error("[주문 생성 실패] cartId와 salesItem을 동시에 사용할 수 없습니다. memberId: {}, cartId: {}, clientRequestId: {}",
+		if ((cartId != null && salesItem != null) || (cartId != null && productOptionId != null) || (salesItem != null && productOptionId != null)) {
+			log.error("[주문 생성 실패] cartId와 productOptionId, salesItem을 동시에 사용할 수 없습니다. memberId: {}, cartId: {}, clientRequestId: {}",
 				memberId, cartId, clientRequestId);
 			throw new BusinessException(OrderErrorCode.INVALID_ORDER_REQUEST);
 		}
@@ -178,6 +182,13 @@ public class OrderServiceImpl implements OrderService {
 		List<OrderItemResponse> orderItems = createOrderItemsFromCart(savedOrder.getId(), cartItems, cheapestSales);
 
 		return CreateOrderResponse.of(OrderResponse.of(savedOrder, orderItems));
+	}
+
+	private CreateOrderResponse createOrderFromProductOptionId(Long productOptionId, Long memberId, String idempotencyKey) {
+
+		SalesItem salesItem = salesService.findCheapestSalesByProductOptionId(productOptionId);
+
+		return createOrderFromSalesItem(salesItem, memberId, idempotencyKey);
 	}
 
 	private CreateOrderResponse createOrderFromSalesItem(SalesItem salesItem, Long memberId, String idempotencyKey) {

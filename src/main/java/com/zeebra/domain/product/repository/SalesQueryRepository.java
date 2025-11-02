@@ -1,12 +1,18 @@
 package com.zeebra.domain.product.repository;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.zeebra.domain.product.dto.SalesDetailResponse;
 import com.zeebra.domain.product.dto.SalesItemOptions;
@@ -122,4 +128,64 @@ public class SalesQueryRepository {
 			options
 		);
 	}
+
+	public Page<SalesDetailResponse> findSalesDetailsByConditions(Long memberId, LocalDate startDate, LocalDate endDate, SalesStatus salesStatus, Pageable pageable) {
+		List<Long> salesIds = queryFactory
+			.select(sales.id)
+			.from(sales)
+			.where(
+				memberIdEq(memberId),
+				createdTimeBetween(startDate, endDate),
+				salesStatusEq(salesStatus)
+			)
+			.orderBy(sales.createdTime.desc())
+			.offset(pageable.getOffset())
+			.limit(pageable.getPageSize())
+			.fetch();
+
+		if (salesIds.isEmpty()) {
+			return new PageImpl<>(List.of(), pageable, 0L);
+		}
+
+		Long total = queryFactory
+			.select(sales.count())
+			.from(sales)
+			.where(
+				memberIdEq(memberId),
+				createdTimeBetween(startDate, endDate),
+				salesStatusEq(salesStatus)
+			)
+			.fetchOne();
+
+		List<SalesDetailResponse> detailResponses = salesIds.stream()
+			.map(salesId -> findSalesDetailById(salesId, memberId))
+			.filter(detail -> detail != null)
+			.collect(Collectors.toList());
+
+		return new PageImpl<>(detailResponses, pageable, total != null ? total : 0L);
+	}
+
+	private BooleanExpression memberIdEq(Long memberId) {
+		return memberId != null ? sales.memberId.eq(memberId) : null;
+	}
+
+	private BooleanExpression createdTimeBetween(LocalDate startDate, LocalDate endDate) {
+		if (startDate != null && endDate != null) {
+			LocalDateTime startDateTime = startDate.atStartOfDay();
+			LocalDateTime endDateTime = endDate.atStartOfDay();
+			return sales.createdTime.between(startDateTime, endDateTime);
+		}
+		if (startDate != null) {
+			return sales.createdTime.goe(startDate.atStartOfDay());
+		}
+		if (endDate != null) {
+			return sales.createdTime.lt(endDate.atStartOfDay());
+		}
+		return null;
+	}
+
+	private BooleanExpression salesStatusEq(SalesStatus salesStatus) {
+		return salesStatus != null ? sales.salesStatus.eq(salesStatus) : null;
+	}
+
 }

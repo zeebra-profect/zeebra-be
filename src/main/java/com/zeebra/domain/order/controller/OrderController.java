@@ -6,6 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.zeebra.domain.order.dto.CreateOrderRequest;
 import com.zeebra.domain.order.dto.CreateOrderResponse;
+import com.zeebra.domain.order.dto.OrderResponse;
 import com.zeebra.domain.order.dto.ReadOrderListResponse;
 import com.zeebra.domain.order.entity.OrderStatus;
 import com.zeebra.domain.order.service.OrderService;
@@ -43,7 +45,7 @@ public class OrderController {
 		return ApiResponse.success(orderService.createOrder(memberId, request));
 	}
 
-	@Operation(summary = "주문 목록 조회 API", description = "주문한 내역을 조건별로 조회합니다.")
+	@Operation(summary = "주문 목록 조회 API", description = "주문한 내역 목록을 조건별로 조회합니다.")
 	@GetMapping()
 	public ApiResponse<ReadOrderListResponse> getOrders(
 		@AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal,
@@ -60,5 +62,13 @@ public class OrderController {
 		ReadOrderListResponse response = orderService.getOrderList(memberId, startDate, endDate, orderStatus, pageable);
 
 		return ApiResponse.success(response);
+	}
+
+	@Operation(summary = "주문 상세 조회 API", description = "특정 주문의 상세를 조회합니다.")
+	@GetMapping("/{orderId}")
+	public ApiResponse<OrderResponse> getOrderDetail(@PathVariable Long orderId, @AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal) {
+		Long memberId = principal.getMemberId();
+
+		return ApiResponse.success(orderService.getOrderDetail(memberId, orderId));
 	}
 }

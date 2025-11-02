@@ -8,15 +8,18 @@ import org.springframework.transaction.annotation.Transactional;
 import com.zeebra.domain.member.entity.Member;
 import com.zeebra.domain.member.repository.MemberRepository;
 import com.zeebra.domain.order.dto.SalesItem;
+import com.zeebra.domain.product.dto.SalesDetailResponse;
 import com.zeebra.domain.product.dto.SalesRequest;
 import com.zeebra.domain.product.dto.SalesResponse;
 import com.zeebra.domain.product.entity.ProductOption;
 import com.zeebra.domain.product.entity.Sales;
 import com.zeebra.domain.product.entity.SalesStatus;
+import com.zeebra.domain.product.repository.ProductOptionQueryRepository;
 import com.zeebra.domain.product.repository.ProductOptionRepository;
 import com.zeebra.domain.product.repository.SalesQueryRepository;
 import com.zeebra.domain.product.repository.SalesRepository;
 import com.zeebra.global.ApiResponse;
+import com.zeebra.global.ErrorCode.CommonErrorCode;
 import com.zeebra.global.ErrorCode.OrderErrorCode;
 import com.zeebra.global.exception.BusinessException;
 
@@ -32,8 +35,9 @@ public class SalesServiceImp implements SalesService {
     private final MemberRepository memberRepository;
     private final ProductOptionRepository productOptionRepository;
 	private final SalesQueryRepository salesQueryRepository;
+	private final ProductOptionQueryRepository productOptionQueryRepository;
 
-    private Sales toSales(ProductOption productOption, Member member, SalesRequest request) {
+	private Sales toSales(ProductOption productOption, Member member, SalesRequest request) {
         return new Sales(
                 productOption.getId(),
                 member.getId(),
@@ -101,5 +105,15 @@ public class SalesServiceImp implements SalesService {
 		}
 
 		return SalesItem.of(sales.getId(), sales.getStock(), sales.getPrice());
+	}
+
+	public SalesDetailResponse getSalesDetail(Long memberId, Long salesId) {
+		SalesDetailResponse salesDetailResponse = salesQueryRepository.findSalesDetailById(salesId, memberId);
+		if (salesDetailResponse == null) {
+			log.info("서비스임");
+			throw new BusinessException(CommonErrorCode.NOT_FOUND);
+		}
+
+		return salesDetailResponse;
 	}
 }

@@ -1,21 +1,27 @@
 package com.zeebra.domain.product.service;
 
+import java.util.NoSuchElementException;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.zeebra.domain.member.entity.Member;
 import com.zeebra.domain.member.repository.MemberRepository;
+import com.zeebra.domain.order.dto.SalesItem;
 import com.zeebra.domain.product.dto.SalesRequest;
 import com.zeebra.domain.product.dto.SalesResponse;
 import com.zeebra.domain.product.entity.ProductOption;
 import com.zeebra.domain.product.entity.Sales;
 import com.zeebra.domain.product.entity.SalesStatus;
 import com.zeebra.domain.product.repository.ProductOptionRepository;
+import com.zeebra.domain.product.repository.SalesQueryRepository;
 import com.zeebra.domain.product.repository.SalesRepository;
 import com.zeebra.global.ApiResponse;
+import com.zeebra.global.ErrorCode.OrderErrorCode;
+import com.zeebra.global.exception.BusinessException;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.NoSuchElementException;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +31,7 @@ public class SalesServiceImp implements SalesService {
     private final SalesRepository salesRepository;
     private final MemberRepository memberRepository;
     private final ProductOptionRepository productOptionRepository;
+	private final SalesQueryRepository salesQueryRepository;
 
     private Sales toSales(ProductOption productOption, Member member, SalesRequest request) {
         return new Sales(
@@ -83,4 +90,16 @@ public class SalesServiceImp implements SalesService {
             return ApiResponse.error(null,"판매 상품을 삭제하는 과정에서 오류가 발생했습니다.");
         }
     }
+
+
+	public SalesItem findCheapestSalesByProductOptionId(Long productOptionId) {
+		Sales sales = salesQueryRepository.findCheapestAndOldestSales(productOptionId);
+
+		if (sales == null) {
+			log.error("[최저가 판매 조회 실패] 판매 중인 상품을 찾을 수 없습니다. productOptionId: {}", productOptionId);
+			throw new BusinessException(OrderErrorCode.PRODUCT_NOT_FOUND);
+		}
+
+		return SalesItem.of(sales.getId(), sales.getStock(), sales.getPrice());
+	}
 }

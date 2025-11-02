@@ -1,6 +1,7 @@
 package com.zeebra.domain.payment.service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -9,6 +10,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +23,7 @@ import com.zeebra.domain.order.dto.OrderInfo;
 import com.zeebra.domain.order.dto.OrderItemResponse;
 import com.zeebra.domain.order.dto.OrderResponse;
 import com.zeebra.domain.order.dto.ProductInfo;
+import com.zeebra.domain.order.dto.ReadOrderListResponse;
 import com.zeebra.domain.order.dto.SalesItem;
 import com.zeebra.domain.order.entity.Order;
 import com.zeebra.domain.order.entity.OrderHistory;
@@ -29,6 +33,7 @@ import com.zeebra.domain.order.entity.OrderStatus;
 import com.zeebra.domain.order.repository.OrderHistoryRepository;
 import com.zeebra.domain.order.repository.OrderItemQueryRepository;
 import com.zeebra.domain.order.repository.OrderItemRepository;
+import com.zeebra.domain.order.repository.OrderQueryRepository;
 import com.zeebra.domain.order.repository.OrderRepository;
 import com.zeebra.domain.order.service.OrderService;
 import com.zeebra.domain.product.entity.Sales;
@@ -53,6 +58,7 @@ public class OrderServiceImpl implements OrderService {
 	private static final int MAX_IDEMPOTENCY_KEY_LENGTH = 255;
 
 	private final OrderRepository orderRepository;
+	private final OrderQueryRepository orderQueryRepository;
 	private final OrderItemRepository orderItemRepository;
 	private final OrderItemQueryRepository orderItemQueryRepository;
 	private final OrderHistoryRepository orderHistoryRepository;
@@ -112,6 +118,35 @@ public class OrderServiceImpl implements OrderService {
 	public void updateAllOrderItemsStatus(Long orderId, OrderItemStatus orderItemStatus) {
 		List<OrderItem> orderItems = orderItemRepository.findByOrderId(orderId);
 		orderItems.forEach(orderItem -> orderItem.updateOrderItemStatus(orderItemStatus));
+	}
+
+	public ReadOrderListResponse getOrderList(Long memberId, LocalDate startDate, LocalDate endDate, OrderStatus orderStatus, Pageable pageable) {
+		if (memberId == null) {
+			log.error("[주문 목록 조회 실패] memberId가 null입니다.");
+			throw new BusinessException(OrderErrorCode.INVALID_ORDER_REQUEST);
+		}
+
+		if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+			log.error("[주문 목록 조회 실패] 시작일이 종료일보다 늦습니다. startDate: {}, endDate: {}", startDate, endDate);
+			throw new BusinessException(OrderErrorCode.INVALID_ORDER_REQUEST);
+		}
+
+		LocalDate adjustedEndDate = endDate != null ? endDate.plusDays(1) : null;
+
+		Page<Order> orderPage = orderQueryRepository.findOrdersByConditions(
+			memberId,
+			startDate,
+			adjustedEndDate,
+			orderStatus,
+			pageable
+		);
+
+		Page<OrderResponse> orderResponsePage = orderPage.map(order -> {
+			List<OrderItemResponse> orderItems = orderItemQueryRepository.findOrderItemsByOrderId(order.getId());
+			return OrderResponse.of(order, orderItems);
+		});
+
+		return ReadOrderListResponse.of(orderResponsePage);
 	}
 
 	private Optional<CreateOrderResponse> findExistingOrder(String clientRequestId, Long memberId) {

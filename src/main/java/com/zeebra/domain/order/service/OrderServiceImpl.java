@@ -149,6 +149,15 @@ public class OrderServiceImpl implements OrderService {
 		return ReadOrderListResponse.of(orderResponsePage);
 	}
 
+	@Override
+	public OrderResponse getOrderDetail(Long memberId, Long orderId) {
+		Order order = orderRepository.findByIdAndMemberId(orderId, memberId).orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
+
+		List<OrderItemResponse> orderItems = orderItemQueryRepository.findOrderItemsByOrderId(order.getId());
+
+		return OrderResponse.of(order, orderItems);
+	}
+
 	private Optional<CreateOrderResponse> findExistingOrder(String clientRequestId, Long memberId) {
 		validateIdempotencyKey(clientRequestId, memberId);
 

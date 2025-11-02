@@ -28,6 +28,7 @@ public enum CommonErrorCode implements ErrorCode {
 
 	UNSUPPORTED_MEDIA_TYPE("E415_UNSUPPORTED_MEDIA_TYPE", HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Unsupported media type"),
 	UNPROCESSABLE_ENTITY("E422_UNPROCESSABLE_ENTITY", HttpStatus.UNPROCESSABLE_ENTITY, "Business rule violation"),
+	JSON_CONVERSION_ERROR("E500_JSON_CONVERSION_ERROR", HttpStatus.INTERNAL_SERVER_ERROR, "JSON 변환 중 오류가 발생했습니다."),
 	INTERNAL_SERVER_ERROR("E500_INTERNAL_SERVER_ERROR", HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error");
 
 	private final String code;

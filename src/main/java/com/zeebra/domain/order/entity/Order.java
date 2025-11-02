@@ -139,6 +139,13 @@ public class Order extends BaseEntity {
 				OrderStatus.PAYMENT_FAILED,
 				OrderStatus.CANCELED
 			),
+			OrderStatus.PAYMENT_FAILED, List.of(
+				OrderStatus.CANCELED,
+				OrderStatus.PAYMENT_PENDING,
+				OrderStatus.FAILED,
+				OrderStatus.CREATED,
+				OrderStatus.PAID
+			),
 			OrderStatus.PAID, List.of(
 				OrderStatus.CONFIRMED,
 				OrderStatus.CANCELED

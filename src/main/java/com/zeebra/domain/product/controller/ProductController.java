@@ -23,7 +23,7 @@ public class ProductController {
 
     @Operation(summary = "상품 목록 조회")
     @GetMapping("/api/products")
-    public ApiResponse<SearchProductResponse> getProductList(@RequestParam(required = false, defaultValue = "") String keyWord,
+    public ApiResponse<SearchProductResponse> getProductList(@RequestParam(required = false) String keyWord,
                                                              @RequestParam(required = false) List<Long> categoryIds,
                                                              @RequestParam(required = false) List<Long> brandIds,
                                                              @RequestParam(required = false) String productSort,

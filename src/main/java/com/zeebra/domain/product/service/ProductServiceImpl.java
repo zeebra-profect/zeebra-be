@@ -11,6 +11,7 @@ import com.zeebra.domain.product.dto.*;
 import com.zeebra.domain.product.entity.*;
 import com.zeebra.domain.product.repository.*;
 import com.zeebra.global.ApiResponse;
+import com.zeebra.global.web.KeywordSanitizer;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -181,7 +182,7 @@ public class ProductServiceImpl implements ProductService {
     public ApiResponse<SizeOptionResponseList> getProductOptionSize(Long productId, Long colorOptionNameId) {
         OptionName optionName = optionNameRepository.findById(colorOptionNameId).orElseThrow(
                 () -> new NoSuchElementException("해당하는 옵션값이 없습니다."));
-        if (optionName.getName() != "color") {
+        if (!"color".equals(optionName.getName())) {
             return ApiResponse.error(null, "색상값이 아닙니다.");
         }
         List<SizeOptionResponse> sizeOptionResponses = productOptionQueryRepository.findByColorOptionName(colorOptionNameId, productId);
@@ -215,28 +216,22 @@ public class ProductServiceImpl implements ProductService {
     @Transactional
     @Override
     public ApiResponse<Void> deleteFavoriteProduct(Long memberId, Long productId) {
-        try {
-            Member member = memberRepository.findById(memberId).orElseThrow(
-                    () -> new NoSuchElementException("해당하는 사용자가 없습니다"));
+        Member member = memberRepository.findById(memberId).orElseThrow(
+                () -> new NoSuchElementException("해당하는 사용자가 없습니다"));
 
-            Product product = productRepository.findById(productId).orElseThrow(
-                    () -> new NoSuchElementException("해당하는 상품이 존재하지 않습니다."));
+        Product product = productRepository.findById(productId).orElseThrow(
+                () -> new NoSuchElementException("해당하는 상품이 존재하지 않습니다."));
 
-            FavoriteProduct favoriteProduct = favoriteProductRepository.findByMemberIdAndProductId(member.getId(), product.getId()).orElseThrow(
-                    () -> new NoSuchElementException("해당하는 관심 상품이 없습니다."));
+        FavoriteProduct favoriteProduct = favoriteProductRepository.findByMemberIdAndProductId(member.getId(), product.getId()).orElseThrow(
+                () -> new NoSuchElementException("해당하는 관심 상품이 없습니다."));
 
-            favoriteProductRepository.delete(favoriteProduct);
+        favoriteProductRepository.delete(favoriteProduct);
 
-            product.decreaseFavoriteProductCount();
+        product.decreaseFavoriteProductCount();
 
-            productRepository.save(product);
+        productRepository.save(product);
 
-            return ApiResponse.successMessage("상품 삭제에 성공했습니다.");
-        } catch (NoSuchElementException e) {
-            return ApiResponse.error(null, e.getMessage());
-        } catch (Exception e) {
-            return ApiResponse.error(null, "상품 삭제 과정에서 오류가 발생했습니다.");
-        }
+        return ApiResponse.successMessage("상품 삭제에 성공했습니다.");
     }
 
     @Override
@@ -263,13 +258,17 @@ public class ProductServiceImpl implements ProductService {
                                                             List<Long> brandIds,
                                                             Pageable pageable,
                                                             String productSort) {
+
+
+        String cleanKeyword = KeywordSanitizer.sanitize(keyWord);
+
         ProductSort parseProductSort = parseProductSort(productSort);
 
-        List<Product> products = productQueryRepository.searchProduct(keyWord, categoryIds, brandIds, pageable, parseProductSort);
+        List<Product> products = productQueryRepository.searchProduct(cleanKeyword, categoryIds, brandIds, pageable, parseProductSort);
 
-        List<Brand> brands = productQueryRepository.filteredBrand(keyWord, categoryIds, brandIds);
+        List<Brand> brands = productQueryRepository.filteredBrand(cleanKeyword, categoryIds, brandIds);
 
-        List<Category> categories = productQueryRepository.filteredCategory(keyWord, categoryIds, brandIds);
+        List<Category> categories = productQueryRepository.filteredCategory(cleanKeyword, categoryIds, brandIds);
 
         List<GetProductDetailResponse> productDetailResponseList = toProductDetailResponse(products);
 
@@ -277,7 +276,7 @@ public class ProductServiceImpl implements ProductService {
 
         List<CategorySearchResponse> categorySearchResponseList = toCategorySearchResponseList(categories);
 
-        long totalCount = productQueryRepository.countFiltered(keyWord, categoryIds, brandIds);
+        long totalCount = productQueryRepository.countFiltered(cleanKeyword, categoryIds, brandIds);
 
         int totalPage = (int) Math.ceil((double) totalCount / pageable.getPageSize());
 

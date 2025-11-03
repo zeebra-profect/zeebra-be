@@ -2,7 +2,10 @@ package com.zeebra.domain.order.controller;
 
 import java.time.LocalDate;
 
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -55,7 +58,7 @@ public class OrderController {
 		@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
 		@Parameter(description = "주문 상태", required = false)
 		@RequestParam(required = false) OrderStatus orderStatus,
-		Pageable pageable
+		@ParameterObject @PageableDefault(size = 20, sort = "createdTime", direction = Sort.Direction.DESC) Pageable pageable
 	) {
 		Long memberId = principal.getMemberId();
 

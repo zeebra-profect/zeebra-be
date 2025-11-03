@@ -7,6 +7,6 @@ public record GetFavoriteProductResponse(
         String productName,
         String productDescription,
         String modelNumber,
-        String ProductThumbnail
+        String productThumbnail
 ) {
 }

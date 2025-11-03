@@ -1,27 +1,35 @@
 package com.zeebra.domain.cart.service;
 
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.NoSuchElementException;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.zeebra.domain.cart.dto.CartItemResponse;
 import com.zeebra.domain.cart.dto.CartRequest;
 import com.zeebra.domain.cart.dto.CartResponse;
+import com.zeebra.domain.cart.dto.GetCartResponse;
 import com.zeebra.domain.cart.entity.Cart;
 import com.zeebra.domain.cart.entity.CartItem;
+import com.zeebra.domain.cart.repository.CartItemQueryRepository;
 import com.zeebra.domain.cart.repository.CartItemRepository;
 import com.zeebra.domain.cart.repository.CartRepository;
 import com.zeebra.domain.member.entity.Member;
 import com.zeebra.domain.member.repository.MemberRepository;
-import com.zeebra.domain.product.entity.OptionCombination;
 import com.zeebra.domain.product.entity.ProductOption;
 import com.zeebra.domain.product.repository.OptionCombinationRepository;
 import com.zeebra.domain.product.repository.ProductOptionRepository;
 import com.zeebra.domain.product.repository.SalesQueryRepository;
 import com.zeebra.global.ApiResponse;
-import lombok.Locked;
+import com.zeebra.global.ErrorCode.CommonErrorCode;
+import com.zeebra.global.exception.BusinessException;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
-import java.util.NoSuchElementException;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +38,7 @@ public class CartServiceImp implements CartService {
 
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
+	private final CartItemQueryRepository cartItemQueryRepository;
     private final MemberRepository memberRepository;
     private final OptionCombinationRepository optionCombinationRepository;
     private final ProductOptionRepository productOptionRepository;
@@ -63,6 +72,7 @@ public class CartServiceImp implements CartService {
             BigDecimal snapShotPrice = salesQueryRepository.cheapestSalesPrice(productOption.getId());
 
             CartItem cartItem = toCartItem(cart, productOption, snapShotPrice, request);
+			cartItemRepository.save(cartItem);
 
             return ApiResponse.success(toCartResponse(cartItem));
         } catch (NoSuchElementException e) {
@@ -97,4 +107,22 @@ public class CartServiceImp implements CartService {
             return ApiResponse.error(null, "장바구니에서 상품을 삭제하는 과정에서 오류가 발생했습니다.");
         }
     }
+
+	@Override
+	public GetCartResponse getCartItems(Long memberId, Pageable pageable) {
+		if (memberId == null) { throw new BusinessException(CommonErrorCode.INVALID_REQUEST); }
+
+		Long cartId = cartRepository.findByMemberId(memberId).orElseThrow(() -> new BusinessException(CommonErrorCode.INVALID_REQUEST)).getId();
+
+		Page<CartItemResponse> cartItemPage = cartItemQueryRepository.findCartItemsByCartId(cartId, pageable);
+
+		List<CartItemResponse> cartItemResponses = cartItemPage.getContent();
+
+		BigDecimal totalPrice = cartItemResponses.stream().map(CartItemResponse::snapShotPrice).reduce(BigDecimal.ZERO, BigDecimal::add);
+		BigDecimal discount = BigDecimal.ZERO;
+		int totalQuantity = cartItemResponses.stream().mapToInt(CartItemResponse::quantity).sum();
+
+
+		return GetCartResponse.of(cartId, totalPrice, discount, totalQuantity, cartItemPage);
+	}
 }

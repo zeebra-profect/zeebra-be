@@ -3,8 +3,10 @@ package com.zeebra.domain.chat.dto;
 import com.zeebra.domain.chat.entity.MessageType;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
+@Setter
 @NoArgsConstructor
 public class ChatMessageRequestDto {
 

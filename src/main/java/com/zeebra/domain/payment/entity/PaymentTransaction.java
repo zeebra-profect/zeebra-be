@@ -1,15 +1,23 @@
 package com.zeebra.domain.payment.entity;
 
-import com.zeebra.global.jpa.BaseEntity;
-import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-import java.util.HashMap;
-import java.util.Map;
+import com.zeebra.global.jpa.BaseEntity;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
@@ -49,8 +57,16 @@ public class PaymentTransaction extends BaseEntity {
     @Column(name = "parent_transaction_id")
     private Long parentTransactionId;
 
-    public PaymentTransaction(Long paymentId, PaymentTransactionType paymentTransactionType,
-                              PaymentTransactionStatus paymentTransactionStatus, Map<String, Object> requestData, Map<String, Object> responseData, int responseCode, int retryCount, Long parentTransactionId) {
+    public PaymentTransaction(
+		Long paymentId,
+		PaymentTransactionType paymentTransactionType,
+		PaymentTransactionStatus paymentTransactionStatus,
+		Map<String, Object> requestData,
+		Map<String, Object> responseData,
+		int responseCode,
+		int retryCount,
+		Long parentTransactionId
+	) {
         this.paymentId = paymentId;
         this.paymentTransactionType = paymentTransactionType;
         this.paymentTransactionStatus = paymentTransactionStatus;
@@ -60,4 +76,13 @@ public class PaymentTransaction extends BaseEntity {
         this.retryCount = retryCount;
         this.parentTransactionId = parentTransactionId;
     }
+
+	public void update(PaymentTransactionStatus paymentTransactionStatus, Map<String, Object> responseData,
+		int responseCode, int retryCount, Long parentTransactionId) {
+		this.paymentTransactionStatus = paymentTransactionStatus;
+		this.responseData = responseData;
+		this.responseCode = responseCode;
+		this.retryCount = retryCount;
+		this.parentTransactionId = parentTransactionId;
+	}
 }

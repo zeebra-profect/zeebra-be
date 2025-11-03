@@ -4,11 +4,9 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 
 public record CreateOrderRequest(
-	@NotBlank String ClientRequestId,
+	@NotBlank String clientRequestId,
 	Long cartId,
+	Long productOptionId,
 	@Valid SalesItem salesItem
 ) {
-	public static CreateOrderRequest of(String ClientRequestId, Long cartId, SalesItem salesItem) {
-		return new CreateOrderRequest(ClientRequestId, cartId, salesItem);
-	}
 }

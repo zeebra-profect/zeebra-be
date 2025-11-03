@@ -1,6 +1,7 @@
 package com.zeebra.domain.payment.service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -9,6 +10,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,17 +23,21 @@ import com.zeebra.domain.order.dto.OrderInfo;
 import com.zeebra.domain.order.dto.OrderItemResponse;
 import com.zeebra.domain.order.dto.OrderResponse;
 import com.zeebra.domain.order.dto.ProductInfo;
+import com.zeebra.domain.order.dto.ReadOrderListResponse;
 import com.zeebra.domain.order.dto.SalesItem;
 import com.zeebra.domain.order.entity.Order;
 import com.zeebra.domain.order.entity.OrderHistory;
 import com.zeebra.domain.order.entity.OrderItem;
+import com.zeebra.domain.order.entity.OrderItemStatus;
 import com.zeebra.domain.order.entity.OrderStatus;
 import com.zeebra.domain.order.repository.OrderHistoryRepository;
 import com.zeebra.domain.order.repository.OrderItemQueryRepository;
 import com.zeebra.domain.order.repository.OrderItemRepository;
+import com.zeebra.domain.order.repository.OrderQueryRepository;
 import com.zeebra.domain.order.repository.OrderRepository;
 import com.zeebra.domain.order.service.OrderService;
 import com.zeebra.domain.product.entity.Sales;
+import com.zeebra.domain.product.service.SalesService;
 import com.zeebra.global.ErrorCode.CommonErrorCode;
 import com.zeebra.global.ErrorCode.OrderErrorCode;
 import com.zeebra.global.exception.BusinessException;
@@ -51,25 +58,29 @@ public class OrderServiceImpl implements OrderService {
 	private static final int MAX_IDEMPOTENCY_KEY_LENGTH = 255;
 
 	private final OrderRepository orderRepository;
+	private final OrderQueryRepository orderQueryRepository;
 	private final OrderItemRepository orderItemRepository;
 	private final OrderItemQueryRepository orderItemQueryRepository;
 	private final OrderHistoryRepository orderHistoryRepository;
+	private final SalesService salesService;
 	private final CartItemRepository cartItemRepository;
 
 	@Transactional
 	public CreateOrderResponse createOrder(Long memberId, CreateOrderRequest request) {
-		String clientRequestId = request.ClientRequestId();
+		String clientRequestId = request.clientRequestId();
 
 		Optional<CreateOrderResponse> existingResponse = findExistingOrder(clientRequestId, memberId);
 		if (existingResponse.isPresent()) {
 			return existingResponse.get();
 		}
 
-		validateOrderRequest(request.cartId(), request.salesItem(), memberId, clientRequestId);
+		validateOrderRequest(request.cartId(), request.productOptionId(), request.salesItem(), memberId, clientRequestId);
 
 		return request.cartId() != null
 			? createOrderFromCart(request.cartId(), memberId, clientRequestId)
-			: createOrderFromSalesItem(request.salesItem(), memberId, clientRequestId);
+			: request.productOptionId() != null
+				? createOrderFromProductOptionId(request.productOptionId(), memberId, clientRequestId)
+				: createOrderFromSalesItem(request.salesItem(), memberId, clientRequestId);
 	}
 
 	@Transactional(readOnly = true)
@@ -102,6 +113,49 @@ public class OrderServiceImpl implements OrderService {
 
 		order.updateOrderStatus(orderStatus);
 		saveOrderHistory(orderId, orderStatus, idempotencyKey);
+	}
+
+	public void updateAllOrderItemsStatus(Long orderId, OrderItemStatus orderItemStatus) {
+		List<OrderItem> orderItems = orderItemRepository.findByOrderId(orderId);
+		orderItems.forEach(orderItem -> orderItem.updateOrderItemStatus(orderItemStatus));
+	}
+
+	public ReadOrderListResponse getOrderList(Long memberId, LocalDate startDate, LocalDate endDate, OrderStatus orderStatus, Pageable pageable) {
+		if (memberId == null) {
+			log.error("[주문 목록 조회 실패] memberId가 null입니다.");
+			throw new BusinessException(OrderErrorCode.INVALID_ORDER_REQUEST);
+		}
+
+		if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+			log.error("[주문 목록 조회 실패] 시작일이 종료일보다 늦습니다. startDate: {}, endDate: {}", startDate, endDate);
+			throw new BusinessException(OrderErrorCode.INVALID_ORDER_REQUEST);
+		}
+
+		LocalDate adjustedEndDate = endDate != null ? endDate.plusDays(1) : null;
+
+		Page<Order> orderPage = orderQueryRepository.findOrdersByConditions(
+			memberId,
+			startDate,
+			adjustedEndDate,
+			orderStatus,
+			pageable
+		);
+
+		Page<OrderResponse> orderResponsePage = orderPage.map(order -> {
+			List<OrderItemResponse> orderItems = orderItemQueryRepository.findOrderItemsByOrderId(order.getId());
+			return OrderResponse.of(order, orderItems);
+		});
+
+		return ReadOrderListResponse.of(orderResponsePage);
+	}
+
+	@Override
+	public OrderResponse getOrderDetail(Long memberId, Long orderId) {
+		Order order = orderRepository.findByIdAndMemberId(orderId, memberId).orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
+
+		List<OrderItemResponse> orderItems = orderItemQueryRepository.findOrderItemsByOrderId(order.getId());
+
+		return OrderResponse.of(order, orderItems);
 	}
 
 	private Optional<CreateOrderResponse> findExistingOrder(String clientRequestId, Long memberId) {
@@ -144,15 +198,15 @@ public class OrderServiceImpl implements OrderService {
 		return CreateOrderResponse.of(OrderResponse.of(order, orderItems));
 	}
 
-	private void validateOrderRequest(Long cartId, SalesItem salesItem, Long memberId, String clientRequestId) {
-		if (cartId == null && salesItem == null) {
-			log.error("[주문 생성 실패] cartId와 salesItem이 모두 null입니다. memberId: {}, clientRequestId: {}",
+	private void validateOrderRequest(Long cartId, Long productOptionId, SalesItem salesItem, Long memberId, String clientRequestId) {
+		if (cartId == null && productOptionId == null && salesItem == null) {
+			log.error("[주문 생성 실패] cartId와 productOptionId, salesItem이 모두 null입니다. memberId: {}, clientRequestId: {}",
 				memberId, clientRequestId);
 			throw new BusinessException(OrderErrorCode.INVALID_ORDER_REQUEST);
 		}
 
-		if (cartId != null && salesItem != null) {
-			log.error("[주문 생성 실패] cartId와 salesItem을 동시에 사용할 수 없습니다. memberId: {}, cartId: {}, clientRequestId: {}",
+		if ((cartId != null && salesItem != null) || (cartId != null && productOptionId != null) || (salesItem != null && productOptionId != null)) {
+			log.error("[주문 생성 실패] cartId와 productOptionId, salesItem을 동시에 사용할 수 없습니다. memberId: {}, cartId: {}, clientRequestId: {}",
 				memberId, cartId, clientRequestId);
 			throw new BusinessException(OrderErrorCode.INVALID_ORDER_REQUEST);
 		}
@@ -172,6 +226,13 @@ public class OrderServiceImpl implements OrderService {
 		List<OrderItemResponse> orderItems = createOrderItemsFromCart(savedOrder.getId(), cartItems, cheapestSales);
 
 		return CreateOrderResponse.of(OrderResponse.of(savedOrder, orderItems));
+	}
+
+	private CreateOrderResponse createOrderFromProductOptionId(Long productOptionId, Long memberId, String idempotencyKey) {
+
+		SalesItem salesItem = salesService.findCheapestSalesByProductOptionId(productOptionId);
+
+		return createOrderFromSalesItem(salesItem, memberId, idempotencyKey);
 	}
 
 	private CreateOrderResponse createOrderFromSalesItem(SalesItem salesItem, Long memberId, String idempotencyKey) {

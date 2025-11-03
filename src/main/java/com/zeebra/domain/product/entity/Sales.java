@@ -1,15 +1,18 @@
 package com.zeebra.domain.product.entity;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
 import com.zeebra.global.jpa.BaseEntity;
+
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 @Entity
 @NoArgsConstructor
@@ -30,6 +33,7 @@ public class Sales extends BaseEntity {
 
     private int stock;
 
+	@Enumerated(EnumType.ORDINAL)
     private SalesStatus salesStatus;
 
     private LocalDateTime soldAt;

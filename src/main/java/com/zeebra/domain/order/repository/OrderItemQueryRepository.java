@@ -77,7 +77,6 @@ public class OrderItemQueryRepository {
 	}
 	public ProductInfo findProductInfoBySaleId(Long saleId) {
 		if (saleId == null) {
-			log.error("[상품 정보 조회 실패] saleId가 null입니다.");
 			return null;
 		}
 
@@ -100,13 +99,10 @@ public class OrderItemQueryRepository {
 				.where(sales.id.eq(saleId))
 				.fetch();
 		} catch (Exception e) {
-			log.error("[상품 정보 조회 실패] 데이터베이스 조회 중 오류가 발생했습니다. saleId: {}, error: {}",
-				saleId, e.getMessage(), e);
 			return null;
 		}
 
 		if (results.isEmpty()) {
-			log.warn("[상품 정보 조회 실패] 해당 saleId로 상품을 찾을 수 없습니다. saleId: {}", saleId);
 			return null;
 		}
 

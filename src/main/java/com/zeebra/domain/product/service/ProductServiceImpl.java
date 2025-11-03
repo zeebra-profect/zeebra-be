@@ -200,6 +200,10 @@ public class ProductServiceImpl implements ProductService {
 
             FavoriteProduct favoriteProduct = favoriteProductRepository.save(new FavoriteProduct(member.getId(), product.getId()));
 
+            product.increaseFavoriteProductCount();
+
+            productRepository.save(product);
+
             return ApiResponse.success(toFavoriteProductResponse(favoriteProduct));
         } catch (NoSuchElementException e) {
             return ApiResponse.error(null, e.getMessage());
@@ -222,6 +226,11 @@ public class ProductServiceImpl implements ProductService {
                     () -> new NoSuchElementException("해당하는 관심 상품이 없습니다."));
 
             favoriteProductRepository.delete(favoriteProduct);
+
+            product.decreaseFavoriteProductCount();
+
+            productRepository.save(product);
+
             return ApiResponse.successMessage("상품 삭제에 성공했습니다.");
         } catch (NoSuchElementException e) {
             return ApiResponse.error(null, e.getMessage());
@@ -281,4 +290,25 @@ public class ProductServiceImpl implements ProductService {
         return ApiResponse.success(searchProductResponse);
     }
 
+    @Override
+    public ApiResponse<FavoriteProductList> getFavoriteProduct(Long memberId, Pageable pageable) {
+        Member member = memberRepository.findById(memberId).orElseThrow(
+                () -> new NoSuchElementException("해당하는 사용자가 없습니다."));
+        List<Product> favoriteProducts = productQueryRepository.getFavoriteProducts(memberId);
+        List<GetFavoriteProductResponse> getFavoriteProductResponses = favoriteProducts.stream()
+                .map(product -> new GetFavoriteProductResponse(
+                        product.getId(),
+                        product.getBrandId(),
+                        product.getCategoryId(),
+                        product.getName(),
+                        product.getDescription(),
+                        product.getModelNumber(),
+                        product.getThumbnail()
+                ))
+                .toList();
+        long totalCount = productQueryRepository.countFavoriteProducts(memberId);
+        int totalPage = (int) Math.ceil((double) totalCount / pageable.getPageSize());
+        Pagination pagination = new Pagination(pageable.getPageNumber(), pageable.getPageSize(), totalCount, totalPage);
+        return ApiResponse.success(new FavoriteProductList(pagination, getFavoriteProductResponses));
+    }
 }

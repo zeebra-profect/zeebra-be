@@ -46,5 +46,23 @@ public class Product extends BaseEntity {
         this.modelNumber = modelNumber;
         this.thumbnail = thumbnail;
         this.images = images;
+        this.reviewCount = 0;
+        this.favoriteProductCount = 0;
+    }
+
+    public void increaseFavoriteProductCount() {
+        this.favoriteProductCount++;
+    }
+
+    public void decreaseFavoriteProductCount() {
+        this.favoriteProductCount--;
+    }
+
+    public void increaseReviewCount() {
+        this.reviewCount++;
+    }
+
+    public void decreaseReviewCount() {
+        this.reviewCount--;
     }
 }

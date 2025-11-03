@@ -32,6 +32,19 @@ public final class CookieUtil {
 			.orElse(null);
 	}
 
+    public static String getCookieHeader(String cookieHeader, String name) {
+        if (cookieHeader == null) {
+            return null;
+        }
+        return Arrays.stream(cookieHeader.split(";"))
+                .map(String::trim)
+                .filter(cookie -> cookie.startsWith(name + "="))
+                .findFirst()
+                .map(cookie -> cookie.substring(name.length() + 1))
+                .orElse(null);
+    }
+
+
 	public static void addAuthCookies(HttpServletResponse response,
 		String accessToken,
 		long accessTokenTtlMinutes,

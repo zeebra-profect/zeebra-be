@@ -22,6 +22,7 @@ import com.zeebra.domain.chat.entity.ChatRoom;
 import com.zeebra.domain.chat.entity.ChatRoomMember;
 import com.zeebra.domain.chat.entity.ChatRoomType;
 import com.zeebra.domain.chat.entity.Trade;
+
 import com.zeebra.domain.chat.repository.ChatMessageRepository;
 import com.zeebra.domain.chat.repository.ChatRoomMemberRepository;
 import com.zeebra.domain.chat.repository.ChatRoomRepository;
@@ -29,6 +30,9 @@ import com.zeebra.domain.chat.repository.TradeRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import static com.zeebra.domain.chat.entity.ChatRoomType.DM;
+import static com.zeebra.domain.chat.entity.ChatRoomType.GROUP;
 
 @Slf4j
 @Service
@@ -50,81 +54,154 @@ public class ChatServiceImpl implements ChatService {
     public ChatRoomResponseDto createOrGetChatRoom(ChatRoomRequestDto chatRoomRequestDto, Long currentMemberId) {
 
         ChatRoom chatRoom;
+        ChatRoomType type = chatRoomRequestDto.getChatRoomType();
 
-        if (chatRoomRequestDto.getProductId() != null) {
-            Long productId = chatRoomRequestDto.getProductId();
-
-             chatRoom = chatRoomRepository.findByProductId(productId).orElseGet(() -> {
-                 ChatRoom newRoom = ChatRoom.builder().productId(productId).chatRoomType(ChatRoomType.GROUP).build();
-
-                 ChatRoom savedRoom = chatRoomRepository.save(newRoom);
-
-                 ensureUserIsChatMember(savedRoom, currentMemberId);
-
-                 return savedRoom;
-            });
-
-
-
-        } else if (chatRoomRequestDto.getSaleId() != null) {
-            Long saleId = chatRoomRequestDto.getSaleId();
-
-            //추후 MSA 패턴 고도화 시 Sale 서비스 호출해서 판매자 ID 가져오기
-            //Long user1 = saleServiceApi.getSellerIdBySaleId(saleId);
-            Sales sales = salesRepository.findById(saleId)
-                    .orElseThrow(() -> new EntityNotFoundException("판매 글을 찾을 수 없습니다."));
-
-            Long user1 = sales.getMemberId();
-            Long user2 = currentMemberId;
-
-            if (Objects.equals(user1, user2)) {
-                throw new IllegalArgumentException("자신과 1:1 채팅을 할 수 없습니다.");
-            }
-
-            // 1:1 채팅방 중복 찾기
-            String dmPairKey = createDmPairKey(saleId, user1, user2);
-
-            chatRoom = chatRoomRepository.findByDmPairKey(dmPairKey)
-                    .orElseGet(() -> {
-                        ChatRoom newRoom = ChatRoom.builder()
-                                .saleId(saleId)
-                                .chatRoomType(ChatRoomType.DM)
-                                .dmPairKey(dmPairKey)
-                                .build();
-
-                        chatRoomRepository.save(newRoom);
-
-                        // 1:1 채팅방은 생성 시 구매자와 판매자를 바로 멤버로 추가
-                        // (MSA) Member 서비스를 호출해서 각자의 닉네임도 가져와야 함
-                        // String buyerName = memberServiceApi.getMemberName(buyerId);
-                        // String sellerName = memberServiceApi.getMemberName(sellerId);
-
-                        Member memberUser1 = memberRepository.findByIdAndDeletedAtIsNull(user1)
-                                .orElseThrow(() -> new EntityNotFoundException("유저를 찾을 수 없습니다."));
-                        Member memberUser2 = memberRepository. findByIdAndDeletedAtIsNull(user2)
-                                .orElseThrow(() -> new EntityNotFoundException("유저를 찾을 수 없습니다."));
-
-
-
-                        ChatRoomMember dmUser1 = ChatRoomMember.builder()
-                                .chatRoom(newRoom)
-                                .memberId(user1)
-                                .memberName(memberUser1.getNickname()) //임시
-                                .build();
-                        ChatRoomMember dmUser2 = ChatRoomMember.builder()
-                                .chatRoom(newRoom)
-                                .memberId(user2)
-                                .memberName(memberUser2.getNickname()) //임시
-                                .build();
-                        chatRoomMemberRepository.saveAll(List.of(dmUser1, dmUser2));
-
-                        return newRoom;
-                    });
-        } else {
-            throw new IllegalArgumentException("productId or saleId required");
+        if (type == null) {
+            throw new IllegalArgumentException("chatRoomType을 받으십시오");
         }
-        return ChatRoomResponseDto.from(chatRoom);
-    }
+
+        switch (type) {
+            case GROUP: {
+                Long productId = chatRoomRequestDto.getProductId();
+                if (productId == null) {
+                throw new IllegalArgumentException("Group 채팅방을 위해선 productId가 필요합니다.");
+                }
+
+                chatRoom = chatRoomRepository.findByProductId(productId).orElseGet(() -> {
+                    ChatRoom newRoom = ChatRoom.builder()
+                            .productId(productId)
+                            .chatRoomType(ChatRoomType.GROUP)
+                            .build();
+                    return chatRoomRepository.save(newRoom);
+                });
+                ensureUserIsChatMember(chatRoom, currentMemberId);
+                break;
+            }
+            case DM: {
+                Long saleId = chatRoomRequestDto.getSaleId();
+                if (saleId == null) {
+                    throw new IllegalArgumentException("DM 채팅방을 위해선 saleId가 필요합니다.");
+                }
+
+                Sales sales = salesRepository.findById(saleId)
+                        .orElseThrow(() -> new EntityNotFoundException("판매 글을 찾을 수 없습니다"));
+
+                Long user1 = sales.getMemberId();
+                Long user2 = currentMemberId;
+
+                if (Objects.equals(user1, user2)) {
+                    throw new IllegalArgumentException("자신과 1:1 채팅을 할 수 없습니다.");
+                }
+
+                String dmPairKey = createDmPairKey(saleId, user1, user2);
+
+                chatRoom = chatRoomRepository.findByDmPairKey(dmPairKey)
+                        .orElseGet(() -> {
+                            ChatRoom newRoom = ChatRoom.builder()
+                                    .saleId(saleId)
+                                    .chatRoomType(ChatRoomType.DM)
+                                    .dmPairKey(dmPairKey).build();
+                            chatRoomRepository.save(newRoom);
+
+                            Member memberUser1 = memberRepository.findByIdAndDeletedAtIsNull(user1)
+                                    .orElseThrow(() -> new EntityNotFoundException("유저를 찾을 수 없습니다."));
+                            Member memberUser2 = memberRepository.findByIdAndDeletedAtIsNull(user2)
+                                    .orElseThrow(() -> new EntityNotFoundException("유저를 찾을 수 없습니다."));
+
+                            ChatRoomMember dmUser1 = ChatRoomMember.builder()
+                                    .chatRoom(newRoom)
+                                    .memberId(user1)
+                                    .memberName(memberUser1.getNickname()).build();
+
+                            ChatRoomMember dmUser2 = ChatRoomMember.builder()
+                                    .chatRoom(newRoom)
+                                    .memberId(user2)
+                                    .memberName(memberUser2.getNickname()).build();
+                            chatRoomMemberRepository.saveAll(List.of(dmUser1, dmUser2));
+
+                            return newRoom;
+                        });
+                break;
+            }
+            default:
+                throw new IllegalArgumentException("지원하지 않는 ChatRoomType 입니다.: " + type);
+            }
+            return ChatRoomResponseDto.from(chatRoom);
+        }
+//
+//        if (chatRoomRequestDto.getProductId() != null) {
+//            Long productId = chatRoomRequestDto.getProductId();
+//
+//             chatRoom = chatRoomRepository.findByProductId(productId).orElseGet(() -> {
+//                 ChatRoom newRoom = ChatRoom.builder().productId(productId).chatRoomType(ChatRoomType.GROUP).build();
+//
+//                 ChatRoom savedRoom = chatRoomRepository.save(newRoom);
+//
+//                 return savedRoom;
+//            });
+//
+//            ensureUserIsChatMember(chatRoom, currentMemberId);
+//
+//
+//        } else if (chatRoomRequestDto.getSaleId() != null) {
+//            Long saleId = chatRoomRequestDto.getSaleId();
+//
+//            //추후 MSA 패턴 고도화 시 Sale 서비스 호출해서 판매자 ID 가져오기
+//            //Long user1 = saleServiceApi.getSellerIdBySaleId(saleId);
+//            Sales sales = salesRepository.findById(saleId)
+//                    .orElseThrow(() -> new EntityNotFoundException("판매 글을 찾을 수 없습니다."));
+//
+//            Long user1 = sales.getMemberId();
+//            Long user2 = currentMemberId;
+//
+//            if (Objects.equals(user1, user2)) {
+//                throw new IllegalArgumentException("자신과 1:1 채팅을 할 수 없습니다.");
+//            }
+//
+//            // 1:1 채팅방 중복 찾기
+//            String dmPairKey = createDmPairKey(saleId, user1, user2);
+//
+//            chatRoom = chatRoomRepository.findByDmPairKey(dmPairKey)
+//                    .orElseGet(() -> {
+//                        ChatRoom newRoom = ChatRoom.builder()
+//                                .saleId(saleId)
+//                                .chatRoomType(ChatRoomType.DM)
+//                                .dmPairKey(dmPairKey)
+//                                .build();
+//
+//                        chatRoomRepository.save(newRoom);
+//
+//                        // 1:1 채팅방은 생성 시 구매자와 판매자를 바로 멤버로 추가
+//                        // (MSA) Member 서비스를 호출해서 각자의 닉네임도 가져와야 함
+//                        // String buyerName = memberServiceApi.getMemberName(buyerId);
+//                        // String sellerName = memberServiceApi.getMemberName(sellerId);
+//
+//                        Member memberUser1 = memberRepository.findByIdAndDeletedAtIsNull(user1)
+//                                .orElseThrow(() -> new EntityNotFoundException("유저를 찾을 수 없습니다."));
+//                        Member memberUser2 = memberRepository. findByIdAndDeletedAtIsNull(user2)
+//                                .orElseThrow(() -> new EntityNotFoundException("유저를 찾을 수 없습니다."));
+//
+//
+//
+//                        ChatRoomMember dmUser1 = ChatRoomMember.builder()
+//                                .chatRoom(newRoom)
+//                                .memberId(user1)
+//                                .memberName(memberUser1.getNickname()) //임시
+//                                .build();
+//                        ChatRoomMember dmUser2 = ChatRoomMember.builder()
+//                                .chatRoom(newRoom)
+//                                .memberId(user2)
+//                                .memberName(memberUser2.getNickname()) //임시
+//                                .build();
+//                        chatRoomMemberRepository.saveAll(List.of(dmUser1, dmUser2));
+//
+//                        return newRoom;
+//                    });
+//        } else {
+//            throw new IllegalArgumentException("productId or saleId required");
+//        }
+//        return ChatRoomResponseDto.from(chatRoom);
+//    }
 
     @Transactional
     public ChatMessageResponseDto saveMessage(ChatMessageRequestDto chatMessageRequestDto, Long currentMemberId) {
@@ -150,7 +227,7 @@ public class ChatServiceImpl implements ChatService {
 
     @Transactional(readOnly = true)
     public Page<ChatMessageResponseDto> getChatHistory(Long roomId, Long currentUserId, Pageable pageable){
-        Page<ChatMessage> messagePage = chatMessageRepository.findByChatRoomMemberChatRoomId(roomId, pageable);
+        Page<ChatMessage> messagePage = chatMessageRepository.findByChatRoomMember_ChatRoomId(roomId, pageable);
 
         return messagePage.map(message -> {
            Long senderMemberId = message.getChatRoomMember().getMemberId();
@@ -165,7 +242,7 @@ public class ChatServiceImpl implements ChatService {
         List<ChatRoomMember> myMemberships = chatRoomMemberRepository.findByMemberIdAndDeletedAtIsNull(currentMemberId);
 
         return myMemberships.stream()
-                .filter(member -> member.getChatRoom().getChatRoomType() == ChatRoomType.DM)
+                .filter(member -> member.getChatRoom().getChatRoomType() == DM)
                 .map(member -> {
                     ChatRoom room = member.getChatRoom();
                     Long roomLastMessageId = room.getLastMessageId();
@@ -175,7 +252,7 @@ public class ChatServiceImpl implements ChatService {
                     String roomProfileImageUrl = null;
 
 
-                    List<ChatRoomMember> membersInRoom = chatRoomMemberRepository.findByChatRoomIdAndDeletedAtIsNull((room.getId()));
+                    List<ChatRoomMember> membersInRoom = chatRoomMemberRepository.findByChatRoomIdAndDeletedAtIsNull(room.getId());
 
                     Optional<ChatRoomMember> opponent = membersInRoom.stream()
                             .filter(m -> !m.getMemberId().equals(currentMemberId))
@@ -219,13 +296,13 @@ public class ChatServiceImpl implements ChatService {
                 }).toList();
     }
 
-
+    @Override
     @Transactional
     public void leaveChatRoom(Long chatRoomId, Long currentMemberId) {
         ChatRoomMember member = chatRoomMemberRepository.findByChatRoomIdAndMemberId(chatRoomId, currentMemberId)
                 .orElseThrow(() -> new EntityNotFoundException("해당 채팅방의 멤버가 아닙니다"));
 
-        if (member.getChatRoom().getChatRoomType() == ChatRoomType.GROUP) {
+        if (member.getChatRoom().getChatRoomType() == GROUP) {
             throw new IllegalArgumentException("그룹 채팅방은 나갈 수 없습니다.");
         }
         member.leave();

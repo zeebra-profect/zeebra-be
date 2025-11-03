@@ -1,5 +1,6 @@
 package com.zeebra.domain.chat.dto;
 
+import com.zeebra.domain.chat.entity.ChatRoomType;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -8,4 +9,5 @@ import lombok.Setter;
 public class ChatRoomRequestDto {
     private Long productId;
     private Long saleId;
+    private ChatRoomType chatRoomType;
 }

@@ -18,7 +18,7 @@ public record ChatMessageResponseDto (
     MessageType messageType,
     String content,
     String imageUrl,
-    LocalDateTime createTime
+    LocalDateTime createdAt
 ){
     public static ChatMessageResponseDto from(ChatMessage chatMessage, Member member) {
         ChatRoomMember sender = chatMessage.getChatRoomMember();

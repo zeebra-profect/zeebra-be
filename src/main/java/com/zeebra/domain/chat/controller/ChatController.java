@@ -10,8 +10,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,7 +31,6 @@ public class ChatController {
             @AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal
     ) {
         Long currentUserId = principal.getMemberId();
-
         ChatRoomResponseDto chatRoomResponse = chatService.createOrGetChatRoom(chatRoomRequestDto, currentUserId);
 
         return ApiResponse.success(chatRoomResponse);
@@ -43,9 +40,9 @@ public class ChatController {
     @GetMapping("/rooms/{roomId}/messages")
     public ApiResponse<Page<ChatMessageResponseDto>> getChatHistory(
             @PathVariable("roomId") Long roomId,
-            @AuthenticationPrincipal JwtProvider .JwtUserPrincipal principal, // 내 정보
+            @AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal, // 내 정보
             @PageableDefault(size = 30) Pageable pageable
-    ){
+    ) {
         Long currentUserId = principal.getMemberId();
         Page<ChatMessageResponseDto> chatHistory = chatService.getChatHistory(roomId, currentUserId, pageable);
         return ApiResponse.success(chatHistory);
@@ -66,7 +63,7 @@ public class ChatController {
     public ApiResponse<Void> leaveChatRoom(
             @PathVariable Long roomId,
             @AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal
-    ){
+    ) {
         Long currentUserId = principal.getMemberId();
         chatService.leaveChatRoom(roomId, currentUserId);
         return ApiResponse.success(null);
@@ -78,7 +75,7 @@ public class ChatController {
             @PathVariable Long roomId,
             @RequestBody TradeRequestDto tradeRequestDto,
             @AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal
-    ){
+    ) {
         Long currentUserId = principal.getMemberId();
         TradeResponseDto tradeResponseDto = chatService.proposeTrade(roomId, tradeRequestDto, currentUserId);
         return ApiResponse.success(tradeResponseDto);

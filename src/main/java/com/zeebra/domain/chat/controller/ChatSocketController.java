@@ -2,16 +2,16 @@ package com.zeebra.domain.chat.controller;
 
 import com.zeebra.domain.chat.dto.ChatMessageRequestDto;
 import com.zeebra.domain.chat.dto.ChatMessageResponseDto;
-import com.zeebra.domain.chat.entity.ChatMessage;
 import com.zeebra.domain.chat.service.ChatService;
 import com.zeebra.global.security.jwt.JwtProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.stereotype.Controller;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.stereotype.Controller;
+
+import java.security.Principal;
 
 @Slf4j
 @Controller
@@ -24,11 +24,21 @@ public class ChatSocketController {
     @MessageMapping("/chat/message")
     public void sendMessage(
             ChatMessageRequestDto requestDto,
-            @AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal
+//            @AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal
+            Principal principal
+
     ) {
         try { // ⭐️ 2. try-catch 블록 추가
+//            Long currentMemberId = principal.getMemberId();
+            UsernamePasswordAuthenticationToken auth =
+                    (UsernamePasswordAuthenticationToken) principal;
 
-            Long currentMemberId = principal.getMemberId();
+            JwtProvider.JwtUserPrincipal userPrincipal =
+                    (JwtProvider.JwtUserPrincipal) auth.getPrincipal();
+
+            // 이제 가능!
+            Long currentMemberId = userPrincipal.getMemberId();
+            System.out.println("curmemId : " + currentMemberId);
             log.info("✅ [WebSocket] 메시지 수신: (Room: {}, User: {})",
                     requestDto.getChatRoomId(), currentMemberId);
             ChatMessageResponseDto savedMessage = chatService.saveMessage(requestDto, currentMemberId);

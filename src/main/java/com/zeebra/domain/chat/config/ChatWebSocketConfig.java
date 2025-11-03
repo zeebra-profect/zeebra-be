@@ -4,6 +4,8 @@ import com.zeebra.global.security.jwt.JwtProvider;
 import com.zeebra.global.web.CookieUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.simp.config.ChannelRegistration;
@@ -24,6 +26,10 @@ import java.util.Map;
 @EnableWebSocketMessageBroker
 @RequiredArgsConstructor
 public class ChatWebSocketConfig implements WebSocketMessageBrokerConfigurer {
+    private final JwtProvider jwtProvider;
+    private final CookieUtil cookieUtil;
+    private final String ACCESS_TOKEN_COOKIE_NAME = "__Host-AT";
+
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws/chat")
@@ -32,21 +38,17 @@ public class ChatWebSocketConfig implements WebSocketMessageBrokerConfigurer {
     }
 
     @Override
-    public void configureMessageBroker(MessageBrokerRegistry registry){
+    public void configureMessageBroker(MessageBrokerRegistry registry) {
         registry.enableSimpleBroker("/sub"); //구독자가 메세지 받을 경로
 
         registry.setApplicationDestinationPrefixes("/pub"); //발행자가 메세지 보낼 경로
     }
 
-
-    private final JwtProvider jwtProvider;
-    private final CookieUtil cookieUtil;
-    private final String ACCESS_TOKEN_COOKIE_NAME = "__Host-AT";
-
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
         registration.interceptors(new ChannelInterceptor() {
             @Override
+            @Order(Ordered.HIGHEST_PRECEDENCE)
             public Message<?> preSend(Message<?> message, MessageChannel channel) {
                 StompHeaderAccessor accessor =
                         MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);

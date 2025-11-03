@@ -76,22 +76,23 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(BusinessException.class)
 	public ResponseEntity<ApiResponse<ErrorData>> handleBusinessException(BusinessException ex) {
 		ErrorCode errorCode = ex.getErrorCode();
+		String message = ex.getMessage();
 
 		log.error("[비즈니스 예외] 발생: 코드 = {}, 메시지 = {}",
-			errorCode.getCode(), errorCode.getMessage());
+			errorCode.getCode(), message);
 
 		if (isDevelopment()) {
 			log.debug("Error details - code: {}, message: {}",
 				errorCode.getCode(),
-				errorCode.getMessage(),
+				message,
 				ex);
 		}
 
-		ErrorData errorData = new ErrorData(errorCode.getCode(), ex.getMessage());
+		ErrorData errorData = new ErrorData(errorCode.getCode(), message);
 
 		return ResponseEntity
 			.status(errorCode.getHttpStatus())
-			.body(ApiResponse.error(errorData, errorCode.getMessage()));
+			.body(ApiResponse.error(errorData, message));
 	}
 
 	@ExceptionHandler(Exception.class)

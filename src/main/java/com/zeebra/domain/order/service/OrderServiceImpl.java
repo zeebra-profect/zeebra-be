@@ -67,7 +67,7 @@ public class OrderServiceImpl implements OrderService {
 
 	@Transactional
 	public CreateOrderResponse createOrder(Long memberId, CreateOrderRequest request) {
-		String clientRequestId = request.ClientRequestId();
+		String clientRequestId = request.clientRequestId();
 
 		Optional<CreateOrderResponse> existingResponse = findExistingOrder(clientRequestId, memberId);
 		if (existingResponse.isPresent()) {

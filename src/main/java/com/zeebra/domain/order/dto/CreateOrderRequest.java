@@ -4,7 +4,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 
 public record CreateOrderRequest(
-	@NotBlank String ClientRequestId,
+	@NotBlank String clientRequestId,
 	Long cartId,
 	Long productOptionId,
 	@Valid SalesItem salesItem

@@ -39,7 +39,7 @@ public class SalesController {
     @PostMapping("/api/sales")
     public ApiResponse<SalesResponse> createSales(@AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal, @RequestBody SalesRequest request) {
         Long memberId = principal.getMemberId();
-        return salesService.createSales(memberId, request);
+        return ApiResponse.success(salesService.createSales(memberId, request));
     }
 
     @DeleteMapping("/api/salses/{salesId}")

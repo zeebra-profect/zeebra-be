@@ -14,7 +14,7 @@ import com.zeebra.global.ApiResponse;
 
 public interface SalesService {
 
-    public ApiResponse<SalesResponse> createSales(Long memberId, SalesRequest request);
+    public SalesResponse createSales(Long memberId, SalesRequest request);
 
     public ApiResponse<Void> deleteSales(Long memberId, Long salesId);
 

@@ -35,3 +35,7 @@ spring.jpa:
   properties:
     hibernate.format_sql: true
   show-sql: false
+
+toss:
+  payments:
+    secret-key: ${TOSS_PAYMENT_SECRET_KEY}

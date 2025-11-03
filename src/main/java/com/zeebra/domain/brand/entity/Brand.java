@@ -21,8 +21,7 @@ public class Brand extends BaseEntity {
 
     private String logoImage;
 
-    public Brand(Long id, String name, String logoImage) {
-        this.id = id;
+    public Brand(String name, String logoImage) {
         this.name = name;
         this.logoImage = logoImage;
     }

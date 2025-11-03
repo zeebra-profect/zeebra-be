@@ -41,20 +41,39 @@ public class ProductQueryRepository {
     private final QOptionName optionName = QOptionName.optionName;
     private final QFavoriteProduct favoriteProduct = QFavoriteProduct.favoriteProduct;
 
+    private StringTemplate norm(String keyword) {
+        // DB normalize_search 호출은 이미 클린된 문자열로만
+        return Expressions.stringTemplate("public.normalize_search({0})", Expressions.constant(keyword == null ? "" : keyword));
+    }
+
+    private boolean isShort(String keyword) {
+        if (keyword == null) return true;
+        return keyword.codePointCount(0, keyword.length()) < 3;
+    }
+
     public List<Product> searchProduct(String keyword,
                                        List<Long> categoryIds,
                                        List<Long> brandIds,
                                        Pageable pageable,
                                        ProductSort productSort) {
-        String safeWord = (keyword == null) ? "" : keyword.trim();
-        boolean isShort = safeWord.length() < 3;
-        StringTemplate normKeyword = Expressions.stringTemplate(
-                "public.normalize_search({0})", Expressions.constant(keyword == null ? "" : keyword)
-        );
+        if (keyword == null) {
+            return queryFactory
+                    .selectFrom(product)
+                    .where(
+                            findByBrandId(brandIds),
+                            findByCategoryId(categoryIds)
+                    )
+                    .orderBy(buildOrderSpecifier(productSort, true, null, null)) // 기본 정렬
+                    .offset(pageable.getOffset())
+                    .limit(pageable.getPageSize())
+                    .fetch();
+        }
 
-        if (isShort) {
+        StringTemplate normKeyword = norm(keyword);
+
+        if (isShort(keyword)) {
             BooleanExpression likeCond = Expressions.booleanTemplate(
-                    "{0} LIKE ('%' || {1} || '%')", productSearchMv.searchTextNorm, normKeyword
+                    "{0} LIKE ('%' || {1} || '%')", productSearchMv.searchTextNorm, keyword
             );
             NumberExpression<Integer> pos = Expressions.numberTemplate(
                     Integer.class, "strpos({0}, {1})", productSearchMv.searchTextNorm, normKeyword
@@ -214,40 +233,60 @@ public class ProductQueryRepository {
     }
 
     private BooleanExpression findByCategoryId(List<Long> categoryIds) {
-        if (categoryIds == null) {
-            return null;
-        }
+        if (categoryIds == null || categoryIds.isEmpty()) return null;
         return product.categoryId.in(categoryIds);
     }
 
     private BooleanExpression findByBrandId(List<Long> brandIds) {
-        if (brandIds == null) {
-            return null;
-        }
+        if (brandIds == null || brandIds.isEmpty()) return null;
         return product.brandId.in(brandIds);
     }
 
-    public long countFiltered(String keyword, List<Long> categoryIds, List<Long> brandIds) {
-        StringTemplate normKeyword = Expressions.stringTemplate(
-                "public.normalize_search({0})", Expressions.constant(keyword)
-        );
 
-        NumberExpression<Double> score = Expressions.numberTemplate(
-                Double.class, "similarity({0}, {1})", productSearchMv.searchTextNorm, normKeyword
-        );
+    public long countFiltered(String cleaned, List<Long> categoryIds, List<Long> brandIds) {
+        if (cleaned == null) {
+            Long c = queryFactory
+                    .select(product.count())
+                    .from(product)
+                    .where(
+                            findByBrandId(brandIds),
+                            findByCategoryId(categoryIds)
+                    ).fetchOne();
+            return c != null ? c : 0L;
+        }
 
-        BooleanExpression simFilter = score.goe(0.1);
-        Long count = queryFactory
-                .select(product.count())
-                .from(productSearchMv)
-                .join(product).on(product.id.eq(productSearchMv.id))
-                .where(
-                        simFilter,
-                        findByBrandId(brandIds),
-                        findByCategoryId(categoryIds)
-                )
-                .fetchOne();
-        return count != null ? count : 0L;
+        StringTemplate normKeyword = norm(cleaned);
+
+        if (isShort(cleaned)) {
+            BooleanExpression likeCond = Expressions.booleanTemplate(
+                    "{0} LIKE ('%' || {1} || '%')", productSearchMv.searchTextNorm, normKeyword
+            );
+            Long c = queryFactory
+                    .select(product.count())
+                    .from(productSearchMv)
+                    .join(product).on(product.id.eq(productSearchMv.id))
+                    .where(
+                            likeCond,
+                            findByBrandId(brandIds),
+                            findByCategoryId(categoryIds)
+                    ).fetchOne();
+            return c != null ? c : 0L;
+        } else {
+            NumberExpression<Double> score = Expressions.numberTemplate(
+                    Double.class, "similarity({0}, {1})", productSearchMv.searchTextNorm, normKeyword
+            );
+            BooleanExpression simFilter = score.goe(0.1);
+            Long c = queryFactory
+                    .select(product.count())
+                    .from(productSearchMv)
+                    .join(product).on(product.id.eq(productSearchMv.id))
+                    .where(
+                            simFilter,
+                            findByBrandId(brandIds),
+                            findByCategoryId(categoryIds)
+                    ).fetchOne();
+            return c != null ? c : 0L;
+        }
     }
 
     private OrderSpecifier<?>[] buildOrderSpecifier(ProductSort productSort,

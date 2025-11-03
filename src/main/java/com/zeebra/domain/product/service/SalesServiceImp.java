@@ -63,7 +63,7 @@ public class SalesServiceImp implements SalesService {
 
     @Transactional
     @Override
-    public ApiResponse<SalesResponse> createSales(Long memberId, SalesRequest request) {
+    public SalesResponse createSales(Long memberId, SalesRequest request) {
         try {
             Member member = memberRepository.findById(memberId).orElseThrow(
                     () -> new NoSuchElementException("해당하는 사용자가 없습니다."));
@@ -72,11 +72,11 @@ public class SalesServiceImp implements SalesService {
                     () -> new NoSuchElementException("해당하는 상품 옵션이 없습니다."));
             Sales sales = salesRepository.save(toSales(productOption, member, request));
             SalesResponse salesResponse = toSalesResponse(sales);
-            return ApiResponse.success(salesResponse);
+            return salesResponse;
         } catch (NoSuchElementException e) {
-            return ApiResponse.error(null, e.getMessage());
+            throw new BusinessException(CommonErrorCode.NOT_FOUND, e.getMessage());
         } catch (Exception e) {
-            return ApiResponse.error(null, "판매 상품을 생성하는 과정에서 오류가 발생했습니다.");
+			throw new BusinessException(CommonErrorCode.INTERNAL_SERVER_ERROR, "판매 상품을 생성하는 과정에서 오류가 발생했습니다.");
         }
     }
 
@@ -105,7 +105,7 @@ public class SalesServiceImp implements SalesService {
 
 		if (sales == null) {
 			log.error("[최저가 판매 조회 실패] 판매 중인 상품을 찾을 수 없습니다. productOptionId: {}", productOptionId);
-			throw new BusinessException(OrderErrorCode.PRODUCT_NOT_FOUND);
+			throw new BusinessException(OrderErrorCode.PRODUCT_NOT_FOUND, "판매 중인 상품을 찾을 수 없습니다.");
 		}
 
 		return SalesItem.of(sales.getId(), sales.getStock(), sales.getPrice());
@@ -114,8 +114,7 @@ public class SalesServiceImp implements SalesService {
 	public SalesDetailResponse getSalesDetail(Long memberId, Long salesId) {
 		SalesDetailResponse salesDetailResponse = salesQueryRepository.findSalesDetailById(salesId, memberId);
 		if (salesDetailResponse == null) {
-			log.info("서비스임");
-			throw new BusinessException(CommonErrorCode.NOT_FOUND);
+			throw new BusinessException(CommonErrorCode.NOT_FOUND, "판매 중인 상품을 찾을 수 없습니다.");
 		}
 
 		return salesDetailResponse;

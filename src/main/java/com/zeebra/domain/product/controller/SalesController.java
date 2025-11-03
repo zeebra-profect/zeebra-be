@@ -2,7 +2,10 @@ package com.zeebra.domain.product.controller;
 
 import java.time.LocalDate;
 
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -64,7 +67,7 @@ public class SalesController {
 		@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
 		@Parameter(description = "판매 상태", required = false)
 		@RequestParam(required = false) SalesStatus salesStatus,
-		Pageable pageable) {
+		@ParameterObject @PageableDefault(size = 20, sort = "createdTime", direction = Sort.Direction.DESC) Pageable pageable) {
 		Long memberId = principal.getMemberId();
 
 		SalesListResponse response = salesService.getSalesList(memberId, startDate, endDate, salesStatus, pageable);

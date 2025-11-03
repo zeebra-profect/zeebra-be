@@ -16,6 +16,7 @@ import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.zeebra.domain.product.dto.SalesDetailResponse;
 import com.zeebra.domain.product.dto.SalesItemOptions;
+import com.zeebra.domain.product.entity.QOptionCombination;
 import com.zeebra.domain.product.entity.QOptionName;
 import com.zeebra.domain.product.entity.QProduct;
 import com.zeebra.domain.product.entity.QProductOption;
@@ -34,8 +35,8 @@ public class SalesQueryRepository {
     private final QProductOption productOption = QProductOption.productOption;
     private final QSales sales = QSales.sales;
 	private final QProduct product = QProduct.product;
-	private final QProductOption optionCombination = QProductOption.productOption;
 	private final QOptionName optionName = QOptionName.optionName;
+	private final QOptionCombination optionCombination = QOptionCombination.optionCombination;
     private final JPAQueryFactory queryFactory;
 
     public BigDecimal cheapestSalesPrice(Long productOptionId) {
@@ -101,7 +102,8 @@ public class SalesQueryRepository {
 			.select(optionName.name, optionName.value)
 			.from(sales)
 			.join(productOption).on(sales.productOptionId.eq(productOption.id))
-			.join(optionName).on(productOption.id.eq(optionName.id))
+			.join(optionCombination).on(productOption.id.eq(optionCombination.productOptionId))
+			.join(optionName).on(optionCombination.optionNameId.eq(optionName.id))
 			.where(sales.id.eq(salesId))
 			.fetch()
 			.stream()

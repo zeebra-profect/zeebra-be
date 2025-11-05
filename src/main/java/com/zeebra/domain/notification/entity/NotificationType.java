@@ -16,8 +16,9 @@ public enum NotificationType {
     REVIEW_REQUEST("님, 상품 후기를 남겨주세요!"), // 리뷰 요청
     NEW_CHAT("새로운 채팅방이 열렸습니다!"), // 새로운 채팅
     NEW_MESSAGE("아직 읽지 않은 메시지가 있습니다." + LocalDateTime.now()),
-    TEST_LOGIN("로그인 알림"); // 기존 채팅의 새 메시지
-
+    LOGIN("로그인 알림"), // 기존 채팅의 새 메시지
+    TEST("테스트용 타입");
+    
     private final String noticeText;
 
     NotificationType(String noticeText) {

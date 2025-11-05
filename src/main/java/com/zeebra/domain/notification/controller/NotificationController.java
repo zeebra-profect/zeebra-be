@@ -1,7 +1,7 @@
 package com.zeebra.domain.notification.controller;
 
-import com.zeebra.domain.member.dto.MemberInfo;
 import com.zeebra.domain.member.service.MemberService;
+import com.zeebra.domain.notification.dto.NotificationRequest;
 import com.zeebra.domain.notification.dto.NotificationResponse;
 import com.zeebra.domain.notification.dto.NotificationsResponse;
 import com.zeebra.domain.notification.service.NotificationService;
@@ -23,17 +23,12 @@ public class NotificationController {
 
     @GetMapping("/all")
     public ApiResponse<NotificationsResponse> getNotifications(@AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal) {
-        MemberInfo member = memberService.findById(principal.getMemberId());
-        return ApiResponse.success(notificationService.getNotifications(member));
+        return ApiResponse.success(notificationService.getNotifications(principal.getMemberId()));
     }
 
-    @PostMapping
-    public void addNotification(@AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal) {
-        notificationService.addNotification(principal.getMemberId());
-    }
-
-    @GetMapping
-    public ApiResponse<NotificationResponse> getNotification(@AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal) {
-        return null;
+    @PostMapping()
+    public ApiResponse<NotificationResponse> createNotification(@AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal, NotificationRequest request) {
+        request.setMemberId(principal.getMemberId());
+        return ApiResponse.success(notificationService.createNotification(request));
     }
 }

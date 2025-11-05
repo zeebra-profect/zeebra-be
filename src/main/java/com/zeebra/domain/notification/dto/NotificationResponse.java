@@ -9,10 +9,11 @@ public record NotificationResponse(
         NotificationType notificationType,
         boolean isRead,
         String noticeText,
-        LocalDateTime createdTime
+        LocalDateTime createdTime,
+        String url
 ) {
 
     public static NotificationResponse of(Notification notification) {
-        return new NotificationResponse(notification.getNotificationType(), notification.isRead(), notification.getNotificationType().getNoticeText(), notification.getCreatedTime());
+        return new NotificationResponse(notification.getNotificationType(), notification.isRead(), notification.getNotificationType().getNoticeText(), notification.getCreatedTime(), notification.getUrl());
     }
 }

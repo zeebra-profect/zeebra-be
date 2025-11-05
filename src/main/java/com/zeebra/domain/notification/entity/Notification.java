@@ -19,12 +19,33 @@ public class Notification extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private NotificationType notificationType;
     private boolean isRead;
+    private String url;
 
     @Builder
-    public Notification(NotificationType notificationType, Long memberId) {
+    public Notification(Long memberId, NotificationType notificationType) {
         this.memberId = memberId;
         this.notificationType = notificationType;
         this.isRead = false;
+    }
+
+    public void CreateUrl() {
+        switch (this.notificationType) {
+            case NotificationType.TEST:
+                this.url = "/dummy/testId";
+                break;
+            case NotificationType.ORDER_CONFIRMED:
+                this.url = "/mypage/orderhistory";
+                break;
+            case NotificationType.ORDER_SHIPPED:
+                this.url = "/mypage/orderhistory";
+                break;
+            case NotificationType.ORDER_DELIVERED:
+                this.url = "/mypage/orderhistory";
+                break;
+            default:
+                this.url = null;
+                break;
+        }
     }
 
 

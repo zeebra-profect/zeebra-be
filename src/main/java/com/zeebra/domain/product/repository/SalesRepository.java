@@ -11,5 +11,5 @@ import com.zeebra.domain.product.entity.Sales;
 public interface SalesRepository extends JpaRepository<Sales, Long> {
 	Optional<Sales> findByIdAndMemberId(Long id, Long memberId);
 
-    List<Sales> findByMemberIdAndStatus(Long memberId, SalesStatus status);
+    List<Sales> findByMemberIdAndSalesStatus(Long memberId, SalesStatus status);
 }

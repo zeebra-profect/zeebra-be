@@ -147,7 +147,7 @@ public class SalesServiceImp implements SalesService {
     // 유저가 판매하는 상품 목록 조회
     @Override
     public List<UserSalesItem> findSalesByMemberId(Long memberId) {
-        List<Sales> salesList = salesRepository.findByMemberIdAndStatus(memberId, SalesStatus.ON_SALE);
+        List<Sales> salesList = salesRepository.findByMemberIdAndSalesStatus(memberId, SalesStatus.ON_SALE);
 
         return salesList.stream()
                 .map(UserSalesItem::from)

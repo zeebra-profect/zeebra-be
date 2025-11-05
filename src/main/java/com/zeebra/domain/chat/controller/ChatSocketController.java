@@ -24,22 +24,19 @@ public class ChatSocketController {
     @MessageMapping("/chat/message")
     public void sendMessage(
             ChatMessageRequestDto requestDto,
-//            @AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal
             Principal principal
 
     ) {
-        try { // ⭐️ 2. try-catch 블록 추가
-//            Long currentMemberId = principal.getMemberId();
+        try { //️ 2. try-catch 블록 추가
             UsernamePasswordAuthenticationToken auth =
                     (UsernamePasswordAuthenticationToken) principal;
 
             JwtProvider.JwtUserPrincipal userPrincipal =
                     (JwtProvider.JwtUserPrincipal) auth.getPrincipal();
 
-            // 이제 가능!
             Long currentMemberId = userPrincipal.getMemberId();
             System.out.println("curmemId : " + currentMemberId);
-            log.info("✅ [WebSocket] 메시지 수신: (Room: {}, User: {})",
+            log.info(" [WebSocket] 메시지 수신: (Room: {}, User: {})",
                     requestDto.getChatRoomId(), currentMemberId);
             ChatMessageResponseDto savedMessage = chatService.saveMessage(requestDto, currentMemberId);
 
@@ -47,10 +44,10 @@ public class ChatSocketController {
                     "/sub/chat/room/" + savedMessage.roomId(),
                     savedMessage
             );
-            log.info("✅ [WebSocket] 메시지 전송 성공: (Room: {})", savedMessage.roomId());
+            log.info("[WebSocket] 메시지 전송 성공: (Room: {})", savedMessage.roomId());
 
         } catch (Exception e) {
-            // ⭐️ 3. 에러 발생 시 서버 로그(터미널)에 에러 메시지 출력
+            //  3. 에러 발생 시 서버 로그(터미널)에 에러 메시지 출력
             log.error("Failed to send WebSocket message: {}", e.getMessage());
             e.printStackTrace(); // (더 자세한 스택 트레이스)
         }

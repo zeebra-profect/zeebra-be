@@ -1,8 +1,12 @@
 package com.zeebra.domain.product.service;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
 
+import com.zeebra.domain.product.dto.*;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnJava;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -11,10 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.zeebra.domain.member.entity.Member;
 import com.zeebra.domain.member.repository.MemberRepository;
 import com.zeebra.domain.order.dto.SalesItem;
-import com.zeebra.domain.product.dto.SalesDetailResponse;
-import com.zeebra.domain.product.dto.SalesListResponse;
-import com.zeebra.domain.product.dto.SalesRequest;
-import com.zeebra.domain.product.dto.SalesResponse;
 import com.zeebra.domain.product.entity.ProductOption;
 import com.zeebra.domain.product.entity.Sales;
 import com.zeebra.domain.product.entity.SalesStatus;
@@ -143,4 +143,14 @@ public class SalesServiceImp implements SalesService {
 
 		return SalesListResponse.of(salesResponsePage);
 	}
+
+    // 유저가 판매하는 상품 목록 조회
+    @Override
+    public List<UserSalesItem> findSalesByMemberId(Long memberId) {
+        List<Sales> salesList = salesRepository.findByMemberIdAndStatus(memberId, SalesStatus.ON_SALE);
+
+        return salesList.stream()
+                .map(UserSalesItem::from)
+                .collect(Collectors.toList());
+    }
 }

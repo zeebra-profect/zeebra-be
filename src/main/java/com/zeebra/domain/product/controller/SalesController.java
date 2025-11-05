@@ -1,7 +1,9 @@
 package com.zeebra.domain.product.controller;
 
 import java.time.LocalDate;
+import java.util.List;
 
+import com.zeebra.domain.product.dto.*;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -16,10 +18,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.zeebra.domain.product.dto.SalesDetailResponse;
-import com.zeebra.domain.product.dto.SalesListResponse;
-import com.zeebra.domain.product.dto.SalesRequest;
-import com.zeebra.domain.product.dto.SalesResponse;
 import com.zeebra.domain.product.entity.SalesStatus;
 import com.zeebra.domain.product.service.SalesService;
 import com.zeebra.global.ApiResponse;
@@ -73,4 +71,14 @@ public class SalesController {
 		SalesListResponse response = salesService.getSalesList(memberId, startDate, endDate, salesStatus, pageable);
 		return ApiResponse.success(response);
 	}
+
+    @Operation(summary = "특정 회원 판매 상품 목록 조회 (채팅 연동)", description = "그룹 채팅에서 유저 프로필 클릭 시 사용")
+    @GetMapping("/api/sales/member/{memberId}")
+    public ApiResponse<List<UserSalesItem>> getSalesByMember(
+            @PathVariable Long memberId,
+            @AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal
+    ){
+        List<UserSalesItem> userSales = salesService.findSalesByMemberId(memberId);
+        return ApiResponse.success(userSales);
+    }
 }

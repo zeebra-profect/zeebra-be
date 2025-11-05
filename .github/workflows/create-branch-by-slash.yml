@@ -38,7 +38,7 @@ jobs:
        github.event.comment.author_association == 'MEMBER')
     uses: zeebra-profect/.github/.github/workflows/issue-create-branch.yml@main
     with:
-      allowed_branch_types: feature,hotfix,release
+      allowed_branch_types: feature,hotfix,release,test
       base_ref: ${{ needs.parse-base.outputs.base_ref }}
       jira_key_prefix: ZBR
     secrets: inherit

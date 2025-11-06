@@ -22,11 +22,11 @@ public class ChatRoom extends BaseEntity {
     private Long id;
 
     // 1:1 채팅 (Sales)
-    @Column(name = "sale_id", nullable = true)
+    @Column(name = "sale_id")
     private Long saleId;
 
     // 그룹 채팅 (Product)
-    @Column(name = "product_id", nullable = true)
+    @Column(name = "product_id")
     private Long productId;
 
     //enum으로 구분

@@ -54,6 +54,14 @@ public class SecurityConfigLocal {
                         .requestMatchers("/api/notification").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
+
+                        .requestMatchers("/ws/chat/**").permitAll()
+                        .requestMatchers("/api/chat/group/**").permitAll()
+
+                        .requestMatchers("/api/chat/dm/rooms/**").authenticated()
+                        .requestMatchers("/api/chat/rooms/{roomId}/leave").authenticated()
+                        .requestMatchers("/api/chat/rooms/{roomId}/trade").authenticated()
+
                         .anyRequest().authenticated()
                 )
                 // ⭐ CSRF 완전 비활성화 (로컬 개발 환경)

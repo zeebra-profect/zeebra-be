@@ -74,14 +74,14 @@ public class ChatServiceImpl implements ChatService {
                             .build();
                     return chatRoomRepository.save(newRoom);
                 });
-                ensureUserIsChatMember(chatRoom, currentMemberId);
+
+                if (currentMemberId != null) {
+                    ensureUserIsChatMember(chatRoom, currentMemberId);
+                }
                 break;
             }
             case DM: {
                 Long saleId = chatRoomRequestDto.getSaleId();
-                if (saleId == null) {
-                    throw new IllegalArgumentException("DM 채팅방을 위해선 saleId가 필요합니다.");
-                }
 
                 Sales sales = salesRepository.findById(saleId)
                         .orElseThrow(() -> new EntityNotFoundException("판매 글을 찾을 수 없습니다"));

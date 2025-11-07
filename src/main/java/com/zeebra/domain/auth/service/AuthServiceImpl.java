@@ -8,8 +8,6 @@ import com.zeebra.domain.member.dto.MemberInfo;
 import com.zeebra.domain.member.entity.Member;
 import com.zeebra.domain.member.repository.MemberRepository;
 import com.zeebra.domain.notification.entity.NotificationType;
-import com.zeebra.domain.notification.event.NotiLoginEvent;
-import com.zeebra.domain.notification.event.NotiSignUpEvent;
 import com.zeebra.global.ErrorCode.AuthErrorCode;
 import com.zeebra.global.ErrorCode.MemberErrorCode;
 import com.zeebra.global.exception.BusinessException;

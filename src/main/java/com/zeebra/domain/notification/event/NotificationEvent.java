@@ -12,7 +12,5 @@ public abstract class NotificationEvent {
     private Long memberId;
     private String nickname;
     private NotificationType notificationType;
-
-    public abstract String generateUrl(Long objectId);
-
+    private Object object;
 }

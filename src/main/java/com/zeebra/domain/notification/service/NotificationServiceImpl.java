@@ -8,8 +8,10 @@ import com.zeebra.domain.notification.dto.NotificationResponse;
 import com.zeebra.domain.notification.dto.NotificationsResponse;
 import com.zeebra.domain.notification.entity.Notification;
 import com.zeebra.domain.notification.entity.NotificationType;
+import com.zeebra.domain.notification.event.NotificationEvent;
 import com.zeebra.domain.notification.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,6 +53,17 @@ public class NotificationServiceImpl implements NotificationService {
         NotificationResponse.of(notification);
 
         return NotificationResponse.of(notification);
+    }
+
+    @EventListener
+    @Async
+    public void NotificationEventListener(NotificationEvent event) {
+        NotificationRequest request = new NotificationRequest();
+        request.setMemberId(event.getMemberId());
+        request.setNotificationType(event.getNotificationType());
+        request.setObject(event.getObject());
+
+        createNotificationAsync(request);
     }
 
     @Async("notificationAsyncExecutor")

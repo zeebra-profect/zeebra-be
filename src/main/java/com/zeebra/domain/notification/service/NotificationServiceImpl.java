@@ -6,14 +6,13 @@ import com.zeebra.domain.notification.dto.NotificationRequest;
 import com.zeebra.domain.notification.dto.NotificationResponse;
 import com.zeebra.domain.notification.dto.NotificationsResponse;
 import com.zeebra.domain.notification.entity.Notification;
+import com.zeebra.domain.notification.entity.NotificationType;
 import com.zeebra.domain.notification.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.NoSuchElementException;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -21,14 +20,8 @@ public class NotificationServiceImpl implements NotificationService {
     private final NotificationRepository notificationRepository;
     private final MemberRepository memberRepository;
 
-    // 로그인 시 내 모든 알림 조회하는 메서드. 필수 기능
-    public NotificationsResponse getNotifications(Long memberId) {
-        List<Notification> notifications = notificationRepository.findByMemberIdOrderByCreatedTimeDesc(memberId);
-        NotificationsResponse responses = new NotificationsResponse(new ArrayList<>());
-        for (Notification notification : notifications) {
-            responses.dtos().add(NotificationResponse.of(notification));
-        }
-        return responses;
+    private boolean isValidNotificationType(NotificationType type) {
+        return Arrays.asList(NotificationType.values()).contains(type);
     }
 
     @Transactional
@@ -37,19 +30,54 @@ public class NotificationServiceImpl implements NotificationService {
                 () -> new NoSuchElementException("해당하는 사용자가 없습니다."));
 
         if (request.getNotificationType() == null) {
-            throw new IllegalArgumentException("유효한 Type이 아니거나 null입니다.");
+            throw new IllegalArgumentException("타입 값이 없습니다.");
+        }
+
+        if (!isValidNotificationType(request.getNotificationType())) {
+            throw new IllegalArgumentException("유효하지 않은 알림 타입입니다.");
         }
 
         Notification notification = new Notification(request.getMemberId(), request.getNotificationType());
-        notification.CreateUrl();
+        notification.CreateUrl(request.getObject());
 
         try {
             notificationRepository.save(notification);
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
         NotificationResponse.of(notification);
+
         return NotificationResponse.of(notification);
+    }
+
+    public NotificationResponse getNotificationById(Long notificationId) {
+        Notification notification = notificationRepository.findByNotificationId(notificationId).orElseThrow(()
+                -> new NoSuchElementException("해당하는 알림이 없습니다."));
+
+        return NotificationResponse.of(notification);
+    }
+
+    public NotificationsResponse getNotifications(Long memberId) {
+
+        if (memberId == null) {
+            throw new NullPointerException("사용자의 id가 null입니다.");
+        }
+
+        Member member = memberRepository.findById(memberId).orElseThrow(
+                () -> new NoSuchElementException("해당하는 사용자가 없습니다."));
+
+        List<NotificationResponse> responses = new ArrayList<>();
+        NotificationsResponse response = new NotificationsResponse(responses);
+        for (Optional<Notification> notification : notificationRepository.findByMemberIdOrderByCreatedTimeDesc(memberId)) {
+            NotificationResponse.of(notification.get());
+            response.dtos().add(NotificationResponse.of(notification.get()));
+        }
+
+        if (responses.isEmpty()) {
+            return null;
+        }
+
+        return response;
     }
 
 //    @EventListener

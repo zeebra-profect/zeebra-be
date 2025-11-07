@@ -28,9 +28,9 @@ public class Notification extends BaseEntity {
         this.isRead = false;
     }
 
-    public void CreateUrl() {
+    public void CreateUrl(Object object) {
         switch (this.notificationType) {
-            case NotificationType.TEST:
+            case NotificationType.TEST_OBJECT:
                 this.url = "/dummy/testId";
                 break;
             case NotificationType.ORDER_CONFIRMED:

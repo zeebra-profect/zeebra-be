@@ -8,6 +8,8 @@ public interface NotificationService {
 
     NotificationResponse createNotification(NotificationRequest notificationRequest);
 
+    NotificationResponse getNotificationById(Long notificationId);
+
     NotificationsResponse getNotifications(Long memberId);
 
 //    void handleMemberSignUp(NotiSignUpEvent memberInfo);

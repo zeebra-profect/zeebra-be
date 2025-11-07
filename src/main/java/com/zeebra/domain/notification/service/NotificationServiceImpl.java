@@ -56,7 +56,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @EventListener
-    @Async
+    @Async("notificationAsyncExecutor")
     public void NotificationEventListener(NotificationEvent event) {
         NotificationRequest request = new NotificationRequest();
         request.setMemberId(event.getMemberId());
@@ -70,7 +70,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional
     public CompletableFuture<NotificationResponse> createNotificationAsync(NotificationRequest request) {
         System.out.println("Thread executing createNotificationAsync: " + Thread.currentThread().getName());
-        return CompletableFuture.supplyAsync(() -> createNotification(request));
+        return CompletableFuture.completedFuture(createNotification(request));
     }
 
 

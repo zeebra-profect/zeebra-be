@@ -8,6 +8,7 @@ import com.zeebra.domain.member.dto.MemberInfo;
 import com.zeebra.domain.member.entity.Member;
 import com.zeebra.domain.member.repository.MemberRepository;
 import com.zeebra.domain.notification.entity.NotificationType;
+import com.zeebra.domain.notification.event.NotificationEvent;
 import com.zeebra.global.ErrorCode.AuthErrorCode;
 import com.zeebra.global.ErrorCode.MemberErrorCode;
 import com.zeebra.global.exception.BusinessException;
@@ -62,7 +63,8 @@ public class AuthServiceImpl implements AuthService {
                 encodedPassword);
 
         Member saved = memberRepository.save(member);
-        eventPublisher.publishEvent(new NotiSignUpEvent(member.getId(), member.getNickname(), NotificationType.SIGN_UP));
+        eventPublisher.publishEvent(new NotificationEvent(member.getId(), member.getNickname(), NotificationType.SIGN_UP, null) {
+        });
 
         return SignupResponse.of(saved);
     }
@@ -88,7 +90,8 @@ public class AuthServiceImpl implements AuthService {
         String refreshToken = jwtProvider.createRefreshToken(member.getId(), member.getRole().toString(), refreshTokenDays);
 
         MemberInfo memberInfo = MemberInfo.of(member);
-        eventPublisher.publishEvent(new NotiLoginEvent(member.getId(), member.getNickname(), NotificationType.LOGIN));
+        eventPublisher.publishEvent(new NotificationEvent(member.getId(), member.getNickname(), NotificationType.LOGIN, null) {
+        });
 
         return new LoginSuccess(accessToken, refreshToken, accessTokenMinutes, refreshTokenDays, memberInfo);
     }

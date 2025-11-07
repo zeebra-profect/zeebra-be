@@ -19,11 +19,13 @@ public class Notification extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private NotificationType notificationType;
     private boolean isRead;
+    private String url;
 
     @Builder
-    public Notification(NotificationType notificationType, Long memberId) {
+    public Notification(Long memberId, NotificationType notificationType, String url) {
         this.memberId = memberId;
         this.notificationType = notificationType;
+        this.url = url;
         this.isRead = false;
     }
 

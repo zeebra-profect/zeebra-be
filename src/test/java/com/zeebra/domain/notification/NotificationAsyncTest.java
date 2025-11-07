@@ -42,8 +42,6 @@ public class NotificationAsyncTest {
     private NotificationRepository notificationRepository;
     @Autowired
     private NotificationService notificationService;
-
-
     @Autowired
     private OrderService orderService;
     @Autowired
@@ -77,8 +75,7 @@ public class NotificationAsyncTest {
 
         CompletableFuture.allOf(f1, f2, f3).join();
         // theㄴ
-        await().atMost(5, TimeUnit.SECONDS)
-                .until(() -> notificationRepository.count() == 3);
+        await().atMost(5, TimeUnit.SECONDS).until(() -> notificationRepository.count() == 3);
         List<Notification> list = notificationRepository.findAll();
         assertThat(list.size()).isEqualTo(3);
     }
@@ -92,7 +89,7 @@ public class NotificationAsyncTest {
         CreateOrderResponse order1 = orderService.createOrder(member1.getId(), orderRequest);
         Order savedOrder = orderRepository.findById(order1.order().orderId()).get();
 
-        // 단 여기서 이상한 req를 하나 준비. 실패 유도
+        // 단 여기서 이상한 알림 req를 하나 준비. 실패 유도
         NotificationRequest req1 = new NotificationRequest(99999L, NotificationType.ORDER_CONFIRMED, savedOrder);
 
         // when
@@ -100,15 +97,11 @@ public class NotificationAsyncTest {
 
         // then
         // 주문은 정상적으로 DB에 남아 있어야 함
-        await().atMost(5, TimeUnit.SECONDS)
-                .until(() -> orderRepository.findById(order1.order().orderId()).isPresent());
+        await().atMost(5, TimeUnit.SECONDS).until(() -> orderRepository.findById(order1.order().orderId()).isPresent());
         assertThat(savedOrder.getMemberId()).isEqualTo(member1.getId());
 
         // 알림 생성에서 발생한 예외는 CompletableFuture에서 잡을 수 있음
-        assertThatThrownBy(() -> f1.join())
-                .isInstanceOf(CompletionException.class)
-                .hasCauseInstanceOf(NoSuchElementException.class)
-                .hasMessageContaining("해당하는 사용자가 없습니다.");
+        assertThatThrownBy(() -> f1.join()).isInstanceOf(CompletionException.class).hasCauseInstanceOf(NoSuchElementException.class).hasMessageContaining("해당하는 사용자가 없습니다.");
     }
 
     // 헬퍼 메서드

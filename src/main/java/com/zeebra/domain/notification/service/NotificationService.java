@@ -16,7 +16,4 @@ public interface NotificationService {
 
     NotificationsResponse getNotifications(Long memberId);
 
-
-//    void handleMemberSignUp(NotiSignUpEvent memberInfo);
-//    void handleMemberLogin(NotiLoginEvent notiLoginEvent);
 }

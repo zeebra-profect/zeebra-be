@@ -6,7 +6,6 @@ import com.zeebra.domain.auth.dto.SignupResponse;
 import com.zeebra.domain.auth.service.AuthService;
 import com.zeebra.domain.member.entity.Gender;
 import com.zeebra.domain.member.repository.MemberRepository;
-import com.zeebra.domain.member.service.MemberService;
 import com.zeebra.domain.notification.dto.NotificationRequest;
 import com.zeebra.domain.notification.dto.NotificationResponse;
 import com.zeebra.domain.notification.dto.NotificationsResponse;
@@ -14,9 +13,6 @@ import com.zeebra.domain.notification.entity.Notification;
 import com.zeebra.domain.notification.entity.NotificationType;
 import com.zeebra.domain.notification.repository.NotificationRepository;
 import com.zeebra.domain.notification.service.NotificationService;
-import com.zeebra.domain.order.repository.OrderHistoryRepository;
-import com.zeebra.domain.order.repository.OrderRepository;
-import com.zeebra.domain.order.service.OrderService;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -42,22 +38,12 @@ public class NotificationTest {
     @Autowired
     private NotificationService notificationService;
     @Autowired
-    private OrderService orderService;
-    @Autowired
-    private OrderRepository orderRepository;
-    @Autowired
-    private OrderHistoryRepository orderHistoryRepository;
-    @Autowired
-    private MemberService memberService;
-    @Autowired
     private AuthService authService;
 
     @BeforeEach
     public void truncate() {
         memberRepository.deleteAll();
         notificationRepository.deleteAll();
-        orderRepository.deleteAll();
-        orderHistoryRepository.deleteAll();
     }
 
     @Test
@@ -217,7 +203,7 @@ public class NotificationTest {
                 .isInstanceOf(NoSuchElementException.class)
                 .hasMessage("해당하는 알림이 없습니다.");
     }
-    
+
     // 헬퍼 메서드
     private SignupResponse createTestMember(String loginId, String email) {
         SignupRequest signupRequest = new SignupRequest(loginId, loginId, email, loginId, "test1234!", "test1234!", LocalDate.now(), Gender.MAN);

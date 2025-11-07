@@ -253,7 +253,6 @@ public class NotificationUTTest {
         verify(notificationRepository).findByNotificationId(99999L);
     }
 
-
     // 헬퍼 메서드
     private Member createMockMember(Long id, String loginId, String email) {
         Member member = Member.builder()
@@ -267,13 +266,11 @@ public class NotificationUTTest {
                 .role(Role.USER)
                 .build();
 
-        // Reflection으로 ID 설정 (또는 mock 사용)
         try {
             java.lang.reflect.Field idField = Member.class.getDeclaredField("id");
             idField.setAccessible(true);
             idField.set(member, id);
         } catch (Exception e) {
-            // Mock 사용 시 무시
         }
 
         return member;
@@ -295,7 +292,6 @@ public class NotificationUTTest {
             createdTimeField.setAccessible(true);
             createdTimeField.set(notification, LocalDateTime.now());
         } catch (Exception e) {
-            // 무시
         }
 
         return notification;

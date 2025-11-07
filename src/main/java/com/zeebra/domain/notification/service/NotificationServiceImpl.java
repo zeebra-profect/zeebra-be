@@ -28,11 +28,9 @@ public class NotificationServiceImpl implements NotificationService {
         return Arrays.asList(NotificationType.values()).contains(type);
     }
 
-    //    @Async("notificationAsyncExecutor")
     @Transactional
     public NotificationResponse createNotification(NotificationRequest request) {
-        Member member = memberRepository.findById(request.getMemberId()).orElseThrow(
-                () -> new NoSuchElementException("해당하는 사용자가 없습니다."));
+        Member member = memberRepository.findById(request.getMemberId()).orElseThrow(() -> new NoSuchElementException("해당하는 사용자가 없습니다."));
 
         if (request.getNotificationType() == null) {
             throw new IllegalArgumentException("타입 값이 없습니다.");
@@ -59,35 +57,12 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional
     public CompletableFuture<NotificationResponse> createNotificationAsync(NotificationRequest request) {
         System.out.println("Thread executing createNotificationAsync: " + Thread.currentThread().getName());
-
-        Member member = memberRepository.findById(request.getMemberId()).orElseThrow(
-                () -> new NoSuchElementException("해당하는 사용자가 없습니다."));
-
-        if (request.getNotificationType() == null) {
-            throw new IllegalArgumentException("타입 값이 없습니다.");
-        }
-
-        if (!isValidNotificationType(request.getNotificationType())) {
-            throw new IllegalArgumentException("유효하지 않은 알림 타입입니다.");
-        }
-
-        String url = notificationUrlFactory.createUrl(request.getNotificationType(), request.getObject());
-        Notification notification = new Notification(request.getMemberId(), request.getNotificationType(), url);
-
-        try {
-            notificationRepository.save(notification);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        NotificationResponse.of(notification);
-
-        return CompletableFuture.completedFuture(NotificationResponse.of(notification));
+        return CompletableFuture.supplyAsync(() -> createNotification(request));
     }
 
 
     public NotificationResponse getNotificationById(Long notificationId) {
-        Notification notification = notificationRepository.findByNotificationId(notificationId).orElseThrow(()
-                -> new NoSuchElementException("해당하는 알림이 없습니다."));
+        Notification notification = notificationRepository.findByNotificationId(notificationId).orElseThrow(() -> new NoSuchElementException("해당하는 알림이 없습니다."));
 
         return NotificationResponse.of(notification);
     }
@@ -98,8 +73,7 @@ public class NotificationServiceImpl implements NotificationService {
             throw new NullPointerException("사용자의 id가 null입니다.");
         }
 
-        Member member = memberRepository.findById(memberId).orElseThrow(
-                () -> new NoSuchElementException("해당하는 사용자가 없습니다."));
+        Member member = memberRepository.findById(memberId).orElseThrow(() -> new NoSuchElementException("해당하는 사용자가 없습니다."));
 
         List<NotificationResponse> responses = new ArrayList<>();
         NotificationsResponse response = new NotificationsResponse(responses);
@@ -114,33 +88,4 @@ public class NotificationServiceImpl implements NotificationService {
 
         return response;
     }
-
-//    @EventListener
-//    @Transactional
-//    public void handleMemberSignUp(NotiSignUpEvent member) {
-//        System.out.println("handleMemberSignUp 들어옴");
-//        Notification notification = Notification.builder()
-//                .memberId(member.getMemberId())
-//                .notificationType(member.getNotificationType())
-//                .build();
-//
-//        notificationRepository.save(notification);
-//        NotificationResponse notificationResponse = new NotificationResponse(notification.getNotificationType(), false, notification.getNotificationType().getNoticeText(), notification.getCreatedTime(),);
-//        List<NotificationResponse> notificationResponses = new ArrayList<>();
-//        notificationResponses.add(notificationResponse);
-//    }
-
-
-//    @EventListener
-//    public void handleMemberLogin(NotiLoginEvent notiLoginEvent) {
-//        System.out.println("handleMemberLogin 실행!");
-//        Notification notification = Notification.builder()
-//                .memberId(notiLoginEvent.getMemberId())
-//                .notificationType(NotificationType.ORDER_CONFIRMED)
-//                .build();
-//        NotificationResponse loginEventNotification = new NotificationResponse(notification.getNotificationType(), false, notification.getNotificationType().getNoticeText(), notification.getCreatedTime());
-//        notificationRepository.save(notification);
-//
-//    }
-
 }

@@ -44,7 +44,7 @@ public class NotificationUTTest {
     private NotificationServiceImpl notificationService;
 
     @Test
-    @DisplayName("TC-UT-NOTI-001-[정상] 유효한 memberId와 Type으로 알림 생성 시 저장 호출")
+    @DisplayName("TC-UT-NOTI-CREATE-001-[정상] 유효한 memberId와 Type으로 알림 생성 시 저장 호출")
     public void createNotification_validInput_success() {
         // given
         Member mockMember = createMockMember(1L, "user1", "user1@abc.a");
@@ -67,7 +67,7 @@ public class NotificationUTTest {
     }
 
     @Test
-    @DisplayName("TC-UT-NOTI-002-[예외] 잘못된 memberId 입력 시 알림 생성 실패")
+    @DisplayName("TC-UT-NOTI-CREATE-002-[예외] 잘못된 memberId 입력 시 알림 생성 실패")
     public void createNotification_invalidMemberId_fail() {
         // given
         Long invalidMemberId = 99999L;
@@ -85,7 +85,7 @@ public class NotificationUTTest {
     }
 
     @Test
-    @DisplayName("TC-UT-NOTI-003-[예외] null Type 입력 시 알림 생성 실패")
+    @DisplayName("TC-UT-NOTI-CREATE-003-[예외] null Type 입력 시 알림 생성 실패")
     public void createNotification_invalidType_fail() {
         // given
         Member mockMember = createMockMember(1L, "user1", "user1@abc.a");
@@ -102,7 +102,7 @@ public class NotificationUTTest {
     }
 
     @Test
-    @DisplayName("TC-UT-NOTI-004-[정상] object, url 포함 알림 생성")
+    @DisplayName("TC-UT-NOTI-CREATE-004-[정상] object, url 포함 알림 생성")
     public void createNotification_validObjectAndUrl_success() {
         // given
         Member mockMember = createMockMember(1L, "user1", "user1@abc.a");
@@ -124,7 +124,7 @@ public class NotificationUTTest {
     }
 
     @Test
-    @DisplayName("TC-UT-NOTI-005-[정상] 여러 사용자에게 알림 생성")
+    @DisplayName("TC-UT-NOTI-CREATE-005-[정상] 여러 사용자에게 알림 생성")
     public void createNotification_multipleNotificationsForDifferentMembers_success() {
         // given
         Member mockMember1 = createMockMember(1L, "user1", "user1@abc.a");
@@ -150,7 +150,7 @@ public class NotificationUTTest {
     }
 
     @Test
-    @DisplayName("TC-UT-NOTI-006-[정상] 특정 회원의 알림 목록 조회 성공")
+    @DisplayName("TC-UT-NOTI-FIND-001-[정상] 특정 회원의 알림 목록 조회 성공")
     public void getNotifications_validMemberId_success() {
         // given
         Member mockMember = createMockMember(1L, "user1", "user1@abc.a");
@@ -185,7 +185,7 @@ public class NotificationUTTest {
     }
 
     @Test
-    @DisplayName("TC-UT-NOTI-007-[정상] 알림이 없는 회원 조회 시 빈 목록 반환")
+    @DisplayName("TC-UT-NOTI-FIND-002-[정상] 알림이 없는 회원 조회 시 빈 목록 반환")
     public void getNotifications_validMemberIdWithEmptyResult_success() {
         // given
         Member mockMember = createMockMember(1L, "user1", "user1@abc.a");
@@ -199,7 +199,7 @@ public class NotificationUTTest {
     }
 
     @Test
-    @DisplayName("TC-UT-NOTI-008-[예외] 존재하지 않는 회원의 알림 조회 실패")
+    @DisplayName("TC-UT-NOTI-FIND-003-[예외] 존재하지 않는 회원의 알림 조회 실패")
     public void getNotifications_invalidMemberId_fail() {
         // given
         when(memberRepository.findById(1L)).thenReturn(Optional.empty());
@@ -213,7 +213,7 @@ public class NotificationUTTest {
     }
 
     @Test
-    @DisplayName("TC-UT-NOTI-009-[예외] null memberId로 알림 조회 실패")
+    @DisplayName("TC-UT-NOTI-FIND-004-[예외] null memberId로 알림 조회 실패")
     public void getNotifications_nullMemberId_fail() {
         // when & then
         assertThatThrownBy(() -> notificationService.getNotifications(null))
@@ -222,7 +222,7 @@ public class NotificationUTTest {
     }
 
     @Test
-    @DisplayName("TC-UT-NOTI-010-[정상] 특정 알림 단건 조회 성공")
+    @DisplayName("TC-UT-NOTI-FIND-005-[정상] 특정 알림 단건 조회 성공")
     public void getNotificationById_validNotificationId_success() {
         // given
         Member mockMember = createMockMember(1L, "user1", "user1@abc.a");
@@ -244,7 +244,7 @@ public class NotificationUTTest {
     }
 
     @Test
-    @DisplayName("TC-UT-NOTI-011-[예외] 존재하지 않는 알림 ID 조회 실패")
+    @DisplayName("TC-UT-NOTI-FIND-006-[예외] 존재하지 않는 알림 ID 조회 실패")
     public void getNotificationById_invalidMemberId_fail() {
         // when & then
         assertThatThrownBy(() -> notificationService.getNotificationById(99999L))

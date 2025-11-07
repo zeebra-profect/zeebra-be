@@ -37,13 +37,13 @@ import static org.awaitility.Awaitility.await;
 public class NotificationAsyncTest {
 
     @Autowired
-    private NotificationRepository notificationRepository;
-
-    @Autowired
     private MemberRepository memberRepository;
-
+    @Autowired
+    private NotificationRepository notificationRepository;
     @Autowired
     private NotificationService notificationService;
+
+
     @Autowired
     private OrderService orderService;
     @Autowired
@@ -110,7 +110,6 @@ public class NotificationAsyncTest {
                 .hasCauseInstanceOf(NoSuchElementException.class)
                 .hasMessageContaining("해당하는 사용자가 없습니다.");
     }
-
 
     // 헬퍼 메서드
     private Member createTestMember(String loginId, String email) {

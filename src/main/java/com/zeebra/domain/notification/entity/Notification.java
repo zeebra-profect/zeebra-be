@@ -22,30 +22,11 @@ public class Notification extends BaseEntity {
     private String url;
 
     @Builder
-    public Notification(Long memberId, NotificationType notificationType) {
+    public Notification(Long memberId, NotificationType notificationType, String url) {
         this.memberId = memberId;
         this.notificationType = notificationType;
+        this.url = url;
         this.isRead = false;
-    }
-
-    public void CreateUrl(Object object) {
-        switch (this.notificationType) {
-            case NotificationType.TEST_OBJECT:
-                this.url = "/dummy/testId";
-                break;
-            case NotificationType.ORDER_CONFIRMED:
-                this.url = "/mypage/orderhistory";
-                break;
-            case NotificationType.ORDER_SHIPPED:
-                this.url = "/mypage/orderhistory";
-                break;
-            case NotificationType.ORDER_DELIVERED:
-                this.url = "/mypage/orderhistory";
-                break;
-            default:
-                this.url = null;
-                break;
-        }
     }
 
 

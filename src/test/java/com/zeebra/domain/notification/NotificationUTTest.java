@@ -280,7 +280,7 @@ public class NotificationUTTest {
     }
 
     private Notification createMockNotification(Long id, Long memberId, NotificationType type, String url) {
-        Notification notification = new Notification(memberId, type);
+        Notification notification = new Notification(memberId, type, url);
 
         try {
             java.lang.reflect.Field idField = Notification.class.getDeclaredField("notificationId");

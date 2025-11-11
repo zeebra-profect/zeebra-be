@@ -13,6 +13,7 @@ import com.zeebra.domain.notification.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -73,7 +74,6 @@ public class NotificationServiceImpl implements NotificationService {
         return CompletableFuture.completedFuture(createNotification(request));
     }
 
-
     public NotificationResponse getNotificationById(Long notificationId) {
         Notification notification = notificationRepository.findByNotificationId(notificationId).orElseThrow(() -> new NoSuchElementException("해당하는 알림이 없습니다."));
 
@@ -101,4 +101,52 @@ public class NotificationServiceImpl implements NotificationService {
 
         return response;
     }
+
+    @Async("notificationAsyncExecutor")
+    @Transactional
+    public CompletableFuture<Void> readNotification(Long memberId, Long notificationId) {
+        if (memberId == null) {
+            throw new NullPointerException("사용자의 id가 null입니다.");
+        }
+        Member member = memberRepository.findById(memberId).orElseThrow(() -> new NoSuchElementException("해당하는 사용자가 없습니다."));
+
+        if (notificationId == null) {
+            throw new NullPointerException("알림 id가 null입니다.");
+        }
+
+        Notification notification = notificationRepository.findByNotificationId(notificationId).orElseThrow(() -> new NoSuchElementException("해당하는 알림이 없습니다."));
+
+        if (!Objects.equals(member.getId(), notification.getMemberId())) {
+            throw new AccessDeniedException("권한이 없습니다.");
+        }
+
+        notification.read();
+        notificationRepository.save(notification);
+
+        return CompletableFuture.completedFuture(null);
+    }
+
+    @Async("notificationAsyncExecutor")
+    @Transactional
+    public CompletableFuture<Void> deleteNotification(Long memberId, Long notificationId) {
+        if (memberId == null) {
+            throw new NullPointerException("사용자의 id가 null입니다.");
+        }
+        Member member = memberRepository.findById(memberId).orElseThrow(() -> new NoSuchElementException("해당하는 사용자가 없습니다."));
+
+        if (notificationId == null) {
+            throw new NullPointerException("알림 id가 null입니다.");
+        }
+
+        Notification notification = notificationRepository.findByNotificationId(notificationId).orElseThrow(() -> new NoSuchElementException("해당하는 알림이 없습니다."));
+
+        if (!Objects.equals(member.getId(), notification.getMemberId())) {
+            throw new AccessDeniedException("권한이 없습니다.");
+        }
+
+        notificationRepository.delete(notification);
+
+        return CompletableFuture.completedFuture(null);
+    }
+
 }

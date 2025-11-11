@@ -4,6 +4,7 @@ import com.zeebra.domain.member.entity.Gender;
 import com.zeebra.domain.member.entity.Member;
 import com.zeebra.domain.member.entity.Role;
 import com.zeebra.domain.member.repository.MemberRepository;
+import com.zeebra.domain.notification.component.NotificationUrlFactory;
 import com.zeebra.domain.notification.dto.NotificationRequest;
 import com.zeebra.domain.notification.dto.NotificationResponse;
 import com.zeebra.domain.notification.dto.NotificationsResponse;
@@ -42,6 +43,9 @@ public class NotificationUTTest {
 
     @InjectMocks
     private NotificationServiceImpl notificationService;
+
+    @Mock
+    private NotificationUrlFactory notificationUrlFactory;
 
     @Test
     @DisplayName("TC-UT-NOTI-CREATE-001-[정상] 유효한 memberId와 Type으로 알림 생성 시 저장 호출")
@@ -108,10 +112,12 @@ public class NotificationUTTest {
         Member mockMember = createMockMember(1L, "user1", "user1@abc.a");
         NotificationRequest request = new NotificationRequest(1L, NotificationType.TEST_OBJECT, new Object());
 
-        Notification mockNotification = createMockNotification(1L, 1L, NotificationType.TEST_OBJECT, "/dummy/testId");
+        Notification mockNotification = createMockNotification(1L, 1L, NotificationType.TEST_OBJECT, "/dummy");
 
         when(memberRepository.findById(1L)).thenReturn(Optional.of(mockMember));
         when(notificationRepository.save(any(Notification.class))).thenReturn(mockNotification);
+        when(notificationUrlFactory.createUrl(eq(NotificationType.TEST_OBJECT), any()))
+                .thenReturn("/dummy");
 
         // when
         NotificationResponse response = notificationService.createNotification(request);
@@ -120,7 +126,7 @@ public class NotificationUTTest {
         verify(notificationRepository).save(any(Notification.class));
         assertThat(response).isNotNull();
         assertThat(response.notificationType()).isEqualTo(NotificationType.TEST_OBJECT);
-        assertThat(response.url()).isEqualTo("/dummy/testId");
+        assertThat(response.url()).isEqualTo("/dummy");
     }
 
     @Test
@@ -136,14 +142,14 @@ public class NotificationUTTest {
         when(memberRepository.findById(3L)).thenReturn(Optional.of(mockMember3));
 
         when(notificationRepository.save(any(Notification.class)))
-                .thenReturn(createMockNotification(1L, 1L, NotificationType.TEST_OBJECT, "/dummy/url"))
-                .thenReturn(createMockNotification(2L, 2L, NotificationType.TEST_OBJECT, "/dummy/url"))
-                .thenReturn(createMockNotification(3L, 3L, NotificationType.TEST_OBJECT, "/dummy/url"));
+                .thenReturn(createMockNotification(1L, 1L, NotificationType.TEST_OBJECT, "/dummy"))
+                .thenReturn(createMockNotification(2L, 2L, NotificationType.TEST_OBJECT, "/dummy"))
+                .thenReturn(createMockNotification(3L, 3L, NotificationType.TEST_OBJECT, "/dummy"));
 
         // when
-        notificationService.createNotification(new NotificationRequest(1L, NotificationType.TEST, new Object()));
-        notificationService.createNotification(new NotificationRequest(2L, NotificationType.TEST, new Object()));
-        notificationService.createNotification(new NotificationRequest(3L, NotificationType.TEST, new Object()));
+        notificationService.createNotification(new NotificationRequest(1L, NotificationType.TEST_OBJECT, null));
+        notificationService.createNotification(new NotificationRequest(2L, NotificationType.TEST_OBJECT, null));
+        notificationService.createNotification(new NotificationRequest(3L, NotificationType.TEST_OBJECT, null));
 
         // then
         verify(notificationRepository, times(3)).save(any(Notification.class));

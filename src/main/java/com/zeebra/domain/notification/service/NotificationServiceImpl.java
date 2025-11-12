@@ -51,20 +51,19 @@ public class NotificationServiceImpl implements NotificationService {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        NotificationResponse.of(notification);
 
         return NotificationResponse.of(notification);
     }
 
     @EventListener
     @Async("notificationAsyncExecutor")
-    public void NotificationEventListener(NotificationEvent event) {
+    public CompletableFuture<NotificationResponse> NotificationEventListener(NotificationEvent event) {
         NotificationRequest request = new NotificationRequest();
         request.setMemberId(event.getMemberId());
         request.setNotificationType(event.getNotificationType());
         request.setObject(event.getObject());
 
-        createNotificationAsync(request);
+        return CompletableFuture.completedFuture(createNotification(request));
     }
 
     @Async("notificationAsyncExecutor")

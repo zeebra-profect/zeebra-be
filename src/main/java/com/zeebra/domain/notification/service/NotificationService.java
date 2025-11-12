@@ -16,4 +16,8 @@ public interface NotificationService {
 
     NotificationsResponse getNotifications(Long memberId);
 
+    CompletableFuture<Void> readNotification(Long memberId, Long notificationId);
+
+    CompletableFuture<Void> deleteNotification(Long memberId, Long notificationId);
+
 }

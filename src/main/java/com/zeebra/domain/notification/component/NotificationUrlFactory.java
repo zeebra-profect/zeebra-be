@@ -8,6 +8,9 @@ import java.lang.reflect.Field;
 @Component
 public class NotificationUrlFactory {
     public String createUrl(NotificationType type, Object object) {
+        if (object == null)
+            return null;
+
         switch (type) {
             case TEST_OBJECT:
                 return "/dummy";

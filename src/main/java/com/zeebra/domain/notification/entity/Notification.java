@@ -20,6 +20,9 @@ public class Notification extends BaseEntity {
     private NotificationType notificationType;
     private boolean isRead;
     private String url;
+    @Version
+    private Long version;
+
 
     @Builder
     public Notification(Long memberId, NotificationType notificationType, String url) {
@@ -27,6 +30,10 @@ public class Notification extends BaseEntity {
         this.notificationType = notificationType;
         this.url = url;
         this.isRead = false;
+    }
+
+    public void read() {
+        this.isRead = true;
     }
 
 

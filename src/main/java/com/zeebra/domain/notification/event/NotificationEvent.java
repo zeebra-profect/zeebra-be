@@ -8,7 +8,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @AllArgsConstructor
-public abstract class NotificationEvent {
+public class NotificationEvent {
     private Long memberId;
     private String nickname;
     private NotificationType notificationType;

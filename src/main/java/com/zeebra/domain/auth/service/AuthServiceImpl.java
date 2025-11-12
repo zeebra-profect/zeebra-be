@@ -90,8 +90,7 @@ public class AuthServiceImpl implements AuthService {
         String refreshToken = jwtProvider.createRefreshToken(member.getId(), member.getRole().toString(), refreshTokenDays);
 
         MemberInfo memberInfo = MemberInfo.of(member);
-        eventPublisher.publishEvent(new NotificationEvent(member.getId(), member.getNickname(), NotificationType.LOGIN, null) {
-        });
+        eventPublisher.publishEvent(new NotificationEvent(member.getId(), member.getNickname(), NotificationType.LOGIN, null));
 
         return new LoginSuccess(accessToken, refreshToken, accessTokenMinutes, refreshTokenDays, memberInfo);
     }

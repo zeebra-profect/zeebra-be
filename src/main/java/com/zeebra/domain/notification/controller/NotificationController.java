@@ -42,7 +42,7 @@ public class NotificationController {
         return ApiResponse.success(notificationService.deleteNotification(principal.getMemberId(), notificationId));
     }
 
-    @PostMapping()
+    @PostMapping
     public ApiResponse<NotificationResponse> createNotification(@AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal, NotificationRequest request) {
         request.setMemberId(principal.getMemberId());
         return ApiResponse.success(notificationService.createNotification(request));

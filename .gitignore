@@ -47,3 +47,6 @@ db-compose.yml
 .env
 *.env
 /src/main/generated/*
+
+src/test/java/com/zeebra/domain/chat/controlle/*
+#임시

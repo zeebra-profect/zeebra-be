@@ -1,18 +1,23 @@
 package com.zeebra.domain.notification.service;
 
-import com.zeebra.domain.member.dto.MemberInfo;
+import com.zeebra.domain.notification.dto.NotificationRequest;
+import com.zeebra.domain.notification.dto.NotificationResponse;
 import com.zeebra.domain.notification.dto.NotificationsResponse;
-import com.zeebra.domain.notification.event.MemberLoginEvent;
-import com.zeebra.domain.notification.event.MemberSignUpEvent;
+
+import java.util.concurrent.CompletableFuture;
 
 public interface NotificationService {
-    void handleMemberSignUp(MemberSignUpEvent memberInfo);
 
-    NotificationsResponse getNotifications(MemberInfo member);
+    NotificationResponse createNotification(NotificationRequest notificationRequest);
 
-    NotificationsResponse sendNotifications(NotificationsResponse responses);
+    CompletableFuture<NotificationResponse> createNotificationAsync(NotificationRequest notificationRequest);
 
-    void handleMemberLogin(MemberLoginEvent memberLoginEvent);
+    NotificationResponse getNotificationById(Long notificationId);
 
-    void addNotification(Long memberId);
+    NotificationsResponse getNotifications(Long memberId);
+
+    CompletableFuture<Void> readNotification(Long memberId, Long notificationId);
+
+    CompletableFuture<Void> deleteNotification(Long memberId, Long notificationId);
+
 }

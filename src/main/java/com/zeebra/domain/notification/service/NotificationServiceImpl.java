@@ -1,84 +1,151 @@
 package com.zeebra.domain.notification.service;
 
-import com.zeebra.domain.member.dto.MemberInfo;
+import com.zeebra.domain.member.entity.Member;
+import com.zeebra.domain.member.repository.MemberRepository;
+import com.zeebra.domain.notification.component.NotificationUrlFactory;
+import com.zeebra.domain.notification.dto.NotificationRequest;
 import com.zeebra.domain.notification.dto.NotificationResponse;
 import com.zeebra.domain.notification.dto.NotificationsResponse;
 import com.zeebra.domain.notification.entity.Notification;
 import com.zeebra.domain.notification.entity.NotificationType;
-import com.zeebra.domain.notification.event.MemberLoginEvent;
-import com.zeebra.domain.notification.event.MemberSignUpEvent;
-import com.zeebra.domain.notification.handler.NotificationHandler;
+import com.zeebra.domain.notification.event.NotificationEvent;
 import com.zeebra.domain.notification.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 @RequiredArgsConstructor
 public class NotificationServiceImpl implements NotificationService {
     private final NotificationRepository notificationRepository;
-    private final NotificationHandler notificationHandler;
+    private final MemberRepository memberRepository;
+    private final NotificationUrlFactory notificationUrlFactory;
 
-    @EventListener
+    private boolean isValidNotificationType(NotificationType type) {
+        return Arrays.asList(NotificationType.values()).contains(type);
+    }
+
     @Transactional
-    public void handleMemberSignUp(MemberSignUpEvent member) {
-        System.out.println("handleMemberSignUp 들어옴");
-        Notification notification = Notification.builder()
-                .memberId(member.getMemberId())
-                .notificationType(member.getNotificationType())
-                .build();
+    public NotificationResponse createNotification(NotificationRequest request) {
+        Member member = memberRepository.findById(request.getMemberId()).orElseThrow(() -> new NoSuchElementException("해당하는 사용자가 없습니다."));
 
-        notificationRepository.save(notification);
-        NotificationResponse notificationResponse = new NotificationResponse(notification.getNotificationType(), false, notification.getNotificationType().getNoticeText(), notification.getCreatedTime());
-        List<NotificationResponse> notificationResponses = new ArrayList<>();
-        notificationResponses.add(notificationResponse);
-    }
-
-
-    public NotificationsResponse getNotifications(MemberInfo member) {
-
-        List<Notification> notifications = notificationRepository.findByMemberIdOrderByCreatedTimeDesc(member.memberId());
-        NotificationsResponse responses = new NotificationsResponse(new ArrayList<>());
-        for (Notification notification : notifications) {
-            responses.dtos().add(NotificationResponse.of(notification));
+        if (request.getNotificationType() == null) {
+            throw new IllegalArgumentException("타입 값이 없습니다.");
         }
-        notificationHandler.sendNotifications(member.memberId(), responses.dtos());
-        return responses;
-    }
 
-    public NotificationsResponse sendNotifications(NotificationsResponse responses) {
+        if (!isValidNotificationType(request.getNotificationType())) {
+            throw new IllegalArgumentException("유효하지 않은 알림 타입입니다.");
+        }
 
-        return responses;
+        String url = notificationUrlFactory.createUrl(request.getNotificationType(), request.getObject());
+        Notification notification = new Notification(request.getMemberId(), request.getNotificationType(), url);
+
+        try {
+            notificationRepository.save(notification);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return NotificationResponse.of(notification);
     }
 
     @EventListener
-    public void handleMemberLogin(MemberLoginEvent memberLoginEvent) {
-        System.out.println("handleMemberLogin 실행!");
-        Notification notification = Notification.builder()
-                .memberId(memberLoginEvent.getMemberId())
-                .notificationType(NotificationType.ORDER_CONFIRMED)
-                .build();
-        NotificationResponse loginEventNotification = new NotificationResponse(notification.getNotificationType(), false, notification.getNotificationType().getNoticeText(), notification.getCreatedTime());
-        notificationRepository.save(notification);
-        notificationHandler.sendNotification(notification.getMemberId(), loginEventNotification);
+    @Async("notificationAsyncExecutor")
+    public CompletableFuture<NotificationResponse> NotificationEventListener(NotificationEvent event) {
+        NotificationRequest request = new NotificationRequest();
+        request.setMemberId(event.getMemberId());
+        request.setNotificationType(event.getNotificationType());
+        request.setObject(event.getObject());
 
+        return CompletableFuture.completedFuture(createNotification(request));
     }
 
+    @Async("notificationAsyncExecutor")
+    @Transactional
+    public CompletableFuture<NotificationResponse> createNotificationAsync(NotificationRequest request) {
+        System.out.println("Thread executing createNotificationAsync: " + Thread.currentThread().getName());
+        return CompletableFuture.completedFuture(createNotification(request));
+    }
 
-    public void addNotification(Long memberId) {
-        Notification notification = Notification.builder()
-                .memberId(memberId)
-                .notificationType(NotificationType.NEW_MESSAGE)
-                .build();
+    public NotificationResponse getNotificationById(Long notificationId) {
+        Notification notification = notificationRepository.findByNotificationId(notificationId).orElseThrow(() -> new NoSuchElementException("해당하는 알림이 없습니다."));
 
-        System.out.println("notification test: " + notification);
+        return NotificationResponse.of(notification);
+    }
+
+    public NotificationsResponse getNotifications(Long memberId) {
+
+        if (memberId == null) {
+            throw new NullPointerException("사용자의 id가 null입니다.");
+        }
+
+        Member member = memberRepository.findById(memberId).orElseThrow(() -> new NoSuchElementException("해당하는 사용자가 없습니다."));
+
+        List<NotificationResponse> responses = new ArrayList<>();
+        NotificationsResponse response = new NotificationsResponse(responses);
+        for (Optional<Notification> notification : notificationRepository.findByMemberIdOrderByCreatedTimeDesc(memberId)) {
+            NotificationResponse.of(notification.get());
+            response.dtos().add(NotificationResponse.of(notification.get()));
+        }
+
+        if (responses.isEmpty()) {
+            return null;
+        }
+
+        return response;
+    }
+
+    @Async("notificationAsyncExecutor")
+    @Transactional
+    public CompletableFuture<Void> readNotification(Long memberId, Long notificationId) {
+        if (memberId == null) {
+            throw new NullPointerException("사용자의 id가 null입니다.");
+        }
+        Member member = memberRepository.findById(memberId).orElseThrow(() -> new NoSuchElementException("해당하는 사용자가 없습니다."));
+
+        if (notificationId == null) {
+            throw new NullPointerException("알림 id가 null입니다.");
+        }
+
+        Notification notification = notificationRepository.findByNotificationId(notificationId).orElseThrow(() -> new NoSuchElementException("해당하는 알림이 없습니다."));
+
+        if (!Objects.equals(member.getId(), notification.getMemberId())) {
+            throw new AccessDeniedException("권한이 없습니다.");
+        }
+
+        notification.read();
         notificationRepository.save(notification);
-        NotificationResponse loginEventNotification = new NotificationResponse(notification.getNotificationType(), false, notification.getNotificationType().getNoticeText(), notification.getCreatedTime());
-        notificationHandler.sendNotification(notification.getMemberId(), loginEventNotification);
+
+        return CompletableFuture.completedFuture(null);
+    }
+
+    @Async("notificationAsyncExecutor")
+    @Transactional
+    public CompletableFuture<Void> deleteNotification(Long memberId, Long notificationId) {
+        if (memberId == null) {
+            throw new NullPointerException("사용자의 id가 null입니다.");
+        }
+        Member member = memberRepository.findById(memberId).orElseThrow(() -> new NoSuchElementException("해당하는 사용자가 없습니다."));
+
+        if (notificationId == null) {
+            throw new NullPointerException("알림 id가 null입니다.");
+        }
+
+        Notification notification = notificationRepository.findByNotificationId(notificationId).orElseThrow(() -> new NoSuchElementException("해당하는 알림이 없습니다."));
+
+        if (!Objects.equals(member.getId(), notification.getMemberId())) {
+            throw new AccessDeniedException("권한이 없습니다.");
+        }
+
+        notificationRepository.delete(notification);
+
+        return CompletableFuture.completedFuture(null);
     }
 
 }

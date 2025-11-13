@@ -35,7 +35,7 @@ public class ChatSocketController {
                     (JwtProvider.JwtUserPrincipal) auth.getPrincipal();
 
             Long currentMemberId = userPrincipal.getMemberId();
-            System.out.println("curmemId : " + currentMemberId);
+            System.out.println("currentMemId : " + currentMemberId);
             log.info(" [WebSocket] 메시지 수신: (Room: {}, User: {})",
                     requestDto.getChatRoomId(), currentMemberId);
             ChatMessageResponseDto savedMessage = chatService.saveMessage(requestDto, currentMemberId);

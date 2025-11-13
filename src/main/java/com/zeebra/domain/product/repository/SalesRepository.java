@@ -7,7 +7,9 @@ import com.zeebra.domain.product.entity.SalesStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.zeebra.domain.product.entity.Sales;
+import org.springframework.stereotype.Repository;
 
+@Repository
 public interface SalesRepository extends JpaRepository<Sales, Long> {
 	Optional<Sales> findByIdAndMemberId(Long id, Long memberId);
 

@@ -9,6 +9,7 @@ import com.zeebra.domain.product.service.ProductService;
 import com.zeebra.global.ApiResponse;
 import com.zeebra.global.ErrorCode.MemberErrorCode;
 import com.zeebra.global.exception.BusinessException;
+import com.zeebra.global.exception.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -70,6 +71,23 @@ public class ProductServiceTest {
         assertThatThrownBy(() -> productService.createProduct(saveMember.getId(), productRequest))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("관리자가 아닙니다.");
+    }
+
+
+    @DisplayName("존재하지 않는 회원은 상품을 생성할 수 없다.")
+    @Test
+    void createProduct_MemberNotFound_ThrowsBusinessException() {
+        // given
+        Long notExistId = 100L;
+        ProductRequest productRequest = new ProductRequest(100L, 200L,
+                "테스트 상품", "상품 설명", "MODEL-001", "thumbnail.jpg",
+                List.of("image1.jpg", "image2.jpg"));
+
+        // when & then
+        assertThatThrownBy(() -> productService.createProduct(notExistId, productRequest))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining(MemberErrorCode.MEMBER_NOT_FOUND.getMessage());
+
     }
 
     private Member createAdmin(String userLoginId,

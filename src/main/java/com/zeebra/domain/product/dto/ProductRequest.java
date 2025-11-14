@@ -1,7 +1,10 @@
 package com.zeebra.domain.product.dto;
 
+import lombok.Builder;
+
 import java.util.List;
 
+@Builder
 public record ProductRequest(
         Long brandId,
         Long categoryId,

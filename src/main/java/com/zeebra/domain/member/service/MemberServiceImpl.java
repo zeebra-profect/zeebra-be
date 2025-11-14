@@ -19,12 +19,18 @@ public class MemberServiceImpl implements MemberService{
 	private final MemberRepository memberRepository;
 	private final PasswordEncoder passwordEncoder;
 
-	@Transactional
+	@Override
 	public MemberInfo findById(Long memberId) {
  		Member member =  memberRepository.findById(memberId).orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
 
 		 return MemberInfo.of(member);
 	}
+
+    @Override
+    public Member findByMemberId(Long memberId){
+        Member member = memberRepository.findById(memberId).orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
+        return member;
+    }
 
 
 	// public void updateNickname(String nickname) {}

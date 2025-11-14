@@ -13,4 +13,5 @@ public class NotificationEvent {
     private String nickname;
     private NotificationType notificationType;
     private Object object;
+    private String imgUrl;
 }

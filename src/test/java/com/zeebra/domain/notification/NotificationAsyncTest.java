@@ -394,7 +394,7 @@ public class NotificationAsyncTest {
                     ? orders.get(index)
                     : null;
 
-            NotificationRequest req = new NotificationRequest(memberId, type, order);
+            NotificationRequest req = new NotificationRequest(memberId, type, order, null);
             notificationRequests.add(req);
         }
 

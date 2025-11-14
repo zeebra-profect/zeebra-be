@@ -51,7 +51,7 @@ public class SecurityConfigLocal {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(SWAGGER_WHITELIST).permitAll()
                         .requestMatchers("/ws/**").permitAll()  // WebSocket 허용
-                        .requestMatchers("/api/notification").permitAll()
+                        .requestMatchers("/api/notification/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .anyRequest().authenticated()

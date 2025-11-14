@@ -52,7 +52,7 @@ public class NotificationTest {
         // given
         SignupResponse member1 = createTestMember("user1", "user1@abc.a");
 
-        NotificationRequest request = new NotificationRequest(member1.member().memberId(), NotificationType.TEST_OBJECT, new Object());
+        NotificationRequest request = new NotificationRequest(member1.member().memberId(), NotificationType.TEST_OBJECT, new Object(), null);
 
         // when
         notificationService.createNotification(request);
@@ -70,7 +70,7 @@ public class NotificationTest {
     public void createNotification_invalidMemberId_fail() {
         // given
         Long invalidMemberId = 99999L;  // 존재하지 않는 memberId
-        NotificationRequest request = new NotificationRequest(invalidMemberId, NotificationType.TEST, null);
+        NotificationRequest request = new NotificationRequest(invalidMemberId, NotificationType.TEST, null, null);
 
         // when & then
         assertThatThrownBy(() -> notificationService.createNotification(request)).isInstanceOf(NoSuchElementException.class).hasMessage("해당하는 사용자가 없습니다.");
@@ -82,7 +82,7 @@ public class NotificationTest {
         // given
         SignupResponse member1 = createTestMember("user1", "user1@abc.a");
 
-        NotificationRequest request = new NotificationRequest(member1.member().memberId(), null, new Object());
+        NotificationRequest request = new NotificationRequest(member1.member().memberId(), null, new Object(), null);
 
         // when & then
         assertThatThrownBy(() -> notificationService.createNotification(request)).isInstanceOf(IllegalArgumentException.class).hasMessage("타입 값이 없습니다.");
@@ -94,7 +94,7 @@ public class NotificationTest {
         // given
         SignupResponse member1 = createTestMember("user1", "user1@abc.a");
 
-        NotificationRequest request = new NotificationRequest(member1.member().memberId(), NotificationType.TEST_OBJECT, new Object());
+        NotificationRequest request = new NotificationRequest(member1.member().memberId(), NotificationType.TEST_OBJECT, new Object(), null);
 
         // when
         notificationService.createNotification(request);
@@ -117,9 +117,9 @@ public class NotificationTest {
         SignupResponse member3 = createTestMember("user3", "user3@abc.a");
 
         // when
-        notificationService.createNotification(new NotificationRequest(member1.member().memberId(), NotificationType.TEST, null));
-        notificationService.createNotification(new NotificationRequest(member2.member().memberId(), NotificationType.TEST, null));
-        notificationService.createNotification(new NotificationRequest(member3.member().memberId(), NotificationType.TEST, null));
+        notificationService.createNotification(new NotificationRequest(member1.member().memberId(), NotificationType.TEST, null, null));
+        notificationService.createNotification(new NotificationRequest(member2.member().memberId(), NotificationType.TEST, null, null));
+        notificationService.createNotification(new NotificationRequest(member3.member().memberId(), NotificationType.TEST, null, null));
 
         // then
         assertThat(notificationRepository.findByNotificationTypeAndMemberId(NotificationType.TEST, member1.member().memberId())).isNotNull();
@@ -132,9 +132,9 @@ public class NotificationTest {
     public void getNotifications_validMemberId_success() {
         // given
         SignupResponse member1 = createTestMember("user1", "user1@abc.a");
-        notificationService.createNotification(new NotificationRequest(member1.member().memberId(), NotificationType.TEST, null));
-        notificationService.createNotification(new NotificationRequest(member1.member().memberId(), NotificationType.TEST, null));
-        notificationService.createNotification(new NotificationRequest(member1.member().memberId(), NotificationType.TEST, null));
+        notificationService.createNotification(new NotificationRequest(member1.member().memberId(), NotificationType.TEST, null, null));
+        notificationService.createNotification(new NotificationRequest(member1.member().memberId(), NotificationType.TEST, null, null));
+        notificationService.createNotification(new NotificationRequest(member1.member().memberId(), NotificationType.TEST, null, null));
 
         // when
         NotificationsResponse response = notificationService.getNotifications(member1.member().memberId());
@@ -178,6 +178,7 @@ public class NotificationTest {
         NotificationRequest request = new NotificationRequest(
                 member.member().memberId(),
                 NotificationType.TEST,
+                null,
                 null
         );
         NotificationResponse createdNotification = notificationService.createNotification(request);

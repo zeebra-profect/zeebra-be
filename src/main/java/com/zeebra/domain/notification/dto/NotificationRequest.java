@@ -14,4 +14,5 @@ public class NotificationRequest {
     private Long memberId;
     private NotificationType notificationType;
     private Object object;
+    private String imgUrl;
 }

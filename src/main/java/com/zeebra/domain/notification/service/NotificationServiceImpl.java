@@ -44,7 +44,7 @@ public class NotificationServiceImpl implements NotificationService {
         }
 
         String url = notificationUrlFactory.createUrl(request.getNotificationType(), request.getObject());
-        Notification notification = new Notification(request.getMemberId(), request.getNotificationType(), url);
+        Notification notification = new Notification(request.getMemberId(), request.getNotificationType(), url, request.getImgUrl());
 
         try {
             notificationRepository.save(notification);
@@ -62,6 +62,7 @@ public class NotificationServiceImpl implements NotificationService {
         request.setMemberId(event.getMemberId());
         request.setNotificationType(event.getNotificationType());
         request.setObject(event.getObject());
+        request.setImgUrl(event.getImgUrl());
 
         return CompletableFuture.completedFuture(createNotification(request));
     }

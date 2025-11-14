@@ -42,7 +42,11 @@ gradle-wrapper.jar
 application.properties
 application.yml
 application-local.yml
+src/test/resources/application-test.yml
 db-compose.yml
 .env
 *.env
 /src/main/generated/*
+
+src/test/java/com/zeebra/domain/chat/controlle/*
+#임시

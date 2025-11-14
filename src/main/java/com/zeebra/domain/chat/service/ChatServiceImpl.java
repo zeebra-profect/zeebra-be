@@ -15,7 +15,7 @@ import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+
 
 import com.zeebra.domain.chat.entity.ChatMessage;
 import com.zeebra.domain.chat.entity.ChatRoom;
@@ -30,6 +30,7 @@ import com.zeebra.domain.chat.repository.TradeRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.transaction.annotation.Transactional;
 
 import static com.zeebra.domain.chat.entity.ChatRoomType.DM;
 import static com.zeebra.domain.chat.entity.ChatRoomType.GROUP;
@@ -72,16 +73,18 @@ public class ChatServiceImpl implements ChatService {
                             .productId(productId)
                             .chatRoomType(ChatRoomType.GROUP)
                             .build();
-                    return chatRoomRepository.save(newRoom);
+
+                    ChatRoom savedRoom = chatRoomRepository.save(newRoom);
+                    return savedRoom;
                 });
-                ensureUserIsChatMember(chatRoom, currentMemberId);
+
+                if (currentMemberId != null) {
+                    ensureUserIsChatMember(chatRoom, currentMemberId);
+                }
                 break;
             }
             case DM: {
                 Long saleId = chatRoomRequestDto.getSaleId();
-                if (saleId == null) {
-                    throw new IllegalArgumentException("DM 채팅방을 위해선 saleId가 필요합니다.");
-                }
 
                 Sales sales = salesRepository.findById(saleId)
                         .orElseThrow(() -> new EntityNotFoundException("판매 글을 찾을 수 없습니다"));
@@ -101,7 +104,7 @@ public class ChatServiceImpl implements ChatService {
                                     .saleId(saleId)
                                     .chatRoomType(ChatRoomType.DM)
                                     .dmPairKey(dmPairKey).build();
-                            chatRoomRepository.save(newRoom);
+                            ChatRoom savedRoom = chatRoomRepository.save(newRoom);
 
                             Member memberUser1 = memberRepository.findByIdAndDeletedAtIsNull(user1)
                                     .orElseThrow(() -> new EntityNotFoundException("유저를 찾을 수 없습니다."));
@@ -109,17 +112,17 @@ public class ChatServiceImpl implements ChatService {
                                     .orElseThrow(() -> new EntityNotFoundException("유저를 찾을 수 없습니다."));
 
                             ChatRoomMember dmUser1 = ChatRoomMember.builder()
-                                    .chatRoom(newRoom)
+                                    .chatRoom(savedRoom)
                                     .memberId(user1)
                                     .memberName(memberUser1.getNickname()).build();
 
                             ChatRoomMember dmUser2 = ChatRoomMember.builder()
-                                    .chatRoom(newRoom)
+                                    .chatRoom(savedRoom)
                                     .memberId(user2)
                                     .memberName(memberUser2.getNickname()).build();
                             chatRoomMemberRepository.saveAll(List.of(dmUser1, dmUser2));
 
-                            return newRoom;
+                            return savedRoom;
                         });
                 break;
             }
@@ -129,6 +132,8 @@ public class ChatServiceImpl implements ChatService {
             return ChatRoomResponseDto.from(chatRoom);
         }
 
+
+    @Override
     @Transactional
     public ChatMessageResponseDto saveMessage(ChatMessageRequestDto chatMessageRequestDto, Long currentMemberId) {
 
@@ -151,8 +156,15 @@ public class ChatServiceImpl implements ChatService {
         return ChatMessageResponseDto.from(savedMessage, member);
     }
 
+    @Override
     @Transactional(readOnly = true)
-    public Page<ChatMessageResponseDto> getChatHistory(Long roomId, Long currentUserId, Pageable pageable){
+    public Page<ChatMessageResponseDto> getChatHistory(Long roomId, Long currentMemberId, Pageable pageable){
+        //권한 검사 로직 추가
+        if (currentMemberId != null) {
+            chatRoomMemberRepository.findByChatRoomIdAndMemberId(roomId, currentMemberId)
+                    .orElseThrow(() -> new SecurityException("채팅방 접근 권한이 없습니다."));
+        }
+
         Page<ChatMessage> messagePage = chatMessageRepository.findByChatRoomMember_ChatRoomId(roomId, pageable);
 
         return messagePage.map(message -> {
@@ -163,6 +175,7 @@ public class ChatServiceImpl implements ChatService {
         });
     }
 
+    @Override
     @Transactional(readOnly = true)
     public List<ChatRoomList> getMyChatRooms(Long currentMemberId) {
         List<ChatRoomMember> myMemberships = chatRoomMemberRepository.findByMemberIdAndDeletedAtIsNull(currentMemberId);
@@ -174,7 +187,7 @@ public class ChatServiceImpl implements ChatService {
                     Long roomLastMessageId = room.getLastMessageId();
                     Long myLastReadId = member.getLastReadMessageId();
 
-                    String roomName = "";
+                    String roomName = member.getMemberName();
                     String roomProfileImageUrl = null;
 
 
@@ -238,7 +251,7 @@ public class ChatServiceImpl implements ChatService {
     @Override
     @Transactional
     public TradeResponseDto proposeTrade(Long chatRoomId, TradeRequestDto tradeRequestDto, Long currentMemberId) {
-        BigDecimal price = tradeRequestDto.getPrice();
+        BigDecimal price = tradeRequestDto.price();
 
         ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId).orElseThrow(() -> new RuntimeException("채팅방을 찾을 수 없습니다"));
 

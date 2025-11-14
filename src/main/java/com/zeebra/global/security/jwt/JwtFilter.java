@@ -49,10 +49,17 @@ public class JwtFilter extends OncePerRequestFilter {
             return;
         }
 
-        if (requestPath.startsWith("/api/products") && "GET".equals(method)) {
+        if (requestPath.startsWith("/ws/chat")) {
             filterChain.doFilter(request, response);
             return;
         }
+
+        if (requestPath.startsWith("/api/chat/group")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+
 
         try {
             String accessToken = CookieUtil.getCookieValue(request, ACCESS_TOKEN_COOKIE_NAME);

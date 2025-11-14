@@ -1,0 +1,50 @@
+spring:
+  config:
+    activate:
+      on-profile: test
+
+  docker:
+    compose:
+      enabled: true           # 기본 true지만 명시
+      file: db-compose.yml
+      readiness:
+        timeout: 120s
+
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      password: 1234
+
+  datasource:
+    url: jdbc:postgresql://127.0.0.1:5432/zeebra_db # <-- 데이터베이스 이름으로 변경해주세요
+    username: zeebra #
+    password: 1234 # <-- 초기비밀번호 x
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: none # 로컬 테스트 디비용 커밋x
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    show-sql: true
+
+jwt:
+  secret: ${JWT_SECRET}
+  issuer: ${JWT_ISSUER}
+  clockSkewSec: ${JWT_CLOCK_SKEW_SEC}
+
+logging:
+  level:
+    org.springdoc: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.http.converter: DEBUG
+
+springdoc:
+  packages-to-scan: com.zeebra
+
+toss:
+  payments:
+    secret-key: ${TOSS_PAYMENT_SECRET_KEY}

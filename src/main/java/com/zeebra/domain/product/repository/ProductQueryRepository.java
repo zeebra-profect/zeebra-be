@@ -73,7 +73,7 @@ public class ProductQueryRepository {
 
         if (isShort(keyword)) {
             BooleanExpression likeCond = Expressions.booleanTemplate(
-                    "{0} LIKE ('%' || {1} || '%')", productSearchMv.searchTextNorm, keyword
+                    "{0} LIKE ('%' || {1} || '%')", productSearchMv.searchTextNorm, normKeyword
             );
             NumberExpression<Integer> pos = Expressions.numberTemplate(
                     Integer.class, "strpos({0}, {1})", productSearchMv.searchTextNorm, normKeyword

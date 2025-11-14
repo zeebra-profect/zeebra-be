@@ -1,12 +1,15 @@
 package com.zeebra.domain.member.service;
 
 import com.zeebra.domain.member.dto.MemberInfo;
+import com.zeebra.domain.member.entity.Member;
 
 public interface MemberService {
-	MemberInfo findById(Long memberId);
-	// 향후 추가될 메소드들
-	// MemberDetailResponse getMemberInfo(Long memberId);
-	// void updateNickname(Long memberId, String nickname);
-	// void updatePassword(Long memberId, String oldPassword, String newPassword);
-	// void deleteAccount(Long memberId);
+    MemberInfo findById(Long memberId);
+
+    Member findByMemberId(Long memberId);
+    // 향후 추가될 메소드들
+    // MemberDetailResponse getMemberInfo(Long memberId);
+    // void updateNickname(Long memberId, String nickname);
+    // void updatePassword(Long memberId, String oldPassword, String newPassword);
+    // void deleteAccount(Long memberId);
 }

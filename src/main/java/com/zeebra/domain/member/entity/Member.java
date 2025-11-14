@@ -2,7 +2,9 @@ package com.zeebra.domain.member.entity;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.NoSuchElementException;
 
+import com.zeebra.global.ApiResponse;
 import com.zeebra.global.jpa.BaseEntity;
 
 import jakarta.persistence.Column;
@@ -101,6 +103,20 @@ public class Member extends BaseEntity {
                 .build();
     }
 
+    public static Member createAdmin(String userLoginId, String memberName, String memberEmail, String nickname, LocalDate birth, Gender gender, String passwordHash) {
+        return Member.builder()
+                .userLoginId(userLoginId)
+                .memberName(memberName)
+                .memberEmail(memberEmail)
+                .nickname(nickname)
+                .birth(birth)
+                .gender(gender)
+                .passwordHash(passwordHash)
+                .role(Role.ADMIN)
+                .build();
+    }
+
+
     private static String normalizeEmail(String email) {
         return (email == null) ? null : email.trim().toLowerCase();
     }
@@ -125,5 +141,11 @@ public class Member extends BaseEntity {
 
     public boolean isAdmin() {
         return this.role == Role.ADMIN;
+    }
+
+    public void validateAdminPermission() {
+        if (!isAdmin()) {
+            throw new IllegalStateException("상품은 관리자만 생성할 수 있습니다.");
+        }
     }
 }

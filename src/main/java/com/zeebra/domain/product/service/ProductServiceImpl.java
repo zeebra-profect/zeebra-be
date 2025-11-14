@@ -192,14 +192,17 @@ public class ProductServiceImpl implements ProductService {
         }
     }
 
+    public Product findByProductId(Long productId) {
+        return productRepository.findById(productId).orElseThrow(
+                () -> new NoSuchElementException("해당하는 상품이 존재하지 않습니다."));
+    }
+
     @Transactional
     @Override
     public ApiResponse<Void> deleteFavoriteProduct(Long memberId, Long productId) {
-        Member member = memberRepository.findById(memberId).orElseThrow(
-                () -> new NoSuchElementException("해당하는 사용자가 없습니다"));
+        Member member = memberService.findByMemberId(memberId);
 
-        Product product = productRepository.findById(productId).orElseThrow(
-                () -> new NoSuchElementException("해당하는 상품이 존재하지 않습니다."));
+        Product product = findByProductId(productId);
 
         FavoriteProduct favoriteProduct = favoriteProductRepository.findByMemberIdAndProductId(member.getId(), product.getId()).orElseThrow(
                 () -> new NoSuchElementException("해당하는 관심 상품이 없습니다."));
@@ -210,7 +213,7 @@ public class ProductServiceImpl implements ProductService {
 
         productRepository.save(product);
 
-        return ApiResponse.successMessage("상품 삭제에 성공했습니다.");
+        return ApiResponse.successMessage("관심 상품 삭제에 성공했습니다.");
     }
 
     @Override

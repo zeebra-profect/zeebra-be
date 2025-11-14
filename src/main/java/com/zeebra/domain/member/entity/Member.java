@@ -145,7 +145,7 @@ public class Member extends BaseEntity {
 
     public void validateAdminPermission() {
         if (!isAdmin()) {
-            throw new IllegalStateException("상품은 관리자만 생성할 수 있습니다.");
+            throw new IllegalStateException("관리자가 아닙니다.");
         }
     }
 }

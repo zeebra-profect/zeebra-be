@@ -80,14 +80,6 @@ public class ProductServiceImpl implements ProductService {
                 colorValue);
     }
 
-    private FavoriteProductResponse toFavoriteProductResponse(FavoriteProduct favoriteProduct) {
-        return new FavoriteProductResponse(
-                favoriteProduct.getProductId(),
-                favoriteProduct.getProductId(),
-                favoriteProduct.getMemberId(),
-                favoriteProduct.getCreatedTime());
-    }
-
     private List<BrandResponse> toBrandListResponse(List<Brand> brands) {
         return brands.stream()
                 .map(brand -> new BrandResponse(brand.getId(), brand.getName()))
@@ -171,25 +163,17 @@ public class ProductServiceImpl implements ProductService {
     @Transactional
     @Override
     public ApiResponse<FavoriteProductResponse> addFavoriteProduct(Long memberId, Long productId) {
-        try {
-            Member member = memberRepository.findById(memberId).orElseThrow(
-                    () -> new NoSuchElementException("해당하는 사용자가 없습니다"));
+        Member member = memberService.findByMemberId(memberId);
 
-            Product product = productRepository.findById(productId).orElseThrow(
-                    () -> new NoSuchElementException("해당하는 상품이 존재하지 않습니다."));
+        Product product = findByProductId(productId);
 
-            FavoriteProduct favoriteProduct = favoriteProductRepository.save(new FavoriteProduct(member.getId(), product.getId()));
+        FavoriteProduct favoriteProduct = favoriteProductRepository.save(new FavoriteProduct(member.getId(), product.getId()));
 
             product.increaseFavoriteProductCount();
 
             productRepository.save(product);
 
-            return ApiResponse.success(toFavoriteProductResponse(favoriteProduct));
-        } catch (NoSuchElementException e) {
-            return ApiResponse.error(null, e.getMessage());
-        } catch (Exception e) {
-            return ApiResponse.error(null, "관심 상품 추가 과정에 오류가 발생했습니다.");
-        }
+            return ApiResponse.success(FavoriteProductResponse.toFavoriteProductResponse(favoriteProduct));
     }
 
     public Product findByProductId(Long productId) {

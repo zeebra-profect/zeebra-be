@@ -29,4 +29,10 @@ public class OptionName extends BaseEntity {
         this.value = value;
         this.useWn = useWn;
     }
+
+    public void validateOptionNameIsColor() {
+        if (!"color".equals(name)) {
+            throw new IllegalStateException("옵션이 색상값이 아닙니다.");
+        }
+    }
 }

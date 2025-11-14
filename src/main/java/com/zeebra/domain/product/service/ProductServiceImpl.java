@@ -153,9 +153,7 @@ public class ProductServiceImpl implements ProductService {
     public ApiResponse<SizeOptionResponseList> getProductOptionSize(Long productId, Long colorOptionNameId) {
         OptionName optionName = optionNameRepository.findById(colorOptionNameId).orElseThrow(
                 () -> new NoSuchElementException("해당하는 옵션값이 없습니다."));
-        if (!"color".equals(optionName.getName())) {
-            return ApiResponse.error(null, "색상값이 아닙니다.");
-        }
+        optionName.validateOptionNameIsColor();
         List<SizeOptionResponse> sizeOptionResponses = productOptionQueryRepository.findByColorOptionName(colorOptionNameId, productId);
         return ApiResponse.success(new SizeOptionResponseList(sizeOptionResponses));
     }
@@ -169,11 +167,11 @@ public class ProductServiceImpl implements ProductService {
 
         FavoriteProduct favoriteProduct = favoriteProductRepository.save(new FavoriteProduct(member.getId(), product.getId()));
 
-            product.increaseFavoriteProductCount();
+        product.increaseFavoriteProductCount();
 
-            productRepository.save(product);
+        productRepository.save(product);
 
-            return ApiResponse.success(FavoriteProductResponse.toFavoriteProductResponse(favoriteProduct));
+        return ApiResponse.success(FavoriteProductResponse.toFavoriteProductResponse(favoriteProduct));
     }
 
     public Product findByProductId(Long productId) {

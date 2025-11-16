@@ -40,112 +40,30 @@ public class ProductServiceImpl implements ProductService {
     private final OptionNameRepository optionNameRepository;
     private final MemberService memberService;
 
-    private List<GetProductDetailResponse> toProductDetailResponse(List<Product> products) {
-        return products.stream()
-                .map(product -> new GetProductDetailResponse(
-                        product.getId(),
-                        product.getBrandId(),
-                        product.getCategoryId(),
-                        product.getName(),
-                        product.getDescription(),
-                        product.getModelNumber(),
-                        product.getThumbnail(),
-                        product.getImages(),
-                        productQueryRepository.lowPriceOfProduct(product.getId()),
-                        product.getReviewCount(),
-                        product.getFavoriteProductCount(),
-                        product.getCreatedTime()
-                ))
-                .toList();
-    }
-
-    private ProductDetailResponse toProductDetailResponse(Product product,
-                                                          BigDecimal lowPriceOfProduct,
-                                                          List<ColorOptionResponse> colorOptionResponses,
-                                                          String colorValue) {
-        return new ProductDetailResponse(
-                product.getId(),
-                product.getBrandId(),
-                product.getCategoryId(),
-                product.getName(),
-                product.getDescription(),
-                product.getModelNumber(),
-                product.getThumbnail(),
-                product.getImages(),
-                lowPriceOfProduct,
-                product.getReviewCount(),
-                product.getFavoriteProductCount(),
-                product.getCreatedTime(),
-                colorOptionResponses,
-                colorValue);
-    }
-
-    private List<BrandResponse> toBrandListResponse(List<Brand> brands) {
-        return brands.stream()
-                .map(brand -> new BrandResponse(brand.getId(), brand.getName()))
-                .toList();
-    }
-
-    private List<CategorySearchResponse> toCategorySearchResponseList(List<Category> categories) {
-        return categories.stream()
-                .map(category -> new CategorySearchResponse(category.getId(), category.getName()))
-                .toList();
-    }
-
-    private SearchProductResponse toSearchProductResponse(List<GetProductDetailResponse> productDetailResponseList,
-                                                          List<BrandResponse> brandListResponse,
-                                                          List<CategorySearchResponse> categorySearchResponseList,
-                                                          Pagination pagination) {
-        return new SearchProductResponse(productDetailResponseList,
-                categorySearchResponseList,
-                brandListResponse,
-                pagination);
-    }
-
-    private ProductSort parseProductSort(String productSort) {
-        if (productSort == null || productSort.isBlank()) {
-            return ProductSort.REVIEW_COUNT_MOST;
-        }
-
-        return switch (productSort.trim().toLowerCase()) {
-            case "most_reviewed" -> ProductSort.REVIEW_COUNT_MOST;
-            case "least_reviewed" -> ProductSort.REVIEW_COUNT_LEAST;
-            default -> ProductSort.REVIEW_COUNT_MOST;
-        };
-    }
-
     @Override
     public ApiResponse<ProductDetailResponse> getProductDetail(Long productId, Long colorOptionNameId) {
-        try {
-            Product product = productRepository.findById(productId).orElseThrow(
-                    () -> new NoSuchElementException("해당하는 상품이 존재하지 않습니다."));
+        Product product = productRepository.findById(productId).orElseThrow(
+                () -> new NoSuchElementException("해당하는 상품이 존재하지 않습니다."));
 
-            List<OptionName> colorOptionNames = productOptionQueryRepository.findAllOptionNames(product.getId());
+        List<OptionName> colorOptionNames = productOptionQueryRepository.findAllOptionNames(product.getId());
 
-            List<ColorOptionResponse> colorOptionResponses = colorOptionNames.stream()
-                    .map(colorOptionName -> new ColorOptionResponse(colorOptionName.getId(), colorOptionName.getValue()))
-                    .toList();
+        List<ColorOptionResponse> colorOptionResponses = colorOptionNames.stream()
+                .map(colorOptionName -> new ColorOptionResponse(colorOptionName.getId(), colorOptionName.getValue()))
+                .toList();
 
-//            List<SizeOptionResponse> sizeOptionResponses = productOptionQueryRepository.findByColorOptionName(colorOptionResponses.get(0).optionNameId(), product.getId());
+        if (colorOptionNameId == null) {
 
-            if (colorOptionNameId == null) {
+            BigDecimal lowPriceOfColor = productQueryRepository.lowPriceOfColor(product.getId(), colorOptionResponses.get(0).colorOptionNameId());
 
-                BigDecimal lowPriceOfColor = productQueryRepository.lowPriceOfColor(product.getId(), colorOptionResponses.get(0).colorOptionNameId());
+            return ApiResponse.success(ProductDetailResponse.from(product, lowPriceOfColor, colorOptionResponses, colorOptionResponses.get(0).colorValue()));
+        } else {
 
-                return ApiResponse.success(toProductDetailResponse(product, lowPriceOfColor, colorOptionResponses, colorOptionResponses.get(0).colorValue()));
-            } else {
+            BigDecimal lowPriceOfColor = productQueryRepository.lowPriceOfColor(product.getId(), colorOptionNameId);
 
-                BigDecimal lowPriceOfColor = productQueryRepository.lowPriceOfColor(product.getId(), colorOptionNameId);
+            OptionName optionName = optionNameRepository.findById(colorOptionNameId).orElseThrow(
+                    () -> new NoSuchElementException("해당하는 옵션이름이 없습니다."));
 
-                OptionName optionName = optionNameRepository.findById(colorOptionNameId).orElseThrow(
-                        () -> new NoSuchElementException("해당하는 옵션이름이 없습니다."));
-
-                return ApiResponse.success(toProductDetailResponse(product, lowPriceOfColor, colorOptionResponses, optionName.getValue()));
-            }
-        } catch (NoSuchElementException e) {
-            return ApiResponse.error(null, e.getMessage());
-        } catch (Exception e) {
-            return ApiResponse.error(null, "상품 상세 조회 과정에 오류가 발생했습니다.");
+            return ApiResponse.success(ProductDetailResponse.from(product, lowPriceOfColor, colorOptionResponses, optionName.getValue()));
         }
     }
 
@@ -217,7 +135,7 @@ public class ProductServiceImpl implements ProductService {
 
         String cleanKeyword = KeywordSanitizer.sanitize(keyWord);
 
-        ProductSort parseProductSort = parseProductSort(productSort);
+        ProductSort parseProductSort = ProductSort.from(productSort);
 
         List<Product> products = productQueryRepository.searchProduct(cleanKeyword, categoryIds, brandIds, pageable, parseProductSort);
 
@@ -225,18 +143,20 @@ public class ProductServiceImpl implements ProductService {
 
         List<Category> categories = productQueryRepository.filteredCategory(cleanKeyword, categoryIds, brandIds);
 
-        List<GetProductDetailResponse> productDetailResponseList = toProductDetailResponse(products);
+        List<GetProductDetailResponse> productDetailResponseList = products.stream()
+                .map(product -> GetProductDetailResponse.of(product, productQueryRepository.lowPriceOfProduct(product.getId())))
+                .toList();
 
-        List<BrandResponse> brandListResponse = toBrandListResponse(brands);
+        List<BrandResponse> brandListResponse = BrandResponse.toListBrandResponse(brands);
 
-        List<CategorySearchResponse> categorySearchResponseList = toCategorySearchResponseList(categories);
+        List<CategorySearchResponse> categorySearchResponseList = CategorySearchResponse.toCategorySearchResponseList(categories);
 
         long totalCount = productQueryRepository.countFiltered(cleanKeyword, categoryIds, brandIds);
 
         int totalPage = (int) Math.ceil((double) totalCount / pageable.getPageSize());
 
         Pagination pagination = new Pagination(pageable.getPageNumber(), pageable.getPageSize(), totalCount, totalPage);
-        SearchProductResponse searchProductResponse = toSearchProductResponse(
+        SearchProductResponse searchProductResponse = SearchProductResponse.from(
                 productDetailResponseList,
                 brandListResponse,
                 categorySearchResponseList,
@@ -250,15 +170,7 @@ public class ProductServiceImpl implements ProductService {
                 () -> new NoSuchElementException("해당하는 사용자가 없습니다."));
         List<Product> favoriteProducts = productQueryRepository.getFavoriteProducts(memberId);
         List<GetFavoriteProductResponse> getFavoriteProductResponses = favoriteProducts.stream()
-                .map(product -> new GetFavoriteProductResponse(
-                        product.getId(),
-                        product.getBrandId(),
-                        product.getCategoryId(),
-                        product.getName(),
-                        product.getDescription(),
-                        product.getModelNumber(),
-                        product.getThumbnail()
-                ))
+                .map(product -> GetFavoriteProductResponse.from(product))
                 .toList();
         long totalCount = productQueryRepository.countFavoriteProducts(memberId);
         int totalPage = (int) Math.ceil((double) totalCount / pageable.getPageSize());

@@ -3,9 +3,11 @@ package com.zeebra.domain.product.repository;
 import com.zeebra.domain.member.entity.Gender;
 import com.zeebra.domain.member.entity.Member;
 import com.zeebra.domain.member.repository.MemberRepository;
+import com.zeebra.domain.product.dto.FavoriteProductList;
 import com.zeebra.domain.product.dto.FavoriteProductResponse;
 import com.zeebra.domain.product.dto.ProductRequest;
 import com.zeebra.domain.product.dto.ProductResponse;
+import com.zeebra.domain.product.entity.FavoriteProduct;
 import com.zeebra.domain.product.entity.Product;
 import com.zeebra.domain.product.service.ProductService;
 import com.zeebra.global.ApiResponse;
@@ -16,6 +18,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -183,6 +187,34 @@ public class ProductServiceTest {
     }
 
 
+    @DisplayName("회원의 관심 상품 목록 조회 성공")
+    @Test
+    void getFavoriteProduct_Success() {
+        // given
+        Product product1 = productRepository.save(createProduct("test1"));
+        Product product2 = productRepository.save(createProduct("test2"));
+
+        Member member = memberRepository.save(createMember("testUser123"));
+
+        productService.addFavoriteProduct(member.getId(), product1.getId());
+        productService.addFavoriteProduct(member.getId(), product2.getId());
+
+        Pageable pageable = PageRequest.of(0, 10);
+        // when
+        ApiResponse<FavoriteProductList> favoriteProducts = productService.getFavoriteProduct(member.getId(), pageable);
+
+        // then
+        assertThat(favoriteProducts.getData().favoriteProductResponses().size()).isEqualTo(2);
+        assertThat(favoriteProducts.getData().pagination().currentPage()).isEqualTo(0);
+        assertThat(favoriteProducts.getData().pagination().totalPages()).isEqualTo(1);
+        assertThat(favoriteProducts.getData().pagination().totalCount()).isEqualTo(2);
+
+    }
+
+    private FavoriteProduct createFavoriteProduct(Long productId, Long memberId) {
+        return new FavoriteProduct(memberId, productId);
+    }
+
     private Product createProduct(String productName) {
         return Product.builder()
                 .thumbnail("testImage")
@@ -192,6 +224,18 @@ public class ProductServiceTest {
                 .categoryId(1L)
                 .modelNumber("testModelNumber")
                 .build();
+    }
+
+    private Member createMember(String memberName) {
+        return Member.createMember(
+                "testLoginId",
+                memberName,
+                "testEmail@test.com",
+                "testNickName",
+                LocalDate.now(),
+                Gender.MAN,
+                "hashedPassword123"
+        );
     }
 
     private Member createAdmin(String userLoginId,

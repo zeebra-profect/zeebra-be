@@ -81,13 +81,18 @@ public class ProductServiceImpl implements ProductService {
 
         Product product = findByProductId(productId);
 
-        FavoriteProduct favoriteProduct = favoriteProductRepository.save(new FavoriteProduct(member.getId(), product.getId()));
+        if (favoriteProductRepository.findByMemberIdAndProductId(memberId, productId).isPresent()) {
+            throw new IllegalStateException("이미 관심 상품에 등록된 상품입니다.");
+        } else {
 
-        product.increaseFavoriteProductCount();
+            FavoriteProduct favoriteProduct = favoriteProductRepository.save(new FavoriteProduct(member.getId(), product.getId()));
 
-        productRepository.save(product);
+            product.increaseFavoriteProductCount();
 
-        return ApiResponse.success(FavoriteProductResponse.toFavoriteProductResponse(favoriteProduct));
+            productRepository.save(product);
+
+            return ApiResponse.success(FavoriteProductResponse.toFavoriteProductResponse(favoriteProduct));
+        }
     }
 
     public Product findByProductId(Long productId) {

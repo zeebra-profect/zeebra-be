@@ -3,8 +3,10 @@ package com.zeebra.domain.product.repository;
 import com.zeebra.domain.member.entity.Gender;
 import com.zeebra.domain.member.entity.Member;
 import com.zeebra.domain.member.repository.MemberRepository;
+import com.zeebra.domain.product.dto.FavoriteProductResponse;
 import com.zeebra.domain.product.dto.ProductRequest;
 import com.zeebra.domain.product.dto.ProductResponse;
+import com.zeebra.domain.product.entity.Product;
 import com.zeebra.domain.product.service.ProductService;
 import com.zeebra.global.ApiResponse;
 import com.zeebra.global.ErrorCode.MemberErrorCode;
@@ -88,6 +90,39 @@ public class ProductServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining(MemberErrorCode.MEMBER_NOT_FOUND.getMessage());
 
+    }
+
+
+    @DisplayName("관심 상품 추가 성공")
+    @Test
+    void addFavoriteProduct_Success() {
+        // given
+        Member member = Member.createMember("testUser123", "홍길동", "hong@test.com",
+                "길동이", LocalDate.of(1990, 5, 15), Gender.MAN, "hashedPassword123");
+        Member saveMember = memberRepository.save(member);
+
+        Product product = createProduct("test1");
+        Product saveProduct = productRepository.save(product);
+
+        // when
+        ApiResponse<FavoriteProductResponse> favoriteProductResponse = productService.addFavoriteProduct(saveMember.getId(), saveProduct.getId());
+
+        // then
+        assertThat(favoriteProductResponse.getData().productId()).isNotNull();
+        assertThat(favoriteProductResponse.getData().memberId()).isEqualTo(saveMember.getId());
+        assertThat(favoriteProductResponse.getData().productId()).isEqualTo(saveProduct.getId());
+
+    }
+
+    private Product createProduct(String productName) {
+        return Product.builder()
+                .thumbnail("testImage")
+                .images(List.of("testImage1", "testImage2"))
+                .name(productName)
+                .brandId(1L)
+                .categoryId(1L)
+                .modelNumber("testModelNumber")
+                .build();
     }
 
     private Member createAdmin(String userLoginId,

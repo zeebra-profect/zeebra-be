@@ -1,5 +1,6 @@
 package com.zeebra.domain.notification;
 
+import com.zeebra.ZeebraApplication;
 import com.zeebra.domain.member.entity.Gender;
 import com.zeebra.domain.member.entity.Member;
 import com.zeebra.domain.member.entity.Role;
@@ -22,6 +23,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.security.access.AccessDeniedException;
 
 import javax.sql.DataSource;
@@ -43,7 +45,8 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
-@SpringBootTest
+@SpringBootTest(classes = ZeebraApplication.class)
+@EnableAsync
 public class NotificationAsyncTest {
 
     @Autowired
@@ -394,7 +397,7 @@ public class NotificationAsyncTest {
                     ? orders.get(index)
                     : null;
 
-            NotificationRequest req = new NotificationRequest(memberId, type, order);
+            NotificationRequest req = new NotificationRequest(memberId, type, order, null);
             notificationRequests.add(req);
         }
 

@@ -114,6 +114,27 @@ public class ProductServiceTest {
 
     }
 
+
+    @DisplayName("관심 상품 추가 시 상품의 좋아요 수가 증가한다")
+    @Test
+    void addFavoriteProduct_IncreaseFavoriteCount() {
+        // given
+        Member member = Member.createMember("testUser123", "홍길동", "hong@test.com",
+                "길동이", LocalDate.of(1990, 5, 15), Gender.MAN, "hashedPassword123");
+        Member saveMember = memberRepository.save(member);
+
+        Product product = createProduct("test1");
+        Product saveProduct = productRepository.save(product);
+
+        // when
+        ApiResponse<FavoriteProductResponse> favoriteProductResponse = productService.addFavoriteProduct(saveMember.getId(), saveProduct.getId());
+
+        // then
+        Product updatedProduct = productRepository.findById(saveProduct.getId()).orElseThrow();
+        assertThat(updatedProduct.getFavoriteProductCount()).isEqualTo(saveProduct.getFavoriteProductCount() + 1);
+
+    }
+
     private Product createProduct(String productName) {
         return Product.builder()
                 .thumbnail("testImage")

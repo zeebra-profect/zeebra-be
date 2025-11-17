@@ -36,6 +36,9 @@ public class ProductServiceTest {
     @Autowired
     private MemberRepository memberRepository;
 
+    @Autowired
+    private FavoriteProductRepository favoriteProductRepository;
+
     @DisplayName("상품 정보를 받아서 상품을 생성한다")
     @Test
     void createProductTest() {
@@ -132,8 +135,29 @@ public class ProductServiceTest {
         // then
         Product updatedProduct = productRepository.findById(saveProduct.getId()).orElseThrow();
         assertThat(updatedProduct.getFavoriteProductCount()).isEqualTo(saveProduct.getFavoriteProductCount() + 1);
-
     }
+
+
+        @DisplayName("관심 상품 삭제 성공")
+        @Test
+        void deleteFavoriteProduct_Success() {
+            // given
+            Member member = Member.createMember("testUser123", "홍길동", "hong@test.com",
+                    "길동이", LocalDate.of(1990, 5, 15), Gender.MAN, "hashedPassword123");
+            Member saveMember = memberRepository.save(member);
+
+            Product product = createProduct("test1");
+            Product saveProduct = productRepository.save(product);
+
+            productService.addFavoriteProduct(saveMember.getId(), saveProduct.getId());
+
+            // when
+            productService.deleteFavoriteProduct(saveMember.getId(), saveProduct.getId());
+
+            // then
+            assertThat(favoriteProductRepository.findById(saveProduct.getId()).isPresent()).isFalse();
+
+        }
 
     private Product createProduct(String productName) {
         return Product.builder()

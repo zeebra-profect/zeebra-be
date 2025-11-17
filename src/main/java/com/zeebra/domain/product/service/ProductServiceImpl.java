@@ -32,8 +32,6 @@ public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository productRepository;
     private final ProductQueryRepository productQueryRepository;
-    private final SalesRepository salesRepository;
-    private final ProductOptionRepository productOptionRepository;
     private final MemberRepository memberRepository;
     private final FavoriteProductRepository favoriteProductRepository;
     private final ProductOptionQueryRepository productOptionQueryRepository;
@@ -53,9 +51,9 @@ public class ProductServiceImpl implements ProductService {
 
         if (colorOptionNameId == null) {
 
-            BigDecimal lowPriceOfColor = productQueryRepository.lowPriceOfColor(product.getId(), colorOptionResponses.get(0).colorOptionNameId());
+            BigDecimal lowPriceOfColor = productQueryRepository.lowPriceOfColor(product.getId(), colorOptionResponses.getFirst().colorOptionNameId());
 
-            return ApiResponse.success(ProductDetailResponse.from(product, lowPriceOfColor, colorOptionResponses, colorOptionResponses.get(0).colorValue()));
+            return ApiResponse.success(ProductDetailResponse.from(product, lowPriceOfColor, colorOptionResponses, colorOptionResponses.getFirst().colorValue()));
         } else {
 
             BigDecimal lowPriceOfColor = productQueryRepository.lowPriceOfColor(product.getId(), colorOptionNameId);
@@ -170,7 +168,7 @@ public class ProductServiceImpl implements ProductService {
                 () -> new NoSuchElementException("해당하는 사용자가 없습니다."));
         List<Product> favoriteProducts = productQueryRepository.getFavoriteProducts(memberId);
         List<GetFavoriteProductResponse> getFavoriteProductResponses = favoriteProducts.stream()
-                .map(product -> GetFavoriteProductResponse.from(product))
+                .map(GetFavoriteProductResponse::from)
                 .toList();
         long totalCount = productQueryRepository.countFavoriteProducts(memberId);
         int totalPage = (int) Math.ceil((double) totalCount / pageable.getPageSize());

@@ -17,6 +17,6 @@ public record NotificationResponse(
 ) {
 
     public static NotificationResponse of(Notification notification) {
-        return new NotificationResponse(notification.getNotificationId(), notification.getMemberId(), notification.getNotificationType(), notification.isRead(), notification.getNotificationType().getNoticeText(), notification.getCreatedTime(), notification.getUrl(), notification.getImgUrl());
+        return new NotificationResponse(notification.getNotificationId(), notification.getMemberId(), notification.getNotificationType(), notification.isRead(), notification.getNotificationType().getNoticeBasicText(), notification.getCreatedTime(), notification.getUrl(), notification.getImgUrl());
     }
 }

@@ -9,6 +9,7 @@ import com.zeebra.global.security.jwt.JwtProvider;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,6 +21,7 @@ import java.util.concurrent.CompletableFuture;
 public class NotificationController {
     private final Logger log = LoggerFactory.getLogger(NotificationController.class);
     private final NotificationService notificationService;
+    private final ApplicationEventPublisher eventPublisher;
 
     // 알림 개별 조회. 실제 사용은 하지 않음
     @GetMapping("/{notificationId}")
@@ -57,12 +59,9 @@ public class NotificationController {
     }
 
     @PostMapping
-    public CompletableFuture<ApiResponse<NotificationsResponse>> createNotification(@AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal, @RequestBody NotificationRequest request) {
+    public ApiResponse<NotificationResponse> createNotification(@AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal, @RequestBody NotificationRequest request) {
         request.setMemberId(principal.getMemberId());
-
-        return notificationService.createNotificationAsync(request)
-                .thenApply(v -> ApiResponse.success(
-                        notificationService.getNotifications(principal.getMemberId())
-                ));
+//        eventPublisher.publishEvent(new NotificationEvent(request.getMemberId(), request.getNotificationType(), "ㅇㅅㅇ", request.getObject(), null));
+        return ApiResponse.success(notificationService.createNotificationAsync(request).join());
     }
 }

@@ -57,8 +57,12 @@ public class NotificationController {
     }
 
     @PostMapping
-    public ApiResponse<NotificationResponse> createNotification(@AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal, @RequestBody NotificationRequest request) {
+    public CompletableFuture<ApiResponse<NotificationsResponse>> createNotification(@AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal, @RequestBody NotificationRequest request) {
         request.setMemberId(principal.getMemberId());
-        return ApiResponse.success(notificationService.createNotification(request));
+
+        return notificationService.createNotificationAsync(request)
+                .thenApply(v -> ApiResponse.success(
+                        notificationService.getNotifications(principal.getMemberId())
+                ));
     }
 }

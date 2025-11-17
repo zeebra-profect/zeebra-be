@@ -274,6 +274,31 @@ public class ProductServiceTest {
 
         }
 
+    @DisplayName("색상 옵션 ID로 사이즈 옵션 목록을 조회한다")
+    @Test
+    void getProductOptionSize_WithValidColorOptionId_ReturnsSizeOptionList() {
+        // given
+        Product product1 = productRepository.save(createProduct("test1"));
+        OptionName optionName1 = optionNameRepository.save(new OptionName("color", "빨강", false));
+        OptionName optionName2 = optionNameRepository.save(new OptionName("size", "L", false));
+
+        ProductOption productOption1 = productOptionRepository.save(new ProductOption(product1.getId()));
+
+        optionCombinationRepository.save(new OptionCombination(productOption1.getId(), optionName1.getId()));
+        optionCombinationRepository.save(new OptionCombination(productOption1.getId(), optionName2.getId()));
+
+        Sales sales1 = salesRepository.save(new Sales(productOption1.getId(), 1L, new BigDecimal("15000.00"), 1, SalesStatus.ON_SALE));
+        Sales sales2 = salesRepository.save(new Sales(productOption1.getId(), 1L, new BigDecimal("16000.00"), 1, SalesStatus.ON_SALE));
+
+        // when
+        ApiResponse<SizeOptionResponseList> productOptionSize = productService.getProductOptionSize(product1.getId(), optionName1.getId());
+
+        // then
+        assertThat(productOptionSize.getData().sizeOptionResponses().size()).isEqualTo(1);
+        assertThat(productOptionSize.getData().sizeOptionResponses().getFirst().lowPriceOfSize()).isEqualTo(sales1.getPrice());
+
+    }
+
     private FavoriteProduct createFavoriteProduct(Long productId, Long memberId) {
         return new FavoriteProduct(memberId, productId);
     }

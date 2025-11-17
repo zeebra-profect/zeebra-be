@@ -34,16 +34,15 @@ public class Sales extends BaseEntity {
 
     private int stock;
 
-	@Enumerated(EnumType.STRING)
+	@Enumerated(EnumType.ORDINAL)
     private SalesStatus salesStatus;
 
     private LocalDateTime soldAt;
 
-    public Sales(Long productOptionId, Long memberId, BigDecimal price, BigDecimal soldPrice, int stock, SalesStatus salesStatus) {
+    public Sales(Long productOptionId, Long memberId, BigDecimal price, int stock, SalesStatus salesStatus) {
         this.productOptionId = productOptionId;
         this.memberId = memberId;
         this.price = price;
-        this.soldPrice = soldPrice;
         this.stock = stock;
         this.salesStatus = salesStatus;
     }

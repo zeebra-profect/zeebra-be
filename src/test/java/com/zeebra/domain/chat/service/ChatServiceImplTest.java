@@ -49,12 +49,18 @@ public class ChatServiceImplTest {
     @InjectMocks
     private ChatServiceImpl chatService;
 
-    @Mock private ChatRoomRepository chatRoomRepository;
-    @Mock private ChatRoomMemberRepository chatRoomMemberRepository;
-    @Mock private ChatMessageRepository chatMessageRepository;
-    @Mock private TradeRepository tradeRepository;
-    @Mock private MemberRepository memberRepository;
-    @Mock private SalesRepository salesRepository;
+    @Mock
+    private ChatRoomRepository chatRoomRepository;
+    @Mock
+    private ChatRoomMemberRepository chatRoomMemberRepository;
+    @Mock
+    private ChatMessageRepository chatMessageRepository;
+    @Mock
+    private TradeRepository tradeRepository;
+    @Mock
+    private MemberRepository memberRepository;
+    @Mock
+    private SalesRepository salesRepository;
 
     private Member testUser;
     private Member testUser2;
@@ -109,12 +115,11 @@ public class ChatServiceImplTest {
         tradeRequestDto = new TradeRequestDto(new BigDecimal("15000"));
 
 
-
     }
 
     @Test
     @DisplayName("시나리오 1 (로그인X): 기존 그룹 채팅방 입장시, 방은 생성X, 멤버추가 X")
-    void scenario1_Anonymous_EnterExistingGroupChat(){
+    void scenario1_Anonymous_EnterExistingGroupChat() {
         //Given
         Long productId = groupRequestDto.getProductId();
         Long currentMemberId = null;
@@ -143,7 +148,7 @@ public class ChatServiceImplTest {
 
     @Test
     @DisplayName("시나리오 2 (로그인X): 새 그룹 채팅방 입장시, 방은 생성O, 멤버추가 X")
-    void scenario2_Anonymous_EnterNewGroupChat(){
+    void scenario2_Anonymous_EnterNewGroupChat() {
         //Given
         Long productId = groupRequestDto.getProductId();
         Long currentMemberId = null;
@@ -175,7 +180,7 @@ public class ChatServiceImplTest {
 
     @Test
     @DisplayName("시나리오 3 (로그인): '기존' 그룹 채팅방 입장 시, 방 생성x, 멤버 추가 O")
-    void scenario3_Authenticated_EnterExistingGroupChat(){
+    void scenario3_Authenticated_EnterExistingGroupChat() {
         //Givne
         Long productId = groupRequestDto.getProductId();
         Long currentMemberId = testUser.getId();
@@ -213,7 +218,7 @@ public class ChatServiceImplTest {
 
         //Mocking
         // 1. 판매글 찾기 (판매자 ID 반환)
-        Sales mockSale = new Sales(1L, sellerUser, BigDecimal.TEN, null, 1, SalesStatus.ON_SALE);
+        Sales mockSale = new Sales(1L, sellerUser, BigDecimal.TEN, 1, SalesStatus.ON_SALE);
         given(salesRepository.findById(saleId)).willReturn(Optional.of(mockSale));
         // 2. DM방 없음 설정
         String dmPairKey = "sale:" + saleId + "-user:" + buyerUser + "-user:" + sellerUser;
@@ -357,7 +362,7 @@ public class ChatServiceImplTest {
         given(mockDMRoom2.getId()).willReturn(dmRoom2Id);
         given(mockDMRoom2.getLastMessageId()).willReturn(lastMessageId2);
 
-        ChatRoom mockGroupRoom =  mock(ChatRoom.class);
+        ChatRoom mockGroupRoom = mock(ChatRoom.class);
         given(mockGroupRoom.getChatRoomType()).willReturn(ChatRoomType.GROUP);
 
         ChatRoomMember myDmMembership1 = mock(ChatRoomMember.class);
@@ -433,7 +438,7 @@ public class ChatServiceImplTest {
         Long dmRoomId = 1L;
 
         // Mock 채팅방, 멤버 설정
-        ChatRoom mockRoom  = mock(ChatRoom.class);
+        ChatRoom mockRoom = mock(ChatRoom.class);
         ChatRoomMember mockMember = mock(ChatRoomMember.class);
 
         // findByChatRooIdANdMemberId mockMember반환하도록 설정
@@ -498,7 +503,7 @@ public class ChatServiceImplTest {
         Long currentMemberId = testUser.getId();
 
         //Mocking 1. 판매자 글 나로 설정
-        Sales mySale = new Sales(1L, currentMemberId, BigDecimal.TEN, null, 1, SalesStatus.ON_SALE);
+        Sales mySale = new Sales(1L, currentMemberId, BigDecimal.TEN, 1, SalesStatus.ON_SALE);
         given(salesRepository.findById(saleId)).willReturn(Optional.of(mySale));
 
         //When Then
@@ -529,7 +534,7 @@ public class ChatServiceImplTest {
 
         // When & Then
         Exception exception = assertThrows(SecurityException.class, () -> {
-           chatService.saveMessage(requestDto, currentMemberId);
+            chatService.saveMessage(requestDto, currentMemberId);
         });
 
         assertThat(exception.getMessage()).isEqualTo("해당 채팅방의 멤버가 아닙니다");
@@ -556,7 +561,8 @@ public class ChatServiceImplTest {
 
         // When & Then
         Exception exception = assertThrows(IllegalArgumentException.class,
-                () -> {chatService.leaveChatRoom(groupId, currentMemberId);
+                () -> {
+                    chatService.leaveChatRoom(groupId, currentMemberId);
                 });
 
         assertThat(exception.getMessage()).isEqualTo("그룹 채팅방은 나갈 수 없습니다.");

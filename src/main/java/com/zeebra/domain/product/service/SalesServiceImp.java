@@ -46,7 +46,6 @@ public class SalesServiceImp implements SalesService {
                 productOption.getId(),
                 member.getId(),
                 request.price(),
-                request.price(),
                 request.stock(),
                 SalesStatus.ON_SALE);
     }

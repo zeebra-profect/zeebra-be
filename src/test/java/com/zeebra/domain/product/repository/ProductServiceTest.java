@@ -3,12 +3,8 @@ package com.zeebra.domain.product.repository;
 import com.zeebra.domain.member.entity.Gender;
 import com.zeebra.domain.member.entity.Member;
 import com.zeebra.domain.member.repository.MemberRepository;
-import com.zeebra.domain.product.dto.FavoriteProductList;
-import com.zeebra.domain.product.dto.FavoriteProductResponse;
-import com.zeebra.domain.product.dto.ProductRequest;
-import com.zeebra.domain.product.dto.ProductResponse;
-import com.zeebra.domain.product.entity.FavoriteProduct;
-import com.zeebra.domain.product.entity.Product;
+import com.zeebra.domain.product.dto.*;
+import com.zeebra.domain.product.entity.*;
 import com.zeebra.domain.product.service.ProductService;
 import com.zeebra.global.ApiResponse;
 import com.zeebra.global.ErrorCode.MemberErrorCode;
@@ -21,6 +17,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -42,6 +39,18 @@ public class ProductServiceTest {
 
     @Autowired
     private FavoriteProductRepository favoriteProductRepository;
+
+    @Autowired
+    private OptionNameRepository optionNameRepository;
+
+    @Autowired
+    private ProductOptionRepository productOptionRepository;
+
+    @Autowired
+    private OptionCombinationRepository optionCombinationRepository;
+
+    @Autowired
+    private SalesRepository salesRepository;
 
     @DisplayName("상품 정보를 받아서 상품을 생성한다")
     @Test
@@ -208,6 +217,32 @@ public class ProductServiceTest {
         assertThat(favoriteProducts.getData().pagination().currentPage()).isEqualTo(0);
         assertThat(favoriteProducts.getData().pagination().totalPages()).isEqualTo(1);
         assertThat(favoriteProducts.getData().pagination().totalCount()).isEqualTo(2);
+
+    }
+
+
+    @DisplayName("colorOptionNameId가 null일 때 첫 번째 색상 옵션으로 상품 상세 조회 성공")
+    @Test
+    void getProductDetail_WithNullColorOptionNameId_ReturnsFirstColorOption() {
+        // given
+        Product product1 = productRepository.save(createProduct("test1"));
+        OptionName optionName1 = optionNameRepository.save(new OptionName("color", "빨강", false));
+        OptionName optionName2 = optionNameRepository.save(new OptionName("size", "L", false));
+
+        ProductOption productOption1 = productOptionRepository.save(new ProductOption(product1.getId()));
+
+        optionCombinationRepository.save(new OptionCombination(productOption1.getId(), optionName1.getId()));
+        optionCombinationRepository.save(new OptionCombination(productOption1.getId(), optionName2.getId()));
+
+        Sales sales1 = salesRepository.save(new Sales(productOption1.getId(), 1L, new BigDecimal("15000.00"), 1, SalesStatus.ON_SALE));
+        Sales sales2 = salesRepository.save(new Sales(productOption1.getId(), 1L, new BigDecimal("16000.00"), 1, SalesStatus.ON_SALE));
+        // when
+        ApiResponse<ProductDetailResponse> productDetail = productService.getProductDetail(product1.getId(), null);
+
+        // then
+        assertThat(productDetail.getData().colorOptionResponses().size()).isEqualTo(1);
+        assertThat(productDetail.getData().productId()).isEqualTo(product1.getId());
+        assertThat(productDetail.getData().lowPrice()).isEqualTo(sales1.getPrice());
 
     }
 

@@ -236,6 +236,7 @@ public class ProductServiceTest {
 
         Sales sales1 = salesRepository.save(new Sales(productOption1.getId(), 1L, new BigDecimal("15000.00"), 1, SalesStatus.ON_SALE));
         Sales sales2 = salesRepository.save(new Sales(productOption1.getId(), 1L, new BigDecimal("16000.00"), 1, SalesStatus.ON_SALE));
+
         // when
         ApiResponse<ProductDetailResponse> productDetail = productService.getProductDetail(product1.getId(), null);
 
@@ -245,6 +246,33 @@ public class ProductServiceTest {
         assertThat(productDetail.getData().lowPrice()).isEqualTo(sales1.getPrice());
 
     }
+
+
+        @DisplayName("colorOptionNameId를 지정하여 해당 색상 옵션의 상품 상세 조회 성공")
+        @Test
+        void getProductDetail_WithSpecificColorOptionNameId_ReturnsSpecifiedColorOption() {
+            // given
+            Product product1 = productRepository.save(createProduct("test1"));
+            OptionName optionName1 = optionNameRepository.save(new OptionName("color", "빨강", false));
+            OptionName optionName2 = optionNameRepository.save(new OptionName("size", "L", false));
+
+            ProductOption productOption1 = productOptionRepository.save(new ProductOption(product1.getId()));
+
+            optionCombinationRepository.save(new OptionCombination(productOption1.getId(), optionName1.getId()));
+            optionCombinationRepository.save(new OptionCombination(productOption1.getId(), optionName2.getId()));
+
+            Sales sales1 = salesRepository.save(new Sales(productOption1.getId(), 1L, new BigDecimal("15000.00"), 1, SalesStatus.ON_SALE));
+            Sales sales2 = salesRepository.save(new Sales(productOption1.getId(), 1L, new BigDecimal("16000.00"), 1, SalesStatus.ON_SALE));
+
+            // when
+            ApiResponse<ProductDetailResponse> productDetail = productService.getProductDetail(product1.getId(), optionName1.getId());
+
+            // then
+            assertThat(productDetail.getData().colorOptionResponses().size()).isEqualTo(1);
+            assertThat(productDetail.getData().productId()).isEqualTo(product1.getId());
+            assertThat(productDetail.getData().lowPrice()).isEqualTo(sales1.getPrice());
+
+        }
 
     private FavoriteProduct createFavoriteProduct(Long productId, Long memberId) {
         return new FavoriteProduct(memberId, productId);

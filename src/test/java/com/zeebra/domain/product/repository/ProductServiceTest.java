@@ -138,26 +138,50 @@ public class ProductServiceTest {
     }
 
 
-        @DisplayName("관심 상품 삭제 성공")
-        @Test
-        void deleteFavoriteProduct_Success() {
-            // given
-            Member member = Member.createMember("testUser123", "홍길동", "hong@test.com",
-                    "길동이", LocalDate.of(1990, 5, 15), Gender.MAN, "hashedPassword123");
-            Member saveMember = memberRepository.save(member);
+    @DisplayName("관심 상품 삭제 성공")
+    @Test
+    void deleteFavoriteProduct_Success() {
+        // given
+        Member member = Member.createMember("testUser123", "홍길동", "hong@test.com",
+                "길동이", LocalDate.of(1990, 5, 15), Gender.MAN, "hashedPassword123");
+        Member saveMember = memberRepository.save(member);
 
-            Product product = createProduct("test1");
-            Product saveProduct = productRepository.save(product);
+        Product product = createProduct("test1");
+        Product saveProduct = productRepository.save(product);
 
-            productService.addFavoriteProduct(saveMember.getId(), saveProduct.getId());
+        productService.addFavoriteProduct(saveMember.getId(), saveProduct.getId());
 
-            // when
-            productService.deleteFavoriteProduct(saveMember.getId(), saveProduct.getId());
+        // when
+        productService.deleteFavoriteProduct(saveMember.getId(), saveProduct.getId());
 
-            // then
-            assertThat(favoriteProductRepository.findById(saveProduct.getId()).isPresent()).isFalse();
+        // then
+        assertThat(favoriteProductRepository.findById(saveProduct.getId()).isPresent()).isFalse();
+    }
 
-        }
+
+    @DisplayName("관심 상품 삭제 시 상품의 좋아요 수가 감소한다")
+    @Test
+    void deleteFavoriteProduct_DecreaseFavoriteCount() {
+        // given
+        Member member = Member.createMember("testUser123", "홍길동", "hong@test.com",
+                "길동이", LocalDate.of(1990, 5, 15), Gender.MAN, "hashedPassword123");
+        Member saveMember = memberRepository.save(member);
+
+        Product product = createProduct("test1");
+        Product saveProduct = productRepository.save(product);
+
+        productService.addFavoriteProduct(saveMember.getId(), saveProduct.getId());
+        Product saveUpdateProduct = productRepository.findById(saveProduct.getId()).orElseThrow();
+
+        // when
+        productService.deleteFavoriteProduct(saveMember.getId(), saveProduct.getId());
+
+        // then
+        Product deleteUpdateProduct = productRepository.findById(saveProduct.getId()).orElseThrow();
+
+        assertThat(saveUpdateProduct.getFavoriteProductCount()).isEqualTo(deleteUpdateProduct.getFavoriteProductCount() + 1);
+    }
+
 
     private Product createProduct(String productName) {
         return Product.builder()

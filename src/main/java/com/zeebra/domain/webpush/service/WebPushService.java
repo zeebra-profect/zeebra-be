@@ -90,7 +90,10 @@ public class WebPushService {
                                 webPush.getAuth(),
                                 payload.getBytes(java.nio.charset.StandardCharsets.UTF_8)
                         );
-
+//                System.out.println("payload string: '" + payload + "'");
+//                System.out.println("payload length: " + payload.length());
+//                System.out.println("VAPID PUBLIC KEY = " + vapidPublicKey);
+//                System.out.println("VAPID PRIVATE KEY = " + vapidPrivateKey);
                 org.apache.http.HttpResponse response = pushService.send(pushNotification);
                 int statusCode = response.getStatusLine().getStatusCode();
 

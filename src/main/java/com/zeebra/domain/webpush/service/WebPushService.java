@@ -11,7 +11,9 @@ import lombok.extern.slf4j.Slf4j;
 import nl.martijndwars.webpush.PushService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.security.GeneralSecurityException;
 import java.util.List;
@@ -33,10 +35,34 @@ public class WebPushService {
     @Value("${vapid.subject}")
     private String vapidSubject;
 
-    @Async
-    public void sendPush(Long memberId, Notification notification) {
+    public boolean isSubscribed(Long memberId) {
+
+        if (memberId == null) {
+            throw new NullPointerException("사용자의 id가 null입니다.");
+        }
+
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new NoSuchElementException("해당하는 사용자가 없습니다."));
+
+        if (member.getId() != memberId) {
+            throw new AccessDeniedException("권한이 없습니다.");
+        }
+
+        return !webPushRepository.findByMemberId(memberId).isEmpty();
+    }
+
+    @Async
+    public void sendPush(Long memberId, Notification notification) {
+        if (memberId == null) {
+            throw new NullPointerException("사용자의 id가 null입니다.");
+        }
+
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new NoSuchElementException("해당하는 사용자가 없습니다."));
+
+        if (member.getId() != memberId) {
+            throw new AccessDeniedException("권한이 없습니다.");
+        }
 
         List<WebPush> webPushList = webPushRepository.findByMemberId(memberId);
         if (webPushList.isEmpty()) {
@@ -94,6 +120,7 @@ public class WebPushService {
 
     }
 
+    @Transactional
     public String saveSubscription(Long memberId, WebPushRequest request) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new NoSuchElementException("해당하는 사용자가 없습니다."));
@@ -116,6 +143,7 @@ public class WebPushService {
         return "구독 성공";
     }
 
+    @Transactional
     public String deleteSubscription(Long memberId) {
         Member member = memberRepository.findById(memberId).orElseThrow(() -> new NoSuchElementException("해당하는 사용자가 없습니다."));
         webPushRepository.deleteByMemberId(memberId);

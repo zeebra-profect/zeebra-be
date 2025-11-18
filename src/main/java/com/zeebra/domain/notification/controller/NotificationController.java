@@ -62,6 +62,6 @@ public class NotificationController {
     public ApiResponse<NotificationResponse> createNotification(@AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal, @RequestBody NotificationRequest request) {
         request.setMemberId(principal.getMemberId());
 //        eventPublisher.publishEvent(new NotificationEvent(request.getMemberId(), request.getNotificationType(), "ㅇㅅㅇ", request.getObject(), null));
-        return ApiResponse.success(notificationService.createNotificationAsync(request).join());
+        return ApiResponse.success(notificationService.createNotificationAsyncPush(request).join());
     }
 }

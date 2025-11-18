@@ -4,11 +4,12 @@ import com.zeebra.global.jpa.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
+@Entity
+@Table(name = "web_push")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-@Table(name = "web_push")
 public class WebPush extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

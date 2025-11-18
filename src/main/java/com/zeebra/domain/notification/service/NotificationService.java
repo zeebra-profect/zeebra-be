@@ -10,6 +10,8 @@ public interface NotificationService {
 
     CompletableFuture<NotificationResponse> createNotificationAsync(NotificationRequest notificationRequest);
 
+    CompletableFuture<NotificationResponse> createNotificationAsyncPush(NotificationRequest notificationRequest);
+
     NotificationResponse getNotificationById(Long notificationId);
 
     NotificationsResponse getNotifications(Long memberId);

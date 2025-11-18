@@ -15,8 +15,13 @@ public class WebPushController {
 
     private final WebPushService webPushService;
 
+    @GetMapping("/status")
+    public ApiResponse<Boolean> isSubscribed(@AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal) {
+        return ApiResponse.success(webPushService.isSubscribed(principal.getMemberId()));
+    }
+
     @PostMapping
-    public ApiResponse<?> subscribe(
+    public ApiResponse<String> subscribe(
             @AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal,
             @RequestBody WebPushRequest request) {
         webPushService.saveSubscription(principal.getMemberId(), request);
@@ -24,8 +29,13 @@ public class WebPushController {
     }
 
     @DeleteMapping
-    public ApiResponse<?> unsubscribe(@AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal) {
-        return ApiResponse.success(webPushService.deleteSubscription(principal.getMemberId()));
+    public ApiResponse<String> unsubscribe(@AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal) {
+        System.out.println("들어오니?");
+
+        ApiResponse<String> result = ApiResponse.success(webPushService.deleteSubscription(principal.getMemberId()));
+        System.out.println(result.getData());
+        return result;
+//        return ApiResponse.success(webPushService.deleteSubscription(principal.getMemberId()));
     }
 
 }

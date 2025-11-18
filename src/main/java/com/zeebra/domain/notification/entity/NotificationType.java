@@ -22,7 +22,7 @@ public enum NotificationType {
     private String noticeBasicText;
 
 
-    NotificationType(String noticeText, String notificationTitle) {
+    NotificationType(String notificationTitle, String noticeText) {
         this.noticeBasicText = noticeText;
         this.notificationTitle = notificationTitle;
     }

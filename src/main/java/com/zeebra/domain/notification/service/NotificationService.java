@@ -8,8 +8,6 @@ import java.util.concurrent.CompletableFuture;
 
 public interface NotificationService {
 
-    NotificationResponse createNotification(NotificationRequest notificationRequest);
-
     CompletableFuture<NotificationResponse> createNotificationAsync(NotificationRequest notificationRequest);
 
     NotificationResponse getNotificationById(Long notificationId);

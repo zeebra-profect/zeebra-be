@@ -9,6 +9,7 @@ import com.zeebra.domain.notification.dto.NotificationsResponse;
 import com.zeebra.domain.notification.entity.Notification;
 import com.zeebra.domain.notification.entity.NotificationType;
 import com.zeebra.domain.notification.repository.NotificationRepository;
+import com.zeebra.domain.webpush.service.WebPushService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.access.AccessDeniedException;
@@ -24,6 +25,7 @@ public class NotificationServiceImpl implements NotificationService {
     private final NotificationRepository notificationRepository;
     private final MemberRepository memberRepository;
     private final NotificationUrlFactory notificationUrlFactory;
+    private final WebPushService webPushService;
 
     private boolean isValidNotificationType(NotificationType type) {
         return Arrays.asList(NotificationType.values()).contains(type);
@@ -49,6 +51,30 @@ public class NotificationServiceImpl implements NotificationService {
 
         return CompletableFuture.completedFuture(NotificationResponse.of(savedNotification));
     }
+
+    @Async("notificationAsyncExecutor")
+    @Transactional
+    public CompletableFuture<NotificationResponse> createNotificationAsyncPush(NotificationRequest request) {
+        System.out.println("Thread executing createNotificationAsync: " + Thread.currentThread().getName());
+
+        if (request.getNotificationType() == null) {
+            throw new IllegalArgumentException("타입 값이 없습니다.");
+        }
+
+        if (!isValidNotificationType(request.getNotificationType())) {
+            throw new IllegalArgumentException("유효하지 않은 알림 타입입니다.");
+        }
+
+        CompletableFuture<Member> member = findByMemberId(request.getMemberId());
+        String url = notificationUrlFactory.createUrl(request.getNotificationType(), request.getObject());
+        Notification notification = new Notification(member.join().getId(), request.getNotificationType(), url, request.getImgUrl());
+        Notification savedNotification = saveNotificationAsync(notification).join();
+
+        webPushService.sendPush(member.join().getId(), savedNotification);
+
+        return CompletableFuture.completedFuture(NotificationResponse.of(savedNotification));
+    }
+
 
     public NotificationResponse getNotificationById(Long notificationId) {
         Notification notification = notificationRepository.findByNotificationId(notificationId).orElseThrow(() -> new NoSuchElementException("해당하는 알림이 없습니다."));

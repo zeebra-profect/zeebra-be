@@ -67,12 +67,16 @@ dependencies {
 
     testImplementation("org.assertj:assertj-core:3.27.3")
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.13.4")
+
+    implementation group: 'org.bouncycastle', name: 'bcprov-jdk15on', version: '1.70' // web push 관련 - VAPID Key 암호화
+    implementation 'nl.martijndwars:web-push:5.1.1' // web push
+
 }
 
 tasks.named('test') {
     useJUnitPlatform()
     finalizedBy jacocoTestReport
-    
+
 }
 
 jacocoTestReport {

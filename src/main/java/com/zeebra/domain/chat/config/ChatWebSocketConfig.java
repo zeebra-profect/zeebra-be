@@ -66,7 +66,7 @@ public class ChatWebSocketConfig implements WebSocketMessageBrokerConfigurer {
                             String cookieHeader = nativeHeaders.get("cookie").get(0);
 
                             // 6. Cookie에서 Access Token 파싱
-                            String accessToken = CookieUtil.getCookieHeader(cookieHeader, CookieUtil.ACCESS_TOKEN_COOKIE_NAME);
+                            String accessToken = CookieUtil.getAccessTokenFromCookieHeader(cookieHeader);
 
                             if (accessToken != null && jwtProvider.isValid(accessToken) && jwtProvider.isAccessToken(accessToken)) {
                                 // 7. 토큰이 유효하면, 인증 정보(UserPrincipal) 생성

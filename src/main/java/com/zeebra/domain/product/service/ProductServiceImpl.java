@@ -23,6 +23,7 @@ import org.springframework.data.domain.Pageable;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 @Service
@@ -135,7 +136,6 @@ public class ProductServiceImpl implements ProductService {
                                                             Pageable pageable,
                                                             String productSort) {
 
-
         String cleanKeyword = KeywordSanitizer.sanitize(keyWord);
 
         ProductSort parseProductSort = ProductSort.from(productSort);
@@ -146,24 +146,27 @@ public class ProductServiceImpl implements ProductService {
 
         List<Category> categories = productQueryRepository.filteredCategory(cleanKeyword, categoryIds, brandIds);
 
+        List<Long> productIds = products.stream()
+                .map(Product::getId)
+                .toList();
+        Map<Long, BigDecimal> priceMap = productQueryRepository.lowPriceOfProductList(productIds);
         List<GetProductDetailResponse> productDetailResponseList = products.stream()
-                .map(product -> GetProductDetailResponse.of(product, productQueryRepository.lowPriceOfProduct(product.getId())))
+                .map(product -> GetProductDetailResponse.of(product, priceMap.get(product.getId()) ))
                 .toList();
 
         List<BrandResponse> brandListResponse = BrandResponse.toListBrandResponse(brands);
-
         List<CategorySearchResponse> categorySearchResponseList = CategorySearchResponse.toCategorySearchResponseList(categories);
 
         long totalCount = productQueryRepository.countFiltered(cleanKeyword, categoryIds, brandIds);
 
         int totalPage = (int) Math.ceil((double) totalCount / pageable.getPageSize());
-
         Pagination pagination = new Pagination(pageable.getPageNumber(), pageable.getPageSize(), totalCount, totalPage);
         SearchProductResponse searchProductResponse = SearchProductResponse.from(
                 productDetailResponseList,
                 brandListResponse,
                 categorySearchResponseList,
                 pagination);
+
         return ApiResponse.success(searchProductResponse);
     }
 

@@ -3,6 +3,7 @@ package com.zeebra.domain.chat.config;
 import com.zeebra.global.security.jwt.JwtProvider;
 import com.zeebra.global.web.CookieUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -22,6 +23,7 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Configuration
 @EnableWebSocketMessageBroker
 @RequiredArgsConstructor
@@ -55,24 +57,34 @@ public class ChatWebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
                 // 4. STOMP "CONNECT" 프레임일 때만 실행
                 if (StompCommand.CONNECT.equals(accessor.getCommand())) {
+                    try {
+                        // 5. HTTP 핸드셰이크 때 저장된 "nativeHeaders" (Cookie 포함) 가져오기
+                        Map<String, List<String>> nativeHeaders =
+                                (Map<String, List<String>>) message.getHeaders().get("nativeHeaders");
 
-                    // 5. HTTP 핸드셰이크 때 저장된 "nativeHeaders" (Cookie 포함) 가져오기
-                    Map<String, List<String>> nativeHeaders =
-                            (Map<String, List<String>>) message.getHeaders().get("nativeHeaders");
+                        if (nativeHeaders != null && nativeHeaders.containsKey("cookie")) {
+                            String cookieHeader = nativeHeaders.get("cookie").get(0);
 
-                    if (nativeHeaders != null && nativeHeaders.containsKey("cookie")) {
-                        String cookieHeader = nativeHeaders.get("cookie").get(0);
+                            // 6. Cookie에서 Access Token 파싱
+                            String accessToken = CookieUtil.getCookieHeader(cookieHeader, CookieUtil.ACCESS_TOKEN_COOKIE_NAME);
 
-                        // 6. Cookie에서 Access Token 파싱
-                        String accessToken = cookieUtil.getCookieHeader(cookieHeader, ACCESS_TOKEN_COOKIE_NAME);
+                            if (accessToken != null && jwtProvider.isValid(accessToken) && jwtProvider.isAccessToken(accessToken)) {
+                                // 7. 토큰이 유효하면, 인증 정보(UserPrincipal) 생성
+                                Authentication authentication = jwtProvider.toAuthentication(accessToken);
 
-                        if (accessToken != null && jwtProvider.isValid(accessToken)) {
-                            // 7. 토큰이 유효하면, 인증 정보(UserPrincipal) 생성
-                            Authentication authentication = jwtProvider.toAuthentication(accessToken);
-
-                            // 8. (핵심) 인증 정보를 STOMP 세션의 유저로 등록
-                            accessor.setUser(authentication);
+                                // 8. (핵심) 인증 정보를 STOMP 세션의 유저로 등록
+                                accessor.setUser(authentication);
+                                log.info("STOMP CONNECT: Cookie 인증 성공 USER={}", authentication.getName());
+                            } else {
+                                log.warn("STOMP CONNECT: 유효하지 않은 토큰(쿠키)");
+                            }
                         }
+                        else {
+                            log.warn("STOMP CONNECT: 쿠키 헤더 없음");
+                        }
+
+                    }catch (Exception e){
+                        log.error("STOMP CONNECT 인증처리 중 예외 발생", e);
                     }
                 }
                 return message;

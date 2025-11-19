@@ -10,6 +10,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -33,6 +34,7 @@ public class OrderHistory extends BaseEntity {
     @Column(name = "idempotency_key", nullable = false, length = 128, unique = true)
     private String idempotencyKey;
 
+	@Builder
     public OrderHistory(Long orderId, OrderStatus orderStatus, String idempotencyKey) {
         this.orderId = orderId;
         this.orderStatus = orderStatus;
@@ -40,6 +42,10 @@ public class OrderHistory extends BaseEntity {
     }
 
 	public static OrderHistory createOrderHistory(Long orderId, OrderStatus orderStatus, String idempotencyKey){
-		return new OrderHistory(orderId, orderStatus, idempotencyKey);
+		return OrderHistory.builder()
+			.orderId(orderId)
+			.orderStatus(orderStatus)
+			.idempotencyKey(idempotencyKey)
+			.build();
 	}
 }

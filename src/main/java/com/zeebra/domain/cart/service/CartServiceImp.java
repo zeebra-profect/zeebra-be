@@ -9,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.zeebra.domain.cart.dto.CartItemInfo;
 import com.zeebra.domain.cart.dto.CartItemResponse;
 import com.zeebra.domain.cart.dto.CartRequest;
 import com.zeebra.domain.cart.dto.CartResponse;
@@ -124,5 +125,11 @@ public class CartServiceImp implements CartService {
 
 
 		return GetCartResponse.of(cartId, totalPrice, discount, totalQuantity, cartItemPage);
+	}
+
+	public List<CartItemInfo> getCartItemsByCartId(Long cartId, Long memberId) {
+		if (memberId == null || cartId == null) { throw new BusinessException(CommonErrorCode.INVALID_REQUEST); }
+		cartRepository.findById(cartId).orElseThrow(() -> new BusinessException(CommonErrorCode.INVALID_REQUEST, "해당 장바구니를 찾을 수 없습니다."));
+		return CartItemInfo.of(cartItemRepository.findByCartId(cartId));
 	}
 }

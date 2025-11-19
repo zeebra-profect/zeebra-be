@@ -1,10 +1,12 @@
 package com.zeebra.domain.category.entity;
 
 import com.zeebra.global.jpa.BaseEntity;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -21,8 +23,12 @@ public class Category extends BaseEntity {
 
     private String name;
 
-    public Category(Long parentId, String name) {
+	private String thumbnail;
+
+	@Builder
+    public Category(Long parentId, String name, String thumbnail) {
         this.parentId = parentId;
         this.name = name;
+		this.thumbnail = thumbnail;
     }
 }

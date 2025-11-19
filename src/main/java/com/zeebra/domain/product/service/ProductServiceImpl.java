@@ -1,5 +1,12 @@
 package com.zeebra.domain.product.service;
 
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.NoSuchElementException;
+
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+
 import com.zeebra.domain.brand.dto.BrandResponse;
 import com.zeebra.domain.brand.entity.Brand;
 import com.zeebra.domain.category.dto.CategorySearchResponse;
@@ -7,21 +14,36 @@ import com.zeebra.domain.category.entity.Category;
 import com.zeebra.domain.member.entity.Member;
 import com.zeebra.domain.member.entity.Role;
 import com.zeebra.domain.member.repository.MemberRepository;
-import com.zeebra.domain.product.dto.*;
-import com.zeebra.domain.product.entity.*;
-import com.zeebra.domain.product.repository.*;
+import com.zeebra.domain.product.dto.ColorOptionResponse;
+import com.zeebra.domain.product.dto.FavoriteProductList;
+import com.zeebra.domain.product.dto.FavoriteProductResponse;
+import com.zeebra.domain.product.dto.GetFavoriteProductResponse;
+import com.zeebra.domain.product.dto.GetProductDetailResponse;
+import com.zeebra.domain.product.dto.Pagination;
+import com.zeebra.domain.product.dto.ProductDetailResponse;
+import com.zeebra.domain.product.dto.ProductRequest;
+import com.zeebra.domain.product.dto.ProductResponse;
+import com.zeebra.domain.product.dto.SearchProductResponse;
+import com.zeebra.domain.product.dto.SizeOptionResponse;
+import com.zeebra.domain.product.dto.SizeOptionResponseList;
+import com.zeebra.domain.product.entity.FavoriteProduct;
+import com.zeebra.domain.product.entity.OptionName;
+import com.zeebra.domain.product.entity.Product;
+import com.zeebra.domain.product.entity.ProductSort;
+import com.zeebra.domain.product.repository.FavoriteProductRepository;
+import com.zeebra.domain.product.repository.OptionNameRepository;
+import com.zeebra.domain.product.repository.ProductOptionQueryRepository;
+import com.zeebra.domain.product.repository.ProductOptionRepository;
+import com.zeebra.domain.product.repository.ProductQueryRepository;
+import com.zeebra.domain.product.repository.ProductRepository;
+import com.zeebra.domain.product.repository.SalesRepository;
 import com.zeebra.global.ApiResponse;
+import com.zeebra.global.ErrorCode.CommonErrorCode;
+import com.zeebra.global.exception.BusinessException;
 import com.zeebra.global.web.KeywordSanitizer;
+
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-
-import org.springframework.data.domain.Pageable;
-
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.NoSuchElementException;
 
 @Service
 @RequiredArgsConstructor
@@ -310,4 +332,8 @@ public class ProductServiceImpl implements ProductService {
         Pagination pagination = new Pagination(pageable.getPageNumber(), pageable.getPageSize(), totalCount, totalPage);
         return ApiResponse.success(new FavoriteProductList(pagination, getFavoriteProductResponses));
     }
+
+	public void validateProductOptionId(Long productOptionId) {
+		productOptionRepository.findById(productOptionId).orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND, "존재하지 않는 상품입니다."));
+	}
 }

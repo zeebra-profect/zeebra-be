@@ -69,11 +69,20 @@ public class Product extends BaseEntity {
                 .build();
     }
 
+    public Boolean hasFavoriteProducts() {
+        return this.favoriteProductCount > 0;
+    }
+
     public void increaseFavoriteProductCount() {
         this.favoriteProductCount++;
     }
 
     public void decreaseFavoriteProductCount() {
-        this.favoriteProductCount--;
+        if (favoriteProductCount <= 0) {
+            throw new IllegalStateException(
+                    "관심상품 개수가 0 이하인데 감소를 시도했습니다. 현재 값: " + favoriteProductCount
+            );
+        }
+        favoriteProductCount--;
     }
 }

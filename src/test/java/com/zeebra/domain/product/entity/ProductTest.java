@@ -9,14 +9,43 @@ import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ProductTest {
 
 
-    @DisplayName("관심상품 갯수를 증가시킨다.")
+    @DisplayName("관심상품이 하나라도 있으면 true를 반환한다")
     @Test
-    void increaseFavoriteProductCount() {
+    void returnsTrueWhenFavoriteProductsExist() {
+        // given
+        Product product = createProduct("test1");
+        product.increaseFavoriteProductCount();
+        // when
+        Boolean hasFavoriteProducts = product.hasFavoriteProducts();
+
+        // then
+        assertThat(hasFavoriteProducts).isTrue();
+    }
+
+
+        @DisplayName("관심상품이 없으면 false를 반환한다")
+        @Test
+        void returnsFalseWhenNoFavoriteProducts() {
+            // given
+            Product product = createProduct("test1");
+
+            // when
+            Boolean hasFavoriteProducts = product.hasFavoriteProducts();
+
+            // then
+            assertThat(hasFavoriteProducts).isFalse();
+
+        }
+
+    @DisplayName("관심상품 갯수를 증가시킨다")
+    @Test
+    void increaseFavoriteProductCount_incrementsCount() {
         // given
         Product product = createProduct("test1");
 
@@ -28,9 +57,9 @@ class ProductTest {
     }
 
 
-    @DisplayName("관심상품 갯수를 감소시킨다.")
+    @DisplayName("관심상품이 있을 때만 감소시킬 수 있다")
     @Test
-    void decreaseFavoriteProductCount() {
+    void decreaseFavoriteProductCount_decrementsOnlyWhenCountGreaterThanZero() {
         // given
         Product product = createProduct("test1");
         product.increaseFavoriteProductCount();
@@ -42,6 +71,22 @@ class ProductTest {
         assertThat(product.getFavoriteProductCount()).isEqualTo(0);
 
     }
+
+
+        @DisplayName("관심상품이 없을 때 감소시키면 예외가 발생한다")
+        @Test
+        void decreaseFavoriteProductCount_throwsException_whenNoFavorites() {
+            // given
+            Product product = createProduct("test1");
+
+            // when & then
+            assertThatThrownBy(product::decreaseFavoriteProductCount)
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("관심상품 개수가 0 이하인데 감소를 시도했습니다")
+                    .hasMessageContaining("현재 값: 0");
+
+
+        }
 
 
     private Product createProduct(String name) {

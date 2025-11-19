@@ -68,19 +68,12 @@ public class Product extends BaseEntity {
                 .thumbnail(request.productThumbnail())
                 .build();
     }
+
     public void increaseFavoriteProductCount() {
         this.favoriteProductCount++;
     }
 
     public void decreaseFavoriteProductCount() {
         this.favoriteProductCount--;
-    }
-
-    public void increaseReviewCount() {
-        this.reviewCount++;
-    }
-
-    public void decreaseReviewCount() {
-        this.reviewCount--;
     }
 }

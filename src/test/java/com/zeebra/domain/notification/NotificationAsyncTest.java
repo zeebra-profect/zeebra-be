@@ -1,5 +1,6 @@
 package com.zeebra.domain.notification;
 
+import com.zeebra.ZeebraApplication;
 import com.zeebra.domain.member.entity.Gender;
 import com.zeebra.domain.member.entity.Member;
 import com.zeebra.domain.member.entity.Role;
@@ -16,11 +17,13 @@ import com.zeebra.domain.order.entity.Order;
 import com.zeebra.domain.order.repository.OrderHistoryRepository;
 import com.zeebra.domain.order.repository.OrderRepository;
 import com.zeebra.domain.order.service.OrderService;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.security.access.AccessDeniedException;
 
 import javax.sql.DataSource;
@@ -42,9 +45,14 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
-@SpringBootTest
+@SpringBootTest(classes = ZeebraApplication.class)
+@EnableAsync
 public class NotificationAsyncTest {
 
+    @Autowired
+    private static DataSource staticDataSource;
+    @Autowired
+    private DataSource dataSource;
     @Autowired
     private MemberRepository memberRepository;
     @Autowired
@@ -56,9 +64,20 @@ public class NotificationAsyncTest {
     @Autowired
     private OrderRepository orderRepository;
     @Autowired
-    private DataSource dataSource;
-    @Autowired
     private OrderHistoryRepository orderHistoryRepository;
+
+    @AfterAll
+    public static void afterAllTruncate() throws Exception {
+        try (Connection conn = staticDataSource.getConnection();
+             Statement stmt = conn.createStatement()) {
+            stmt.execute("TRUNCATE TABLE notification, order_history, orders, members RESTART IDENTITY CASCADE");
+        }
+    }
+
+    @Autowired
+    public void setDataSource(DataSource ds) {
+        staticDataSource = ds;  // static에 수동 할당
+    }
 
     @BeforeEach
     public void truncate() throws Exception {
@@ -330,7 +349,6 @@ public class NotificationAsyncTest {
                 });
     }
 
-
     // 헬퍼 메서드
     private Member createTestMember(String loginId, String email) {
         return memberRepository.save(Member.builder().userLoginId(loginId).memberName(loginId).memberEmail(email).nickname("testMember").birth(LocalDate.now()).gender(Gender.WOMAN).passwordHash("hashedPassword").role(Role.USER).build());
@@ -379,7 +397,7 @@ public class NotificationAsyncTest {
                     ? orders.get(index)
                     : null;
 
-            NotificationRequest req = new NotificationRequest(memberId, type, order);
+            NotificationRequest req = new NotificationRequest(memberId, type, order, null);
             notificationRequests.add(req);
         }
 
@@ -394,7 +412,7 @@ public class NotificationAsyncTest {
             CreateOrderResponse order = orderService.createOrder(member.getId(), orderRequest);
             Order savedOrder = orderRepository.findById(order.order().orderId()).get();
             orders.add(savedOrder);
-            System.out.println("orderSaved!: " + savedOrder.getId());
+//            System.out.println("orderSaved!: " + savedOrder.getId());
         }
         return orders;
     }

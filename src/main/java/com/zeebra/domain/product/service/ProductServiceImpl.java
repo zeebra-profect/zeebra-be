@@ -1,9 +1,5 @@
 package com.zeebra.domain.product.service;
 
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.NoSuchElementException;
-
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
@@ -14,29 +10,10 @@ import com.zeebra.domain.category.entity.Category;
 import com.zeebra.domain.member.entity.Member;
 import com.zeebra.domain.member.entity.Role;
 import com.zeebra.domain.member.repository.MemberRepository;
-import com.zeebra.domain.product.dto.ColorOptionResponse;
-import com.zeebra.domain.product.dto.FavoriteProductList;
-import com.zeebra.domain.product.dto.FavoriteProductResponse;
-import com.zeebra.domain.product.dto.GetFavoriteProductResponse;
-import com.zeebra.domain.product.dto.GetProductDetailResponse;
-import com.zeebra.domain.product.dto.Pagination;
-import com.zeebra.domain.product.dto.ProductDetailResponse;
-import com.zeebra.domain.product.dto.ProductRequest;
-import com.zeebra.domain.product.dto.ProductResponse;
-import com.zeebra.domain.product.dto.SearchProductResponse;
-import com.zeebra.domain.product.dto.SizeOptionResponse;
-import com.zeebra.domain.product.dto.SizeOptionResponseList;
-import com.zeebra.domain.product.entity.FavoriteProduct;
-import com.zeebra.domain.product.entity.OptionName;
-import com.zeebra.domain.product.entity.Product;
-import com.zeebra.domain.product.entity.ProductSort;
-import com.zeebra.domain.product.repository.FavoriteProductRepository;
-import com.zeebra.domain.product.repository.OptionNameRepository;
-import com.zeebra.domain.product.repository.ProductOptionQueryRepository;
-import com.zeebra.domain.product.repository.ProductOptionRepository;
-import com.zeebra.domain.product.repository.ProductQueryRepository;
-import com.zeebra.domain.product.repository.ProductRepository;
-import com.zeebra.domain.product.repository.SalesRepository;
+import com.zeebra.domain.member.service.MemberService;
+import com.zeebra.domain.product.dto.*;
+import com.zeebra.domain.product.entity.*;
+import com.zeebra.domain.product.repository.*;
 import com.zeebra.global.ApiResponse;
 import com.zeebra.global.ErrorCode.CommonErrorCode;
 import com.zeebra.global.exception.BusinessException;
@@ -44,9 +21,19 @@ import com.zeebra.global.web.KeywordSanitizer;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+import org.springframework.data.domain.Pageable;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.NoSuchElementException;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository productRepository;
@@ -57,6 +44,7 @@ public class ProductServiceImpl implements ProductService {
     private final FavoriteProductRepository favoriteProductRepository;
     private final ProductOptionQueryRepository productOptionQueryRepository;
     private final OptionNameRepository optionNameRepository;
+    private final MemberService memberService;
 
     private List<GetProductDetailResponse> toProductDetailResponse(List<Product> products) {
         return products.stream()
@@ -104,31 +92,6 @@ public class ProductServiceImpl implements ProductService {
                 favoriteProduct.getProductId(),
                 favoriteProduct.getMemberId(),
                 favoriteProduct.getCreatedTime());
-    }
-
-    private Product toProduct(ProductRequest request) {
-        return new Product(
-                request.brandId(),
-                request.categoryId(),
-                request.productName(),
-                request.productDescription(),
-                request.modelName(),
-                request.productThumbnail(),
-                request.productImages()
-        );
-    }
-
-    private ProductResponse toProductResponse(Product product) {
-        return new ProductResponse(
-                product.getId(),
-                product.getBrandId(),
-                product.getCategoryId(),
-                product.getName(),
-                product.getDescription(),
-                product.getModelNumber(),
-                product.getThumbnail(),
-                product.getImages(),
-                product.getCreatedTime());
     }
 
     private List<BrandResponse> toBrandListResponse(List<Brand> brands) {
@@ -259,19 +222,10 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ApiResponse<ProductResponse> createProduct(Long memberId, ProductRequest request) {
-        try {
-            Member member = memberRepository.findById(memberId).orElseThrow(
-                    () -> new NoSuchElementException("해당하는 사용자가 없습니다."));
-            if (member.getRole() != Role.ADMIN) {
-                return ApiResponse.error(null, "상품은 관리자만 생성할 수 있습니다.");
-            }
-            Product product = productRepository.save(toProduct(request));
-            return ApiResponse.success(toProductResponse(product));
-        } catch (NoSuchElementException e) {
-            return ApiResponse.error(null, e.getMessage());
-        } catch (Exception e) {
-            return ApiResponse.error(null, "상품을 등록하는 과정에서 오류가 발생했습니다.");
-        }
+        Member member = memberService.findByMemberId(memberId);
+        member.validateAdminPermission();
+        Product product = productRepository.save(Product.from(request));
+        return ApiResponse.success(ProductResponse.from(product));
     }
 
     @Override

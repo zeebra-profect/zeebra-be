@@ -1,10 +1,9 @@
 package com.zeebra;
 
 import org.springframework.boot.SpringApplication;
-import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-@EnableJpaAuditing
-//@SpringBootApplication
+@SpringBootApplication
 public class ZeebraApplicationTests {
 
     public static void main(String[] args) {

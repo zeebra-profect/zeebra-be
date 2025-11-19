@@ -1,7 +1,10 @@
 package com.zeebra.domain.product.entity;
 
+import com.zeebra.domain.product.dto.ProductRequest;
 import com.zeebra.global.jpa.BaseEntity;
 import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -9,7 +12,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 public class Product extends BaseEntity {
 
@@ -17,10 +20,13 @@ public class Product extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
     private Long brandId;
 
+    @Column(nullable = false)
     private Long categoryId;
 
+    @Column(nullable = false)
     private String name;
 
     private String description;
@@ -37,6 +43,7 @@ public class Product extends BaseEntity {
 
     private LocalDateTime deletedAt;
 
+    @Builder
     public Product(Long brandId, Long categoryId, String name, String description, String modelNumber,
                    String thumbnail, List<String> images) {
         this.brandId = brandId;
@@ -50,6 +57,17 @@ public class Product extends BaseEntity {
         this.favoriteProductCount = 0;
     }
 
+    public static Product from(ProductRequest request) {
+        return Product.builder()
+                .brandId(request.brandId())
+                .categoryId(request.categoryId())
+                .name(request.productName())
+                .description(request.productDescription())
+                .modelNumber(request.modelName())
+                .images(request.productImages())
+                .thumbnail(request.productThumbnail())
+                .build();
+    }
     public void increaseFavoriteProductCount() {
         this.favoriteProductCount++;
     }

@@ -28,6 +28,11 @@ public class ChatSocketController {
 
     ) {
         try { //️ 2. try-catch 블록 추가
+            if (principal == null) {
+                log.warn(" WebSocket - 인증되지 않은 사용자 메세지 전송 시도: (Room : {})", requestDto.getChatRoomId());
+                return;
+            }
+
             UsernamePasswordAuthenticationToken auth =
                     (UsernamePasswordAuthenticationToken) principal;
 
@@ -35,7 +40,7 @@ public class ChatSocketController {
                     (JwtProvider.JwtUserPrincipal) auth.getPrincipal();
 
             Long currentMemberId = userPrincipal.getMemberId();
-            System.out.println("curmemId : " + currentMemberId);
+            System.out.println("currentMemId : " + currentMemberId);
             log.info(" [WebSocket] 메시지 수신: (Room: {}, User: {})",
                     requestDto.getChatRoomId(), currentMemberId);
             ChatMessageResponseDto savedMessage = chatService.saveMessage(requestDto, currentMemberId);

@@ -49,11 +49,17 @@ public class SecurityConfig {
 				.requestMatchers(SWAGGER_WHITELIST).permitAll()
 				.requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**").permitAll()
 				.requestMatchers("/api/auth/**").permitAll()
-                    .requestMatchers(HttpMethod.POST, "/api/chat/rooms").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/chat/rooms/**").permitAll()
+                    .requestMatchers("/ws/chat/**").permitAll()
+                    .requestMatchers("/api/chat/group/**").permitAll()
+
+                    .requestMatchers("/api/chat/dm/**").authenticated()
+                    .requestMatchers("/api/chat/rooms/{roomId}/leave").authenticated()
+                    .requestMatchers("/api/chat/rooms/{roomId}/trade").authenticated()
+
 				.anyRequest().authenticated())
 			.csrf(csrf -> csrf
-				.ignoringRequestMatchers("/api/auth/**", "/api/products", "/api/products/**")
+				.ignoringRequestMatchers("/api/auth/**", "/api/products", "/api/products/**",
+                        "/ws/chat/**", "/api/chat/group/**")
 				.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
 			.formLogin(AbstractHttpConfigurer::disable)
 			.httpBasic(AbstractHttpConfigurer::disable)

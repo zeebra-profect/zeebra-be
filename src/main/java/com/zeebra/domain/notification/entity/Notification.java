@@ -20,15 +20,17 @@ public class Notification extends BaseEntity {
     private NotificationType notificationType;
     private boolean isRead;
     private String url;
+    private String imgUrl;
     @Version
     private Long version;
 
 
     @Builder
-    public Notification(Long memberId, NotificationType notificationType, String url) {
+    public Notification(Long memberId, NotificationType notificationType, String url, String imgUrl) {
         this.memberId = memberId;
         this.notificationType = notificationType;
         this.url = url;
+        this.imgUrl = imgUrl;
         this.isRead = false;
     }
 

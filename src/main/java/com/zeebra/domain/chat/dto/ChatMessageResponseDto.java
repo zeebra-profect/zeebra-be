@@ -23,13 +23,14 @@ public record ChatMessageResponseDto (
     public static ChatMessageResponseDto from(ChatMessage chatMessage, Member member) {
         ChatRoomMember sender = chatMessage.getChatRoomMember();
 
+        String senderName = (member != null) ? member.getNickname() : sender.getMemberName();
         String profileImageUrl = (member != null) ? member.getMemberImage() : null;
 
         return new ChatMessageResponseDto(
                 chatMessage.getId(),
-                chatMessage.getChatRoomMember().getChatRoom().getId(),
-                chatMessage.getChatRoomMember().getMemberId(),
-                chatMessage.getChatRoomMember().getMemberName(),
+                sender.getChatRoom().getId(),
+                sender.getMemberId(),
+                senderName,
                 profileImageUrl,
                 chatMessage.getMessageType(),
                 chatMessage.getMessageContent(),

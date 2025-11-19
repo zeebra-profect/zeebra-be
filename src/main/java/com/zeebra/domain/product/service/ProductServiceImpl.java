@@ -91,8 +91,6 @@ public class ProductServiceImpl implements ProductService {
 
             product.increaseFavoriteProductCount();
 
-            productRepository.save(product);
-
             return ApiResponse.success(FavoriteProductResponse.toFavoriteProductResponse(favoriteProduct));
         }
     }
@@ -115,8 +113,6 @@ public class ProductServiceImpl implements ProductService {
         favoriteProductRepository.delete(favoriteProduct);
 
         product.decreaseFavoriteProductCount();
-
-        productRepository.save(product);
 
         return ApiResponse.successMessage("관심 상품 삭제에 성공했습니다.");
     }

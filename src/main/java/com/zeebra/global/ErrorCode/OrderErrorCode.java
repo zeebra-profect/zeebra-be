@@ -18,7 +18,7 @@ public enum OrderErrorCode implements ErrorCode {
 	ACCESS_DENIED("E403_ACCESS_DENIED", HttpStatus.FORBIDDEN,"접근 권한이 없습니다."),
 
 	ORDER_NOT_FOUND("E404_ORDER_NOT_FOUND", HttpStatus.NOT_FOUND, "주문을 찾을 수 없습니다"),
-	PRODUCT_NOT_FOUND("E404_PRODUCT_NOT_FOUND", HttpStatus.NOT_FOUND, "해당 상품을 찾을 수 없습니다."),
+	PRODUCT_NOT_FOUND("E404_PRODUCT_NOT_FOUND", HttpStatus.NOT_FOUND, "상품 정보를 찾을 수 없습니다"),
 
 	ORDER_ALREADY_PROCESSED("E409_ORDER_ALREADY_PROCESSED", HttpStatus.CONFLICT, "이미 처리 중이거나 완료된 주문입니다"),
 	ORDER_ALREADY_CONFIRMED("E409_ORDER_ALREADY_CONFIRMED", HttpStatus.CONFLICT, "이미 확정된 주문입니다"),

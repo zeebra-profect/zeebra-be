@@ -2,8 +2,6 @@ package com.zeebra.domain.order.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
 
 import org.hibernate.annotations.Comment;
 
@@ -45,6 +43,10 @@ public class Order extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private OrderStatus orderStatus;
 
+	@Column(name = "order_type", nullable = false)
+	@Enumerated(EnumType.STRING)
+	private OrderType orderType;
+
     @Column(name = "order_time", nullable = false)
     private LocalDateTime orderTime;
 
@@ -58,6 +60,9 @@ public class Order extends BaseEntity {
     @Column(name = "total_amount", nullable = false, scale = 2, precision = 19)
     private BigDecimal totalAmount;
 
+	@Column(name = "trade_id")
+	private Long tradeId;
+
     @Column(name = "use_point", nullable = false)
     private int usePoint;
 
@@ -65,102 +70,72 @@ public class Order extends BaseEntity {
     private String idempotencyKey;
 
 	@Builder
-    public Order(Long memberId, String orderNumber, OrderStatus orderStatus, LocalDateTime orderTime, int totalQuantity, BigDecimal totalPrice, BigDecimal totalAmount, int usePoint, String idempotencyKey) {
+    public Order(Long memberId, String orderNumber, OrderStatus orderStatus, OrderType orderType, LocalDateTime orderTime, int totalQuantity, BigDecimal totalPrice, BigDecimal totalAmount, Long tradeId, int usePoint, String idempotencyKey) {
         this.memberId = memberId;
         this.orderNumber = orderNumber;
         this.orderStatus = orderStatus != null ? orderStatus : OrderStatus.CREATED;
+		this.orderType = orderType;
         this.orderTime = orderTime;
         this.totalQuantity = totalQuantity;
         this.totalPrice = totalPrice;
         this.totalAmount = totalAmount;
+		this.tradeId = tradeId;
         this.usePoint = usePoint;
         this.idempotencyKey = idempotencyKey;
     }
 
-	public static Order createOrder(Long memberId, String orderNumber, LocalDateTime orderTime, int totalQuantity, BigDecimal totalPrice, BigDecimal totalAmount, int usePoint, String idempotencyKey) {
+	public static Order createOrder(Long memberId, String orderNumber, OrderType orderType, LocalDateTime orderTime, int totalQuantity, BigDecimal totalPrice, BigDecimal totalAmount, Long tradeId,int usePoint, String idempotencyKey) {
 		return Order.builder()
 			.memberId(memberId)
 			.orderNumber(orderNumber)
 			.orderStatus(OrderStatus.CREATED)
+			.orderType(orderType)
 			.orderTime(orderTime)
 			.totalQuantity(totalQuantity)
 			.totalPrice(totalPrice)
 			.totalAmount(totalAmount)
+			.tradeId(tradeId)
 			.usePoint(usePoint)
 			.idempotencyKey(idempotencyKey)
 			.build();
 	}
 
 	public void updateOrderStatus(OrderStatus newStatus) {
-		validateStatusTransition(newStatus);
+		this.orderStatus.validateStatusTransition(newStatus);
 		this.orderStatus = newStatus;
 	}
 
-	public void transitionToPaymentPending() {
-		if (this.orderStatus != OrderStatus.CREATED) {
-			throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
+	public void validateCreatable() {
+		if (!this.orderStatus.isProcessing()) {
+			throw new BusinessException(OrderErrorCode.ALREADY_IN_PROGRESS);
 		}
+	}
+
+	public void transitionToPaymentPending() {
+		this.orderStatus.validateStatusTransition(OrderStatus.PAYMENT_PENDING);
 		this.orderStatus = OrderStatus.PAYMENT_PENDING;
 	}
 
 	public void transitionToPaid() {
-		if (this.orderStatus != OrderStatus.PAYMENT_PENDING) {
-			throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
-		}
+		this.orderStatus.validateStatusTransition(OrderStatus.PAID);
 		this.orderStatus = OrderStatus.PAID;
 	}
 
-	public void cancel() {
-		if (!canCancel()) {
-			throw new BusinessException(OrderErrorCode.CANNOT_BE_CANCELLED);
-		}
+	public void transitionToCancel() {
+		this.orderStatus.validateStatusTransition(OrderStatus.CANCELED);
 		this.orderStatus = OrderStatus.CANCELED;
 	}
 
+	public void transitionToRefund() {
+		this.orderStatus.validateStatusTransition(OrderStatus.REFUNDED);
+		this.orderStatus = OrderStatus.REFUNDED;
+	}
+
 	public boolean canCancel() {
-		return this.orderStatus == OrderStatus.CREATED
-			|| this.orderStatus == OrderStatus.PAYMENT_PENDING
-			|| this.orderStatus == OrderStatus.PAID;
+		return this.orderStatus.isCancelable();
 	}
 
 	public boolean canRefund() {
-		return this.orderStatus == OrderStatus.PAID
-			|| this.orderStatus == OrderStatus.CONFIRMED;
-	}
-	private void validateStatusTransition(OrderStatus newStatus) {
-		Map<OrderStatus, List<OrderStatus>> allowedTransitions = Map.of(
-			OrderStatus.CREATED, List.of(
-				OrderStatus.PAYMENT_PENDING,
-				OrderStatus.CANCELED,
-				OrderStatus.FAILED
-			),
-			OrderStatus.PAYMENT_PENDING, List.of(
-				OrderStatus.PAID,
-				OrderStatus.PAYMENT_FAILED,
-				OrderStatus.CANCELED
-			),
-			OrderStatus.PAYMENT_FAILED, List.of(
-				OrderStatus.CANCELED,
-				OrderStatus.PAYMENT_PENDING,
-				OrderStatus.FAILED,
-				OrderStatus.CREATED,
-				OrderStatus.PAID
-			),
-			OrderStatus.PAID, List.of(
-				OrderStatus.CONFIRMED,
-				OrderStatus.CANCELED
-			),
-			OrderStatus.CONFIRMED, List.of(
-				OrderStatus.COMPLETED,
-				OrderStatus.REFUNDED,
-				OrderStatus.PARTIALLY_REFUNDED
-			)
-		);
-
-		List<OrderStatus> allowed = allowedTransitions.getOrDefault(this.orderStatus, List.of());
-
-		if (!allowed.contains(newStatus)) {
-			throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
-		}
+		return this.orderStatus.isRefundable();
 	}
 }

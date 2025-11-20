@@ -24,9 +24,14 @@ public class OptionName extends BaseEntity {
 
     private Boolean useWn;
 
-    public OptionName(String name, String value, Boolean useWn) {
+    public OptionName(String name, String value) {
         this.name = name;
         this.value = value;
-        this.useWn = useWn;
+    }
+
+    public void validateOptionNameIsColor() {
+        if (!"color".equals(name)) {
+            throw new IllegalStateException("옵션이 색상값이 아닙니다.");
+        }
     }
 }

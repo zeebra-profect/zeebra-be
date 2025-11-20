@@ -19,6 +19,8 @@ public interface OrderService {
 
 	void updateOrderStatus(Long orderId, OrderStatus orderStatus, String idempotencyKey);
 
+	void updateOrderItemStatus(Long orderId, Long orderItemId, OrderItemStatus orderItemStatus);
+
 	void updateAllOrderItemsStatus(Long orderId, OrderItemStatus orderItemStatus);
 
 	ReadOrderListResponse getOrderList(Long memberId, LocalDate startDate, LocalDate endDate, OrderStatus orderStatus, Pageable pageable);

@@ -1,216 +1,321 @@
 package com.zeebra.domain.product.repository;
 
-import com.querydsl.core.types.Order;
+import com.querydsl.core.Tuple;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
-import com.querydsl.core.types.dsl.Expressions;
-import com.querydsl.core.types.dsl.NumberExpression;
-import com.querydsl.core.types.dsl.StringTemplate;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.zeebra.domain.brand.entity.Brand;
-import com.zeebra.domain.brand.entity.QBrand;
-import com.zeebra.domain.brand.repository.BrandRepository;
 import com.zeebra.domain.category.entity.Category;
-import com.zeebra.domain.category.entity.QCategory;
-import com.zeebra.domain.product.dto.SizeOptionResponse;
 import com.zeebra.domain.product.entity.*;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
 import lombok.RequiredArgsConstructor;
-import org.springframework.boot.autoconfigure.data.web.SpringDataWebProperties;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Repository
 public class ProductQueryRepository {
 
     private final QProduct product = QProduct.product;
-    private final QBrand brand = QBrand.brand;
-    private final QCategory category = QCategory.category;
     private final QProductOption productOption = QProductOption.productOption;
     private final QSales sales = QSales.sales;
-    private final JPAQueryFactory queryFactory;
-    private final QProductSearchMv productSearchMv = QProductSearchMv.productSearchMv;
     private final QOptionCombination optionCombination = QOptionCombination.optionCombination;
     private final QOptionName optionName = QOptionName.optionName;
     private final QFavoriteProduct favoriteProduct = QFavoriteProduct.favoriteProduct;
 
-    private StringTemplate norm(String keyword) {
-        // DB normalize_search 호출은 이미 클린된 문자열로만
-        return Expressions.stringTemplate("public.normalize_search({0})", Expressions.constant(keyword == null ? "" : keyword));
+    private final JPAQueryFactory queryFactory;
+    private final EntityManager em;
+
+    /**
+     * 검색어 전처리
+     * "갤럭시 버즈" -> "갤럭시:* & 버즈:*"
+     */
+    private String preprocessKeyword(String keyword) {
+        String cleaned = keyword.trim()
+                .replaceAll("[^가-힣a-zA-Z0-9\\s]", " ")
+                .replaceAll("\\s+", " ");
+
+        String[] words = cleaned.split(" ");
+        StringBuilder query = new StringBuilder();
+
+        for (int i = 0; i < words.length; i++) {
+            if (!words[i].isEmpty()) {
+                query.append(words[i]).append(":*");
+                if (i < words.length - 1) {
+                    query.append(" & ");
+                }
+            }
+        }
+
+        return query.toString();
     }
 
-    private boolean isShort(String keyword) {
-        if (keyword == null) return true;
-        return keyword.codePointCount(0, keyword.length()) < 3;
-    }
-
+    /**
+     * 상품 검색 (Full-Text Search 포함)
+     */
     public List<Product> searchProduct(String keyword,
                                        List<Long> categoryIds,
                                        List<Long> brandIds,
                                        Pageable pageable,
                                        ProductSort productSort) {
-        if (keyword == null) {
-            return queryFactory
-                    .selectFrom(product)
-                    .where(
-                            findByBrandId(brandIds),
-                            findByCategoryId(categoryIds)
-                    )
-                    .orderBy(buildOrderSpecifier(productSort, true, null, null)) // 기본 정렬
-                    .offset(pageable.getOffset())
-                    .limit(pageable.getPageSize())
-                    .fetch();
+        // 키워드가 없으면 일반 쿼리 (QueryDSL 사용)
+        if (keyword == null || keyword.isBlank()) {
+            return searchWithoutKeyword(categoryIds, brandIds, pageable, productSort);
         }
 
-        StringTemplate normKeyword = norm(keyword);
-
-        if (isShort(keyword)) {
-            BooleanExpression likeCond = Expressions.booleanTemplate(
-                    "{0} LIKE ('%' || {1} || '%')", productSearchMv.searchTextNorm, normKeyword
-            );
-            NumberExpression<Integer> pos = Expressions.numberTemplate(
-                    Integer.class, "strpos({0}, {1})", productSearchMv.searchTextNorm, normKeyword
-            );
-
-            return queryFactory
-                    .select(product)
-                    .from(productSearchMv)
-                    .join(product).on(product.id.eq(productSearchMv.id))
-                    .where(
-                            likeCond,
-                            findByBrandId(brandIds),
-                            findByCategoryId(categoryIds)
-                    )
-                    .orderBy(buildOrderSpecifier(productSort, true, null, pos))
-                    .offset(pageable.getOffset())
-                    .limit(pageable.getPageSize())
-                    .fetch();
-        } else {
-
-            NumberExpression<Double> score = Expressions.numberTemplate(
-                    Double.class, "similarity({0}, {1})", productSearchMv.searchTextNorm, normKeyword
-            );
-
-            BooleanExpression simFilter = score.goe(0.1);
-
-            return queryFactory
-                    .select(product)
-                    .from(productSearchMv)
-                    .join(product).on(product.id.eq(productSearchMv.id))
-                    .where(
-                            simFilter,
-                            findByBrandId(brandIds),
-                            findByCategoryId(categoryIds)
-                    )
-                    .orderBy(buildOrderSpecifier(productSort, false, score, null))
-                    .offset(pageable.getOffset())
-                    .limit(pageable.getPageSize())
-                    .fetch();
-        }
+        // 키워드가 있으면 FTS 쿼리 (Native Query 사용)
+        return searchWithKeyword(keyword, categoryIds, brandIds, pageable, productSort);
     }
 
+    /**
+     * 키워드 없이 검색 (QueryDSL)
+     */
+    private List<Product> searchWithoutKeyword(List<Long> categoryIds,
+                                               List<Long> brandIds,
+                                               Pageable pageable,
+                                               ProductSort productSort) {
+        return queryFactory
+                .selectFrom(product)
+                .where(
+                        findByBrandId(brandIds),
+                        findByCategoryId(categoryIds)
+                )
+                .orderBy(buildOrderSpecifier(productSort))
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
+    }
 
-    public List<Brand> filteredBrand(String keyword, List<Long> categoryIds,
+    /**
+     * 키워드로 검색 (Native Query)
+     */
+    private List<Product> searchWithKeyword(String keyword,
+                                            List<Long> categoryIds,
+                                            List<Long> brandIds,
+                                            Pageable pageable,
+                                            ProductSort productSort) {
+        String processedQuery = preprocessKeyword(keyword);
+
+        // 동적 SQL 생성
+        StringBuilder sql = new StringBuilder("""
+            SELECT p.*
+            FROM product p
+            INNER JOIN product_search_document psd ON p.id = psd.product_id
+            WHERE psd.search_vector @@ to_tsquery('simple', :query)
+            AND ts_rank(psd.search_vector, to_tsquery('simple', :query)) >= 0.3
+            """);
+
+        // 동적 WHERE 조건 추가
+        if (categoryIds != null && !categoryIds.isEmpty()) {
+            sql.append(" AND p.category_id IN :categoryIds");
+        }
+        if (brandIds != null && !brandIds.isEmpty()) {
+            sql.append(" AND p.brand_id IN :brandIds");
+        }
+
+        // 동적 ORDER BY
+        sql.append(" ORDER BY ");
+        sql.append(buildNativeOrderClause(productSort));
+
+        // 쿼리 실행
+        Query query = em.createNativeQuery(sql.toString(), Product.class);
+        query.setParameter("query", processedQuery);
+
+        if (categoryIds != null && !categoryIds.isEmpty()) {
+            query.setParameter("categoryIds", categoryIds);
+        }
+        if (brandIds != null && !brandIds.isEmpty()) {
+            query.setParameter("brandIds", brandIds);
+        }
+
+        return query
+                .setFirstResult((int) pageable.getOffset())
+                .setMaxResults(pageable.getPageSize())
+                .getResultList();
+    }
+
+    /**
+     * Native Query용 ORDER BY 절 생성
+     */
+    private String buildNativeOrderClause(ProductSort productSort) {
+        StringBuilder order = new StringBuilder();
+
+        // FTS rank를 최우선 정렬 기준으로
+        order.append("ts_rank(psd.search_vector, to_tsquery('simple', :query)) DESC, ");
+
+        if (productSort != null) {
+            switch (productSort) {
+                case REVIEW_COUNT_LEAST:
+                    order.append("p.review_count ASC, ");
+                    break;
+                case REVIEW_COUNT_MOST:
+                    order.append("p.review_count DESC, ");
+                    break;
+            }
+        }
+
+        order.append("p.id DESC");
+        return order.toString();
+    }
+
+    /**
+     * 필터링된 브랜드 조회 (Native Query)
+     */
+    public List<Brand> filteredBrand(String keyword,
+                                     List<Long> categoryIds,
                                      List<Long> brandIds) {
-        String safeWord = (keyword == null) ? "" : keyword.trim();
-        boolean isShort = safeWord.length() < 3;
-        StringTemplate normKeyword = Expressions.stringTemplate(
-                "public.normalize_search({0})", Expressions.constant(keyword == null ? "" : keyword)
-        );
+        String processedQuery = preprocessKeyword(keyword);
 
-        if (isShort) {
-            BooleanExpression likeCond = Expressions.booleanTemplate(
-                    "{0} LIKE ('%' || {1} || '%')", productSearchMv.searchTextNorm, normKeyword
-            );
+        StringBuilder sql = new StringBuilder("""
+            SELECT DISTINCT b.*
+            FROM brand b
+            INNER JOIN product_search_document psd ON b.id = psd.brand_id
+            WHERE psd.search_vector @@ to_tsquery('simple', :query)
+            """);
 
-            return queryFactory
-                    .selectDistinct(brand)
-                    .from(productSearchMv)
-                    .join(product).on(product.id.eq(productSearchMv.id))
-                    .join(brand).on(brand.id.eq(product.brandId))
-                    .where(
-                            likeCond,
-                            findByCategoryId(categoryIds),
-                            findByBrandId(brandIds)
-                    )
-                    .orderBy(brand.id.asc())
-                    .fetch();
-        } else {
-            NumberExpression<Double> score = Expressions.numberTemplate(
-                    Double.class, "similarity({0}, {1})", productSearchMv.searchTextNorm, normKeyword
-            );
-
-            BooleanExpression simFilter = score.goe(0.1);
-
-            return queryFactory
-                    .selectDistinct(brand)
-                    .from(productSearchMv)
-                    .join(product).on(product.id.eq(productSearchMv.id))
-                    .join(brand).on(brand.id.eq(product.brandId))
-                    .where(
-                            simFilter,
-                            findByCategoryId(categoryIds),
-                            findByBrandId(brandIds)
-                    )
-                    .orderBy(brand.id.asc())
-                    .fetch();
+        if (categoryIds != null && !categoryIds.isEmpty()) {
+            sql.append(" AND psd.category_id IN :categoryIds");
         }
+        if (brandIds != null && !brandIds.isEmpty()) {
+            sql.append(" AND b.id IN :brandIds");
+        }
+
+        sql.append(" ORDER BY b.id ASC");
+
+        Query query = em.createNativeQuery(sql.toString(), Brand.class);
+        query.setParameter("query", processedQuery);
+
+        if (categoryIds != null && !categoryIds.isEmpty()) {
+            query.setParameter("categoryIds", categoryIds);
+        }
+        if (brandIds != null && !brandIds.isEmpty()) {
+            query.setParameter("brandIds", brandIds);
+        }
+
+        return query.getResultList();
     }
 
-    public List<Category> filteredCategory(String keyword, List<Long> categoryIds, List<Long> brandIds) {
+    /**
+     * 필터링된 카테고리 조회 (Native Query)
+     */
+    public List<Category> filteredCategory(String keyword,
+                                           List<Long> categoryIds,
+                                           List<Long> brandIds) {
+        String processedQuery = preprocessKeyword(keyword);
 
-        String safeWord = (keyword == null) ? "" : keyword.trim();
-        boolean isShort = safeWord.length() < 3;
-        StringTemplate normKeyword = Expressions.stringTemplate(
-                "public.normalize_search({0})", Expressions.constant(keyword == null ? "" : keyword)
-        );
+        StringBuilder sql = new StringBuilder("""
+            SELECT DISTINCT c.*
+            FROM category c
+            INNER JOIN product_search_document psd ON c.id = psd.category_id
+            WHERE psd.search_vector @@ to_tsquery('simple', :query)
+            """);
 
-        if (isShort) {
-            BooleanExpression likeCond = Expressions.booleanTemplate(
-                    "{0} LIKE ('%' || {1} || '%')", productSearchMv.searchTextNorm, normKeyword
-            );
-
-            return queryFactory
-                    .selectDistinct(category)
-                    .from(productSearchMv)
-                    .join(product).on(product.id.eq(productSearchMv.id))
-                    .join(category).on(category.id.eq(product.categoryId))
-                    .where(
-                            likeCond,
-                            findByCategoryId(categoryIds),
-                            findByBrandId(brandIds)
-                    )
-                    .orderBy(category.id.asc())
-                    .fetch();
-        } else {
-            NumberExpression<Double> score = Expressions.numberTemplate(
-                    Double.class, "similarity({0}, {1})", productSearchMv.searchTextNorm, normKeyword
-            );
-
-            BooleanExpression simFilter = score.goe(0.1);
-
-            return queryFactory
-                    .selectDistinct(category)
-                    .from(productSearchMv)
-                    .join(product).on(product.id.eq(productSearchMv.id))
-                    .join(category).on(category.id.eq(product.categoryId))
-                    .where(
-                            simFilter,
-                            findByCategoryId(categoryIds),
-                            findByBrandId(brandIds)
-                    )
-                    .orderBy(category.id.asc())
-                    .fetch();
+        if (categoryIds != null && !categoryIds.isEmpty()) {
+            sql.append(" AND c.id IN :categoryIds");
         }
+        if (brandIds != null && !brandIds.isEmpty()) {
+            sql.append(" AND psd.brand_id IN :brandIds");
+        }
+
+        sql.append(" ORDER BY c.id ASC");
+
+        Query query = em.createNativeQuery(sql.toString(), Category.class);
+        query.setParameter("query", processedQuery);
+
+        if (categoryIds != null && !categoryIds.isEmpty()) {
+            query.setParameter("categoryIds", categoryIds);
+        }
+        if (brandIds != null && !brandIds.isEmpty()) {
+            query.setParameter("brandIds", brandIds);
+        }
+
+        return query.getResultList();
     }
 
+    /**
+     * 검색 결과 카운트
+     */
+    public long countFiltered(String keyword,
+                              List<Long> categoryIds,
+                              List<Long> brandIds) {
+        // 키워드가 없으면 일반 카운트 (QueryDSL)
+        if (keyword == null || keyword.isBlank()) {
+            Long count = queryFactory
+                    .select(product.count())
+                    .from(product)
+                    .where(
+                            findByBrandId(brandIds),
+                            findByCategoryId(categoryIds)
+                    )
+                    .fetchOne();
+            return count != null ? count : 0L;
+        }
+
+        // 키워드가 있으면 FTS 카운트 (Native Query)
+        String processedQuery = preprocessKeyword(keyword);
+
+        StringBuilder sql = new StringBuilder("""
+            SELECT COUNT(*)
+            FROM product p
+            INNER JOIN product_search_document psd ON p.id = psd.product_id
+            WHERE psd.search_vector @@ to_tsquery('simple', :query)
+            AND ts_rank(psd.search_vector, to_tsquery('simple', :query)) >= 0.3
+            """);
+
+        if (categoryIds != null && !categoryIds.isEmpty()) {
+            sql.append(" AND p.category_id IN :categoryIds");
+        }
+        if (brandIds != null && !brandIds.isEmpty()) {
+            sql.append(" AND p.brand_id IN :brandIds");
+        }
+
+        Query query = em.createNativeQuery(sql.toString());
+        query.setParameter("query", processedQuery);
+
+        if (categoryIds != null && !categoryIds.isEmpty()) {
+            query.setParameter("categoryIds", categoryIds);
+        }
+        if (brandIds != null && !brandIds.isEmpty()) {
+            query.setParameter("brandIds", brandIds);
+        }
+
+        return ((Number) query.getSingleResult()).longValue();
+    }
+
+    // ==================== QueryDSL 메서드들 (변경 없음) ====================
+
+    /**
+     * 여러 상품의 최저가 조회
+     */
+    public Map<Long, BigDecimal> lowPriceOfProductList(List<Long> productIds) {
+        if (productIds == null || productIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        List<Tuple> fetch = queryFactory
+                .select(sales.price.min(),
+                        productOption.productId)
+                .from(productOption)
+                .join(sales).on(sales.productOptionId.eq(productOption.id))
+                .where(productOption.productId.in(productIds))
+                .groupBy(productOption.productId)
+                .fetch();
+
+        return fetch.stream()
+                .collect(Collectors.toMap(
+                        tuple -> tuple.get(productOption.productId),
+                        tuple -> tuple.get(sales.price.min())
+                ));
+    }
+
+    /**
+     * 단일 상품의 최저가 조회
+     */
     public BigDecimal lowPriceOfProduct(Long productId) {
         return queryFactory
                 .select(sales.price.min())
@@ -220,6 +325,9 @@ public class ProductQueryRepository {
                 .fetchOne();
     }
 
+    /**
+     * 특정 색상의 최저가 조회
+     */
     public BigDecimal lowPriceOfColor(Long productId, Long colorOptionId) {
         return queryFactory
                 .select(sales.price.min())
@@ -232,6 +340,33 @@ public class ProductQueryRepository {
                 .fetchOne();
     }
 
+    /**
+     * 찜한 상품 목록 조회
+     */
+    public List<Product> getFavoriteProducts(Long memberId) {
+        return queryFactory
+                .selectFrom(product)
+                .join(favoriteProduct).on(favoriteProduct.productId.eq(product.id))
+                .where(favoriteProduct.memberId.eq(memberId))
+                .orderBy(favoriteProduct.createdTime.desc())
+                .fetch();
+    }
+
+    /**
+     * 찜한 상품 개수 조회
+     */
+    public long countFavoriteProducts(Long memberId) {
+        Long count = queryFactory
+                .select(product.count())
+                .from(product)
+                .join(favoriteProduct).on(favoriteProduct.productId.eq(product.id))
+                .where(favoriteProduct.memberId.eq(memberId))
+                .fetchOne();
+        return count != null ? count : 0L;
+    }
+
+    // ==================== Private Helper 메서드들 ====================
+
     private BooleanExpression findByCategoryId(List<Long> categoryIds) {
         if (categoryIds == null || categoryIds.isEmpty()) return null;
         return product.categoryId.in(categoryIds);
@@ -242,90 +377,25 @@ public class ProductQueryRepository {
         return product.brandId.in(brandIds);
     }
 
-
-    public long countFiltered(String cleaned, List<Long> categoryIds, List<Long> brandIds) {
-        if (cleaned == null) {
-            Long c = queryFactory
-                    .select(product.count())
-                    .from(product)
-                    .where(
-                            findByBrandId(brandIds),
-                            findByCategoryId(categoryIds)
-                    ).fetchOne();
-            return c != null ? c : 0L;
-        }
-
-        StringTemplate normKeyword = norm(cleaned);
-
-        if (isShort(cleaned)) {
-            BooleanExpression likeCond = Expressions.booleanTemplate(
-                    "{0} LIKE ('%' || {1} || '%')", productSearchMv.searchTextNorm, normKeyword
-            );
-            Long c = queryFactory
-                    .select(product.count())
-                    .from(productSearchMv)
-                    .join(product).on(product.id.eq(productSearchMv.id))
-                    .where(
-                            likeCond,
-                            findByBrandId(brandIds),
-                            findByCategoryId(categoryIds)
-                    ).fetchOne();
-            return c != null ? c : 0L;
-        } else {
-            NumberExpression<Double> score = Expressions.numberTemplate(
-                    Double.class, "similarity({0}, {1})", productSearchMv.searchTextNorm, normKeyword
-            );
-            BooleanExpression simFilter = score.goe(0.1);
-            Long c = queryFactory
-                    .select(product.count())
-                    .from(productSearchMv)
-                    .join(product).on(product.id.eq(productSearchMv.id))
-                    .where(
-                            simFilter,
-                            findByBrandId(brandIds),
-                            findByCategoryId(categoryIds)
-                    ).fetchOne();
-            return c != null ? c : 0L;
-        }
-    }
-
-    private OrderSpecifier<?>[] buildOrderSpecifier(ProductSort productSort,
-                                                    boolean isShort,
-                                                    NumberExpression<Double> score,
-                                                    NumberExpression<Integer> pos) {
+    /**
+     * QueryDSL용 ORDER BY 생성 (키워드 없을 때)
+     */
+    private OrderSpecifier<?>[] buildOrderSpecifier(ProductSort productSort) {
         List<OrderSpecifier<?>> orderSpecifiers = new ArrayList<>();
 
-        switch (productSort) {
-            case REVIEW_COUNT_LEAST -> orderSpecifiers.add(product.reviewCount.asc());
-            case REVIEW_COUNT_MOST -> orderSpecifiers.add(product.reviewCount.desc());
-        }
-
-        if (isShort) {
-            if (pos != null) orderSpecifiers.add(new OrderSpecifier<>(Order.ASC, pos));
-        } else {
-            if (score != null) orderSpecifiers.add(new OrderSpecifier<>(Order.DESC, score));
+        if (productSort != null) {
+            switch (productSort) {
+                case REVIEW_COUNT_LEAST:
+                    orderSpecifiers.add(product.reviewCount.asc());
+                    break;
+                case REVIEW_COUNT_MOST:
+                    orderSpecifiers.add(product.reviewCount.desc());
+                    break;
+            }
         }
 
         orderSpecifiers.add(product.id.desc());
+
         return orderSpecifiers.toArray(OrderSpecifier[]::new);
-    }
-
-    public List<Product> getFavoriteProducts(Long memberId) {
-        return queryFactory
-                .selectFrom(product)
-                .join(favoriteProduct).on(favoriteProduct.productId.eq(product.id))
-                .where(favoriteProduct.memberId.eq(memberId))
-                .orderBy(favoriteProduct.createdTime.desc())
-                .fetch();
-    }
-
-    public long countFavoriteProducts(Long memberId) {
-        Long count = queryFactory
-                .select(product.count())
-                .from(product)
-                .join(favoriteProduct).on(favoriteProduct.productId.eq(product.id))
-                .where(favoriteProduct.memberId.eq(memberId))
-                .fetchOne();
-        return count != null ? count : 0L;
     }
 }

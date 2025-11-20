@@ -49,15 +49,6 @@ public class JwtFilter extends OncePerRequestFilter {
             return;
         }
 
-        if (requestPath.startsWith("/ws/chat")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        if (requestPath.startsWith("/api/chat/group")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
 
 
 
@@ -191,10 +182,9 @@ public class JwtFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-//        String path = request.getRequestURI();
-//        return path.startsWith("/ws")
-//                || path.startsWith("/api/auth");  // 로그인/회원가입은 인증 불필요
-        return false;
+        String path = request.getRequestURI();
+        return path.startsWith("/ws")
+                || path.startsWith("/api/auth");  // 로그인/회원가입은 인증 불필요
     }
 
 }

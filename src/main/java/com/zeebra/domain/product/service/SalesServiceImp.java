@@ -1,12 +1,16 @@
 package com.zeebra.domain.product.service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
+
 import com.zeebra.domain.product.dto.*;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnJava;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -14,7 +18,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.zeebra.domain.member.entity.Member;
 import com.zeebra.domain.member.repository.MemberRepository;
-import com.zeebra.domain.order.dto.SalesItem;
+import com.zeebra.domain.product.dto.OrderSalesItem;
+import com.zeebra.domain.product.dto.SalesDetailResponse;
+import com.zeebra.domain.product.dto.SalesListResponse;
+import com.zeebra.domain.product.dto.SalesRequest;
+import com.zeebra.domain.product.dto.SalesResponse;
+import com.zeebra.domain.product.dto.UserSalesItem;
 import com.zeebra.domain.product.entity.ProductOption;
 import com.zeebra.domain.product.entity.Sales;
 import com.zeebra.domain.product.entity.SalesStatus;
@@ -30,6 +39,7 @@ import com.zeebra.global.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+@Transactional(readOnly = true)
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -40,12 +50,12 @@ public class SalesServiceImp implements SalesService {
     private final ProductOptionRepository productOptionRepository;
 	private final SalesQueryRepository salesQueryRepository;
 	private final ProductOptionQueryRepository productOptionQueryRepository;
+	private final ProductService productService;
 
 	private Sales toSales(ProductOption productOption, Member member, SalesRequest request) {
         return new Sales(
                 productOption.getId(),
                 member.getId(),
-                request.price(),
                 request.price(),
                 request.stock(),
                 SalesStatus.ON_SALE);
@@ -100,7 +110,7 @@ public class SalesServiceImp implements SalesService {
     }
 
 
-	public SalesItem findCheapestSalesByProductOptionId(Long productOptionId) {
+	public OrderSalesItem findCheapestSalesByProductOptionId(Long productOptionId) {
 		Sales sales = salesQueryRepository.findCheapestAndOldestSales(productOptionId);
 
 		if (sales == null) {
@@ -108,7 +118,7 @@ public class SalesServiceImp implements SalesService {
 			throw new BusinessException(OrderErrorCode.PRODUCT_NOT_FOUND, "판매 중인 상품을 찾을 수 없습니다.");
 		}
 
-		return SalesItem.of(sales.getId(), sales.getStock(), sales.getPrice());
+		return OrderSalesItem.of(sales);
 	}
 
 	public SalesDetailResponse getSalesDetail(Long memberId, Long salesId) {
@@ -153,4 +163,50 @@ public class SalesServiceImp implements SalesService {
                 .map(UserSalesItem::from)
                 .collect(Collectors.toList());
     }
+
+	public void updateSalesStock(Long salesId, Integer quantity) {}
+
+	public void updateSalesPrice(Long salesId, BigDecimal price) {}
+
+	public void updateSalesStatus(Long salesId, SalesStatus salesStatus) {}
+
+	public void updateSalesSoldPrice(Long salesId, BigDecimal soldPrice) {}
+
+	public void updateSalesSoldAt(Long salesId, LocalDateTime soldAt) {}
+
+	public List<OrderSalesItem> selectCheapestValidSales(Map<Long, Integer> productOptionQuantityMap) {
+		List<OrderSalesItem> orderSalesItems = OrderSalesItem.of(
+			salesQueryRepository.findCheapestAndOldestSales(productOptionQuantityMap));
+
+		validateSalesAvailability(productOptionQuantityMap, orderSalesItems);
+		return orderSalesItems;
+	}
+
+	public void validateSales(Long salesId, int quantity) {
+		Sales sales = salesRepository.findById(salesId).orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND, "해당 판매 상품을 찾을 수 없습니다."));
+		if (sales.getStock() < quantity) {
+			throw new BusinessException(CommonErrorCode.INVALID_REQUEST, "남은 재고가 없습니다.");
+		}
+		if (sales.getSalesStatus() != SalesStatus.ON_SALE){
+			throw new BusinessException(CommonErrorCode.INVALID_REQUEST, "판매 중인 상품이 없습니다.");
+		}
+	}
+
+	private void validateSalesAvailability(Map<Long, Integer> productOptionQuantityMap, List<OrderSalesItem> cheapestSales) {
+
+		Map<Long, Integer> salesQuantityByOption = cheapestSales.stream()
+			.collect(Collectors.toMap(
+				OrderSalesItem::productOptionId,
+				OrderSalesItem::quantity,
+				Integer::sum)
+			);
+
+		productOptionQuantityMap.forEach((optionId, requiredQuantity) -> {
+			int allocatedQuantity = salesQuantityByOption.getOrDefault(optionId, 0);
+
+			if (allocatedQuantity < requiredQuantity) {
+				throw new BusinessException(OrderErrorCode.PRODUCT_OUT_OF_STOCK, "상품 재고가 부족합니다.");
+			}
+		});
+	}
 }

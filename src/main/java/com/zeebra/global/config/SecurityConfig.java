@@ -60,7 +60,8 @@ public class SecurityConfig {
                         .anyRequest().authenticated())
                 .csrf(csrf -> csrf
                         .ignoringRequestMatchers("/api/auth/**", "/api/products", "/api/products/**",
-                                "/ws/chat/**", "/api/chat/group/**")
+                                "/ws/chat/**", "/api/chat/group/**",
+                                "/api/notification/**", "/api/push/**")
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)

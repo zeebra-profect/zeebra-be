@@ -53,7 +53,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/chat/dm/**").authenticated()
                         .requestMatchers("/api/chat/rooms/{roomId}/leave").authenticated()
                         .requestMatchers("/api/chat/rooms/{roomId}/trade").authenticated()
-                                       
+
                         .requestMatchers("/api/push/**").authenticated()
                         .requestMatchers("/api/notification/**").authenticated()
 
@@ -70,7 +70,10 @@ public class SecurityConfig {
                         .accessDeniedHandler(authProblemHandler))
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .securityContext(securityContext ->
+                        securityContext.requireExplicitSave(false))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
 

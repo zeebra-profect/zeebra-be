@@ -3,6 +3,12 @@ spring:
     activate:
       on-profile: test
 
+  datasource:
+    url: jdbc:postgresql://localhost:5432/zeebra_db
+    driver-class-name: org.postgresql.Driver
+    username: zeebra
+    password: 1234
+
   # Docker Compose 비활성화
   docker:
     compose:
@@ -61,3 +67,4 @@ springdoc:
 toss:
   payments:
     secret-key: test_sk_dummy_for_testing
+

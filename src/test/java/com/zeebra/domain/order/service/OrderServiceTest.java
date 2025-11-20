@@ -92,7 +92,7 @@ public class OrderServiceTest {
 	}
 
 	private Sales createSales(Long productOptionId, BigDecimal price, int stock, SalesStatus salesStatus){
-		return salesRepository.save(new Sales(productOptionId, 1L, price, BigDecimal.ZERO, stock, salesStatus));
+		return salesRepository.save(new Sales(productOptionId, 1L, price, stock, salesStatus));
 	}
 
 	private Cart createCart(Long memberId){

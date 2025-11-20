@@ -30,7 +30,7 @@ springdoc:
   packages-to-scan: com.zeebra
 
 spring.jpa:
-  hibernate.ddl-auto: update
+  hibernate.ddl-auto: create
   open-in-view: false
   properties:
     hibernate.format_sql: true

@@ -1,5 +1,10 @@
 package com.zeebra.domain.product.repository;
 
+import com.zeebra.IntegrationTestSupport;
+import com.zeebra.domain.brand.entity.Brand;
+import com.zeebra.domain.brand.repository.BrandRepository;
+import com.zeebra.domain.category.entity.Category;
+import com.zeebra.domain.category.repository.CategoryRepository;
 import com.zeebra.domain.member.entity.Gender;
 import com.zeebra.domain.member.entity.Member;
 import com.zeebra.domain.member.repository.MemberRepository;
@@ -9,24 +14,27 @@ import com.zeebra.domain.product.service.ProductService;
 import com.zeebra.global.ApiResponse;
 import com.zeebra.global.ErrorCode.MemberErrorCode;
 import com.zeebra.global.exception.BusinessException;
-import com.zeebra.global.exception.ErrorCode;
+import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-
+import org.springframework.test.context.ActiveProfiles;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
-
+@ActiveProfiles("test")
+//@Testcontainers
 @SpringBootTest
-public class ProductServiceTest {
+public class ProductServiceTest extends IntegrationTestSupport {
 
     @Autowired
     private ProductService productService;
@@ -51,6 +59,30 @@ public class ProductServiceTest {
 
     @Autowired
     private SalesRepository salesRepository;
+
+    @Autowired
+    private BrandRepository brandRepository;
+
+    @Autowired
+    private CategoryRepository categoryRepository;
+
+    @Autowired
+    private EntityManager em;
+
+    @AfterEach
+    void tearDown() {
+        productRepository.deleteAllInBatch();
+        favoriteProductRepository.deleteAllInBatch();
+        optionNameRepository.deleteAllInBatch();
+        productOptionRepository.deleteAllInBatch();
+        salesRepository.deleteAllInBatch();
+        brandRepository.deleteAllInBatch();
+        categoryRepository.deleteAllInBatch();
+        memberRepository.deleteAllInBatch();
+        optionCombinationRepository.deleteAllInBatch();
+        brandRepository.deleteAllInBatch();
+        categoryRepository.deleteAllInBatch();
+    }
 
     @DisplayName("상품 정보를 받아서 상품을 생성한다")
     @Test
@@ -96,7 +128,7 @@ public class ProductServiceTest {
     @Test
     void createProduct_MemberNotFound_ThrowsBusinessException() {
         // given
-        Long notExistId = 100L;
+        Long notExistId = 92345098L;
         ProductRequest productRequest = new ProductRequest(100L, 200L,
                 "테스트 상품", "상품 설명", "MODEL-001", "thumbnail.jpg",
                 List.of("image1.jpg", "image2.jpg"));
@@ -142,8 +174,14 @@ public class ProductServiceTest {
         Product product = createProduct("test1");
         Product saveProduct = productRepository.save(product);
 
+        em.flush();
+        em.clear();
+
         // when
         ApiResponse<FavoriteProductResponse> favoriteProductResponse = productService.addFavoriteProduct(saveMember.getId(), saveProduct.getId());
+
+        em.flush();
+        em.clear();
 
         // then
         Product updatedProduct = productRepository.findById(saveProduct.getId()).orElseThrow();
@@ -183,11 +221,18 @@ public class ProductServiceTest {
         Product product = createProduct("test1");
         Product saveProduct = productRepository.save(product);
 
+        em.flush();
+        em.clear();
+
         productService.addFavoriteProduct(saveMember.getId(), saveProduct.getId());
         Product saveUpdateProduct = productRepository.findById(saveProduct.getId()).orElseThrow();
+        em.flush();
+        em.clear();
 
         // when
         productService.deleteFavoriteProduct(saveMember.getId(), saveProduct.getId());
+        em.flush();
+        em.clear();
 
         // then
         Product deleteUpdateProduct = productRepository.findById(saveProduct.getId()).orElseThrow();
@@ -226,8 +271,8 @@ public class ProductServiceTest {
     void getProductDetail_WithNullColorOptionNameId_ReturnsFirstColorOption() {
         // given
         Product product1 = productRepository.save(createProduct("test1"));
-        OptionName optionName1 = optionNameRepository.save(new OptionName("color", "빨강", false));
-        OptionName optionName2 = optionNameRepository.save(new OptionName("size", "L", false));
+        OptionName optionName1 = optionNameRepository.save(new OptionName("color", "빨강"));
+        OptionName optionName2 = optionNameRepository.save(new OptionName("size", "L"));
 
         ProductOption productOption1 = productOptionRepository.save(new ProductOption(product1.getId()));
 
@@ -248,39 +293,51 @@ public class ProductServiceTest {
     }
 
 
-        @DisplayName("colorOptionNameId를 지정하여 해당 색상 옵션의 상품 상세 조회 성공")
-        @Test
-        void getProductDetail_WithSpecificColorOptionNameId_ReturnsSpecifiedColorOption() {
-            // given
-            Product product1 = productRepository.save(createProduct("test1"));
-            OptionName optionName1 = optionNameRepository.save(new OptionName("color", "빨강", false));
-            OptionName optionName2 = optionNameRepository.save(new OptionName("size", "L", false));
+    @DisplayName("colorOptionNameId를 지정하여 해당 색상 옵션의 상품 상세 조회 성공")
+    @Test
+    void getProductDetail_WithSpecificColorOptionNameId_ReturnsSpecifiedColorOption() {
+        // given
+        Product product1 = productRepository.save(createProduct("test1"));
+        OptionName optionName1 = optionNameRepository.save(new OptionName("color", "빨강"));
+        OptionName optionName2 = optionNameRepository.save(new OptionName("size", "L"));
 
-            ProductOption productOption1 = productOptionRepository.save(new ProductOption(product1.getId()));
+        ProductOption productOption1 = productOptionRepository.save(new ProductOption(product1.getId()));
 
-            optionCombinationRepository.save(new OptionCombination(productOption1.getId(), optionName1.getId()));
-            optionCombinationRepository.save(new OptionCombination(productOption1.getId(), optionName2.getId()));
+        optionCombinationRepository.save(new OptionCombination(productOption1.getId(), optionName1.getId()));
+        optionCombinationRepository.save(new OptionCombination(productOption1.getId(), optionName2.getId()));
 
-            Sales sales1 = salesRepository.save(new Sales(productOption1.getId(), 1L, new BigDecimal("15000.00"), 1, SalesStatus.ON_SALE));
-            Sales sales2 = salesRepository.save(new Sales(productOption1.getId(), 1L, new BigDecimal("16000.00"), 1, SalesStatus.ON_SALE));
+        Sales sales1 = salesRepository.save(new Sales(productOption1.getId(), 1L, new BigDecimal("15000.00"), 1, SalesStatus.ON_SALE));
+        Sales sales2 = salesRepository.save(new Sales(productOption1.getId(), 1L, new BigDecimal("16000.00"), 1, SalesStatus.ON_SALE));
 
-            // when
-            ApiResponse<ProductDetailResponse> productDetail = productService.getProductDetail(product1.getId(), optionName1.getId());
+        // when
+        ApiResponse<ProductDetailResponse> productDetail = productService.getProductDetail(product1.getId(), optionName1.getId());
 
-            // then
-            assertThat(productDetail.getData().colorOptionResponses().size()).isEqualTo(1);
-            assertThat(productDetail.getData().productId()).isEqualTo(product1.getId());
-            assertThat(productDetail.getData().lowPrice()).isEqualTo(sales1.getPrice());
+        // then
+        assertThat(productDetail.getData().colorOptionResponses().size()).isEqualTo(1);
+        assertThat(productDetail.getData().productId()).isEqualTo(product1.getId());
+        assertThat(productDetail.getData().lowPrice()).isEqualTo(sales1.getPrice());
 
-        }
+    }
+
+    @DisplayName("상품 상세 조회시 상품이 존재하지 않을 때 오류를 반환한다")
+    @Test
+    void getProductDetail_notFound_whenProductNotExist() {
+        // given
+        OptionName optionName1 = optionNameRepository.save(new OptionName("color", "빨강"));
+
+        // when & then
+        assertThatThrownBy(() -> productService.getProductDetail(985512367L, optionName1.getId()))
+                .isInstanceOf(NoSuchElementException.class)
+                .hasMessageContaining("해당하는 상품이 존재하지 않습니다.");
+    }
 
     @DisplayName("색상 옵션 ID로 사이즈 옵션 목록을 조회한다")
     @Test
     void getProductOptionSize_WithValidColorOptionId_ReturnsSizeOptionList() {
         // given
         Product product1 = productRepository.save(createProduct("test1"));
-        OptionName optionName1 = optionNameRepository.save(new OptionName("color", "빨강", false));
-        OptionName optionName2 = optionNameRepository.save(new OptionName("size", "L", false));
+        OptionName optionName1 = optionNameRepository.save(new OptionName("color", "빨강"));
+        OptionName optionName2 = optionNameRepository.save(new OptionName("size", "L"));
 
         ProductOption productOption1 = productOptionRepository.save(new ProductOption(product1.getId()));
 
@@ -296,6 +353,28 @@ public class ProductServiceTest {
         // then
         assertThat(productOptionSize.getData().sizeOptionResponses().size()).isEqualTo(1);
         assertThat(productOptionSize.getData().sizeOptionResponses().getFirst().lowPriceOfSize()).isEqualTo(sales1.getPrice());
+
+    }
+
+
+    @DisplayName("키워드 검색 시 상품 목록, 최저가, 필터된 브랜드/카테고리, 페이징 정보가 모두 정상 반환된다")
+    @Test
+    void searchProduct_success_withOnlyKeyword() {
+        // given
+        Product product1 = productRepository.save(createProduct("test1"));
+        Brand brand = brandRepository.save(new Brand("testBrand", null));
+        Category category = categoryRepository.save(new Category(null, "testCategory"));
+        Pageable pageable = PageRequest.of(0, 10);
+
+        // when
+        ApiResponse<SearchProductResponse> searchTest = productService.searchProduct("test1", null, null,
+                pageable, null);
+
+        // then
+        assertThat(searchTest.getData().brandResponses().size()).isEqualTo(1);
+        assertThat(searchTest.getData().categoryResponses().size()).isEqualTo(1);
+        assertThat(searchTest.getData().productDetailResponses().size()).isEqualTo(1);
+        assertThat(searchTest.getData().productDetailResponses().getFirst().productId()).isEqualTo(product1.getId());
 
     }
 

@@ -13,7 +13,6 @@ import com.zeebra.domain.notification.entity.Notification;
 import com.zeebra.domain.notification.entity.NotificationType;
 import com.zeebra.domain.notification.repository.NotificationRepository;
 import com.zeebra.domain.notification.service.NotificationService;
-import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,12 +23,12 @@ import java.time.LocalDate;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 @SpringBootTest(classes = ZeebraApplication.class)
-@Transactional
 public class NotificationTest {
 
     @Autowired
@@ -56,10 +55,9 @@ public class NotificationTest {
         NotificationRequest request = new NotificationRequest(member1.member().memberId(), NotificationType.TEST_OBJECT, new Object(), null);
 
         // when
-        CompletableFuture<NotificationResponse> future = notificationService.createNotificationAsync(request);
+        NotificationResponse future = notificationService.createNotificationAsync(request).join();
 
         // then
-        NotificationResponse response = future.join();
         Optional<Notification> savedNotification = notificationRepository.findByNotificationTypeAndMemberId(request.getNotificationType(), request.getMemberId());
 
         assertThat(savedNotification).isNotEmpty();
@@ -75,7 +73,12 @@ public class NotificationTest {
         NotificationRequest request = new NotificationRequest(invalidMemberId, NotificationType.TEST, null, null);
 
         // when & then
-        assertThatThrownBy(() -> notificationService.createNotificationAsync(request)).isInstanceOf(NoSuchElementException.class).hasMessage("해당하는 사용자가 없습니다.");
+        CompletableFuture<NotificationResponse> future = notificationService.createNotificationAsync(request);
+
+        assertThatThrownBy(future::join)
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(NoSuchElementException.class)
+                .hasMessageContaining("해당하는 사용자가 없습니다.");
     }
 
     @Test
@@ -87,8 +90,14 @@ public class NotificationTest {
         NotificationRequest request = new NotificationRequest(member1.member().memberId(), null, new Object(), null);
 
         // when & then
-        assertThatThrownBy(() -> notificationService.createNotificationAsync(request)).isInstanceOf(IllegalArgumentException.class).hasMessage("타입 값이 없습니다.");
+        CompletableFuture<NotificationResponse> future = notificationService.createNotificationAsync(request);
+
+        assertThatThrownBy(future::join)
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("타입 값이 없습니다.");
     }
+
 
     @Test
     @DisplayName("TC-IT-NOTI-CREATE-004-[정상] object, url 포함 알림 생성")
@@ -99,7 +108,7 @@ public class NotificationTest {
         NotificationRequest request = new NotificationRequest(member1.member().memberId(), NotificationType.TEST_OBJECT, new Object(), null);
 
         // when
-        notificationService.createNotificationAsync(request);
+        NotificationResponse future = notificationService.createNotificationAsync(request).join();
 
         // then
         Optional<Notification> savedNotification = notificationRepository.findByNotificationTypeAndMemberId(request.getNotificationType(), request.getMemberId());
@@ -119,9 +128,9 @@ public class NotificationTest {
         SignupResponse member3 = createTestMember("user3", "user3@abc.a");
 
         // when
-        notificationService.createNotificationAsync(new NotificationRequest(member1.member().memberId(), NotificationType.TEST, null, null));
-        notificationService.createNotificationAsync(new NotificationRequest(member2.member().memberId(), NotificationType.TEST, null, null));
-        notificationService.createNotificationAsync(new NotificationRequest(member3.member().memberId(), NotificationType.TEST, null, null));
+        NotificationResponse future1 = notificationService.createNotificationAsync(new NotificationRequest(member1.member().memberId(), NotificationType.TEST, null, null)).join();
+        NotificationResponse future2 = notificationService.createNotificationAsync(new NotificationRequest(member2.member().memberId(), NotificationType.TEST, null, null)).join();
+        NotificationResponse future3 = notificationService.createNotificationAsync(new NotificationRequest(member3.member().memberId(), NotificationType.TEST, null, null)).join();
 
         // then
         assertThat(notificationRepository.findByNotificationTypeAndMemberId(NotificationType.TEST, member1.member().memberId())).isNotNull();
@@ -134,15 +143,15 @@ public class NotificationTest {
     public void getNotifications_validMemberId_success() {
         // given
         SignupResponse member1 = createTestMember("user1", "user1@abc.a");
-        notificationService.createNotificationAsync(new NotificationRequest(member1.member().memberId(), NotificationType.TEST, null, null));
-        notificationService.createNotificationAsync(new NotificationRequest(member1.member().memberId(), NotificationType.TEST, null, null));
-        notificationService.createNotificationAsync(new NotificationRequest(member1.member().memberId(), NotificationType.TEST, null, null));
+        NotificationResponse future1 = notificationService.createNotificationAsync(new NotificationRequest(member1.member().memberId(), NotificationType.TEST, null, null)).join();
+        NotificationResponse future2 = notificationService.createNotificationAsync(new NotificationRequest(member1.member().memberId(), NotificationType.TEST, null, null)).join();
+        NotificationResponse future3 = notificationService.createNotificationAsync(new NotificationRequest(member1.member().memberId(), NotificationType.TEST, null, null)).join();
 
         // when
         NotificationsResponse response = notificationService.getNotifications(member1.member().memberId());
 
-        // then
-        assertThat(response.dtos().size()).isEqualTo(3);
+        // then : 회원가입 시 알림이 생성되기 때문에 +1
+        assertThat(response.dtos().size()).isEqualTo(4);
     }
 
     @Test
@@ -155,7 +164,7 @@ public class NotificationTest {
         NotificationsResponse response = notificationService.getNotifications(member1.member().memberId());
 
         // then
-        assertThat(response).isNull();
+        assertThat(response.dtos().size()).isEqualTo(1);
     }
 
     @Test

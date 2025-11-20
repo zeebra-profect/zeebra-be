@@ -3,48 +3,68 @@ spring:
     activate:
       on-profile: test
 
+  datasource:
+    url: jdbc:postgresql://localhost:5432/zeebra_db
+    driver-class-name: org.postgresql.Driver
+    username: zeebra
+    password: 1234
+
+  # Docker Compose 비활성화
   docker:
     compose:
-      enabled: true           # 기본 true지만 명시
-      file: db-compose.yml
-      readiness:
-        timeout: 120s
+      enabled: false
 
+  # Redis는 로컬 사용 (테스트용)
   data:
     redis:
       host: 127.0.0.1
       port: 6379
       password: 1234
 
-  datasource:
-    url: jdbc:postgresql://127.0.0.1:5432/zeebra_db # <-- 데이터베이스 이름으로 변경해주세요
-    username: zeebra #
-    password: 1234 # <-- 초기비밀번호 x
-    driver-class-name: org.postgresql.Driver
-
   jpa:
     hibernate:
-      ddl-auto: none # 로컬 테스트 디비용 커밋x
+      ddl-auto: create-drop  # 테스트마다 스키마 재생성
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
+        default_batch_fetch_size: 100  # N+1 문제 방지
+        # 테스트 속도 향상을 위한 설정
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
     show-sql: true
+    # 테스트 환경에서는 open-in-view 비활성화 권장
+    open-in-view: false
 
+# JWT 테스트용 설정
 jwt:
-  secret: ${JWT_SECRET}
-  issuer: ${JWT_ISSUER}
-  clockSkewSec: ${JWT_CLOCK_SKEW_SEC}
+  secret: test-secret-key-for-testing-minimum-256-bits-required-here-must-be-long-enough
+  issuer: zeebra-test
+  clockSkewSec: 10
 
+# 로깅 레벨 설정
 logging:
   level:
-    org.springdoc: DEBUG
-    org.springframework.web: DEBUG
-    org.springframework.http.converter: DEBUG
+    com.zeebra: DEBUG  # 우리 애플리케이션 로그
+    org.springframework.web: INFO
+    org.springframework.security: DEBUG  # 보안 관련 디버그
+    org.testcontainers: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.hibernate.orm.jdbc.bind: TRACE  # 파라미터 바인딩 로그
 
+# Springdoc 설정
 springdoc:
   packages-to-scan: com.zeebra
+  api-docs:
+    enabled: false  # 테스트 환경에서는 API 문서 비활성화
+  swagger-ui:
+    enabled: false  # 테스트 환경에서는 Swagger UI 비활성화
 
+# Toss Payments 테스트용 설정
 toss:
   payments:
-    secret-key: ${TOSS_PAYMENT_SECRET_KEY}
+    secret-key: test_sk_dummy_for_testing
+

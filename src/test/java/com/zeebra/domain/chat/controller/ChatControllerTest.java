@@ -32,6 +32,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import org.testcontainers.shaded.org.checkerframework.checker.units.qual.C;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -40,6 +41,7 @@ import java.util.Optional;
 import static com.zeebra.domain.chat.entity.ChatRoomType.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -66,7 +68,7 @@ public class ChatControllerTest {
     @Autowired
     private JwtProvider jwtProvider;
 
-    @MockBean
+    @Autowired
     private SalesRepository salesRepository;
 
     private Member testUser;
@@ -145,10 +147,11 @@ public class ChatControllerTest {
         chatRoomRequestDto.setChatRoomType(GROUP);
 
         String accessToken = jwtProvider.createAccessToken(testUser.getId(), "testUser", "USER", 10);
+        Cookie authCookie = new Cookie("__Host-AT", accessToken);
 
         //When
         mockMvc.perform(post("/api/chat/group/rooms")
-                        .cookie(new Cookie("__Host-AT", accessToken))
+                        .cookie(authCookie)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(chatRoomRequestDto)))
 
@@ -167,27 +170,34 @@ public class ChatControllerTest {
     @Test
     @DisplayName("시나리오 1-2 (인증): 로그인 한 유저가 1:1 채팅방 입장")
     void scenario1_Authenticated_EnterGroupChat() throws Exception {
-        Long fakeSaleId = 4L;
         //Given
+        Member seller = testUser2; // @BeforeEach에서 이미 save 됨
+        Member buyer  = testUser;
+
         Sales fakeSale = new Sales(
                 1L, // productOptionId
-                testUser2.getId(), //  판매자(testUser2)의 ID
+                seller.getId(), //  판매자(testUser2)의 ID
                 new BigDecimal("10000"),
-                null,
                 10,
                 SalesStatus.ON_SALE
         );
+
+        Sales savedSale = salesRepository.save(fakeSale);
+        Long fakeSaleId = savedSale.getId();
 
         ChatRoomRequestDto chatRoomRequestDto = new ChatRoomRequestDto();
         chatRoomRequestDto.setSaleId(fakeSaleId);
         chatRoomRequestDto.setChatRoomType(ChatRoomType.DM);
 
         long memberCountBefore = chatRoomMemberRepository.count();
-        Cookie authCookie = new Cookie(CookieUtil.ACCESS_TOKEN_COOKIE_NAME, accessToken);
+
+        Cookie authCookie = new Cookie("__Host-AT", accessToken);
+
 
         //When
         mockMvc.perform(post("/api/chat/dm/rooms")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer" + authCookie)
+                        .with(csrf())
+                        .cookie(authCookie)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(chatRoomRequestDto)))
 

@@ -9,6 +9,9 @@ import java.util.NoSuchElementException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+
+import com.zeebra.domain.product.dto.*;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -38,6 +41,7 @@ import com.zeebra.global.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+@Transactional(readOnly = true)
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -54,7 +58,6 @@ public class SalesServiceImp implements SalesService {
         return new Sales(
                 productOption.getId(),
                 member.getId(),
-                request.price(),
                 request.price(),
                 request.stock(),
                 SalesStatus.ON_SALE);

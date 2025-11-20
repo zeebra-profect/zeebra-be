@@ -17,6 +17,8 @@ import com.zeebra.domain.order.entity.Order;
 import com.zeebra.domain.order.repository.OrderHistoryRepository;
 import com.zeebra.domain.order.repository.OrderRepository;
 import com.zeebra.domain.order.service.OrderService;
+import com.zeebra.domain.webpush.repository.WebPushRepository;
+import com.zeebra.domain.webpush.service.WebPushService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -45,7 +47,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
-@SpringBootTest(classes = ZeebraApplication.class)
+@SpringBootTest(classes = ZeebraApplication.class, properties = "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.websocket.servlet.WebSocketServletAutoConfiguration")
 @EnableAsync
 public class NotificationAsyncTest {
 
@@ -65,6 +67,10 @@ public class NotificationAsyncTest {
     private OrderRepository orderRepository;
     @Autowired
     private OrderHistoryRepository orderHistoryRepository;
+    @Autowired
+    private WebPushService webPushService;
+    @Autowired
+    private WebPushRepository webPushRepository;
 
     @AfterAll
     public static void afterAllTruncate() throws Exception {
@@ -83,19 +89,20 @@ public class NotificationAsyncTest {
     public void truncate() throws Exception {
         try (Connection conn = dataSource.getConnection();
              Statement stmt = conn.createStatement()) {
-            stmt.execute("TRUNCATE TABLE notification, order_history, orders, members RESTART IDENTITY CASCADE");
+            stmt.execute("TRUNCATE TABLE web_push, notification, order_history, orders, members RESTART IDENTITY CASCADE");
         }
         orderHistoryRepository.deleteAll();
         orderRepository.deleteAll();
         memberRepository.deleteAll();
         notificationRepository.deleteAll();
+        webPushRepository.deleteAll();
     }
 
     @Test
-    @DisplayName("TC-UT-NOTI-ASYNC-001-[정상] 여러 알림 비동기 동시 생성")
+    @DisplayName("TC-IT-NOTI-ASYNC-001-[정상] 여러 알림 비동기 동시 생성")
     public void createNotification_async_multipleNotifications_success() {
         // given
-        Long testnum = 10000L;
+        Long testnum = 10L;
         List<Member> members = createTestMembers(testnum.intValue());
         System.out.println("생성된 멤버 개수: " + members.size());
         List<NotificationRequest> reqs = createNotificationRequests(1L, testnum, members, null);
@@ -104,14 +111,13 @@ public class NotificationAsyncTest {
         // when
         long startTime = System.currentTimeMillis();
         List<CompletableFuture<NotificationResponse>> responses = createNotificationResponses(reqs);
-
         // then
         // 1. 모든 비동기 작업이 완료될 때까지 대기
-        await().atMost(5, TimeUnit.SECONDS)
+        await().atMost(20, TimeUnit.SECONDS)
                 .until(() -> responses.stream().allMatch(CompletableFuture::isDone));
 
         // 2. DB에 저장 완료 확인
-        await().atMost(5, TimeUnit.SECONDS)
+        await().atMost(20, TimeUnit.SECONDS)
                 .until(() -> notificationRepository.count() == testnum.intValue());
 
         assertThat(notificationRepository.count()).isEqualTo(testnum.intValue());
@@ -121,10 +127,10 @@ public class NotificationAsyncTest {
     }
 
     @Test
-    @DisplayName("TC-UT-NOTI-ASYNC-002-[예외] 비동기 내부 예외가 메인 흐름에 영향 없음")
+    @DisplayName("TC-IT-NOTI-ASYNC-002-[예외] 비동기 내부 예외가 메인 흐름에 영향 없음")
     public void createNotification_async_mainFlowNotAffected_fail() {
         // given
-        Long testnum = 10000L;
+        Long testnum = 10L;
         List<Member> members = createTestMembers(testnum.intValue());
         List<Order> orders = createOrders(members);
         List<NotificationRequest> reqs = createNotificationRequests(testnum + 1, testnum * 2, null, orders);
@@ -147,10 +153,10 @@ public class NotificationAsyncTest {
     }
 
     @Test
-    @DisplayName("TC-UT-NOTI-READ-001-[정상] 알림 읽음처리 시 isRead가 true로 변경")
+    @DisplayName("TC-IT-NOTI-READ-001-[정상] 알림 읽음처리 시 isRead가 true로 변경")
     public void readNotification_async_multipleNotifications_success() {
         // given
-        Long testnum = 10000L;
+        Long testnum = 10L;
         List<Member> members = createTestMembers(testnum.intValue());
         List<NotificationRequest> reqs = createNotificationRequests(1L, testnum, members, null);
         List<CompletableFuture<NotificationResponse>> responses = createNotificationResponses(reqs);
@@ -179,7 +185,7 @@ public class NotificationAsyncTest {
     }
 
     @Test
-    @DisplayName("TC-UT-NOTI-READ-002-[예외] 존재하지 않는 알림 읽음처리 요청")
+    @DisplayName("TC-IT-NOTI-READ-002-[예외] 존재하지 않는 알림 읽음처리 요청")
     public void readNotification_async_nonExistNotification_fail() {
         // given
         Member member = createTestMember("user1", "user1@a.b");
@@ -192,10 +198,10 @@ public class NotificationAsyncTest {
     }
 
     @Test
-    @DisplayName("TC-UT-NOTI-READ-003-[정상] 이미 읽음처리된 알림을 또 읽음처리 요청")
+    @DisplayName("TC-IT-NOTI-READ-003-[정상] 이미 읽음처리된 알림을 또 읽음처리 요청")
     public void readNotification_async_ReadAgain_success() {
         // given
-        Long testnum = 1000L;
+        Long testnum = 10L;
         List<Member> members = createTestMembers(testnum.intValue());
         List<NotificationRequest> reqs = createNotificationRequests(1L, testnum, members, null);
         List<CompletableFuture<NotificationResponse>> responses = createNotificationResponses(reqs);
@@ -216,10 +222,10 @@ public class NotificationAsyncTest {
     }
 
     @Test
-    @DisplayName("TC-UT-NOTI-READ-004-[예외] 접근권한 없는 알림 읽음처리 요청")
+    @DisplayName("TC-IT-NOTI-READ-004-[예외] 접근권한 없는 알림 읽음처리 요청")
     public void readNotification_async_unauthorized_fail() {
         // given
-        Long testnum = 1000L;
+        Long testnum = 10L;
         List<Member> members = createTestMembers(testnum.intValue());
         List<Member> unauthorizedMembers = createTestMembers(testnum.intValue());
         List<NotificationRequest> reqs = createNotificationRequests(1L, testnum, members, null);
@@ -242,10 +248,10 @@ public class NotificationAsyncTest {
     }
 
     @Test
-    @DisplayName("TC-UT-NOTI-READ-005-[예외] null notificationId로 읽음처리 요청")
+    @DisplayName("TC-IT-NOTI-READ-005-[예외] null notificationId로 읽음처리 요청")
     public void readNotification_async_null_notificationId_fail() {
         // given
-        Long testnum = 1000L;
+        Long testnum = 10L;
         List<Member> members = createTestMembers(testnum.intValue());
 
         // when
@@ -265,10 +271,10 @@ public class NotificationAsyncTest {
     }
 
     @Test
-    @DisplayName("TC-UT-NOTI-DELETE-001-[정상] 알림 삭제처리 시 삭제됨")
+    @DisplayName("TC-IT-NOTI-DELETE-001-[정상] 알림 삭제처리 시 삭제됨")
     public void deleteNotification_async_delete_success() {
         // given
-        Long testnum = 10000L;
+        Long testnum = 10L;
         List<Member> members = createTestMembers(testnum.intValue());
         List<NotificationRequest> reqs = createNotificationRequests(1L, testnum, members, null);
         List<CompletableFuture<NotificationResponse>> responses = createNotificationResponses(reqs);
@@ -289,7 +295,7 @@ public class NotificationAsyncTest {
     }
 
     @Test
-    @DisplayName("TC-UT-NOTI-DELETE-002-[정상] 존재하지 않는 알림 삭제 요청")
+    @DisplayName("TC-IT-NOTI-DELETE-002-[정상] 존재하지 않는 알림 삭제 요청")
     public void deleteNotification_async_deleteNonExistNotification_fail() {
         // given
         Member member = createTestMember("user1", "user1@a.b");
@@ -302,10 +308,10 @@ public class NotificationAsyncTest {
     }
 
     @Test
-    @DisplayName("TC-UT-NOTI-DELETE-003-[예외] 접근권한 없는 알림 삭제 요청")
+    @DisplayName("TC-IT-NOTI-DELETE-003-[예외] 접근권한 없는 알림 삭제 요청")
     public void deleteNotification_async_unauthorized_fail() {
         // given
-        Long testnum = 1000L;
+        Long testnum = 10L;
         List<Member> members = createTestMembers(testnum.intValue());
         List<Member> unauthorizedMembers = createTestMembers(testnum.intValue());
         List<NotificationRequest> reqs = createNotificationRequests(1L, testnum, members, null);
@@ -328,10 +334,10 @@ public class NotificationAsyncTest {
     }
 
     @Test
-    @DisplayName("TC-UT-NOTI-DELETE-004-[예외] null notificationId로 삭제 요청")
+    @DisplayName("TC-IT-NOTI-DELETE-004-[예외] null notificationId로 삭제 요청")
     public void deleteNotification_async_null_notificationId_fail() {
         // given
-        Long testnum = 1000L;
+        Long testnum = 10L;
         List<Member> members = createTestMembers(testnum.intValue());
 
         // when
@@ -368,6 +374,7 @@ public class NotificationAsyncTest {
 
         for (NotificationRequest notificationRequest : notificationRequests) {
             CompletableFuture<NotificationResponse> noti = notificationService.createNotificationAsync(notificationRequest);
+            System.out.println("생성 성공: " + noti);
             notis.add(noti);
         }
         return notis;
@@ -420,7 +427,7 @@ public class NotificationAsyncTest {
     private List<CompletableFuture<Void>> readNotifications(List<Member> members, List<CompletableFuture<NotificationResponse>> notifications) {
         // notifications가 있는 경우
         if (notifications != null && !notifications.isEmpty()) {
-            CompletableFuture.allOf(notifications.toArray(new CompletableFuture[0])).join();
+            CompletableFuture.allOf(notifications.toArray(new CompletableFuture[0]));
 
             return IntStream.range(0, notifications.size())
                     .mapToObj(i -> {

@@ -39,7 +39,8 @@ public class NotificationController {
 
     @PutMapping("/{notificationId}")
     public CompletableFuture<ApiResponse<Object>> updateNotification(@AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal, @PathVariable("notificationId") Long notificationId) {
-        return notificationService.readNotification(principal.getMemberId(), notificationId)
+        Long memberId = principal.getMemberId();
+        return notificationService.readNotification(memberId, notificationId)
                 .thenApply(v -> {
                     // 비동기 작업 완료 후 실행
                     log.info("알림 {} 읽음 처리 완료", notificationId);
@@ -54,7 +55,8 @@ public class NotificationController {
 
     @DeleteMapping("/{notificationId}")
     public CompletableFuture<ApiResponse<NotificationsResponse>> deleteNotification(@AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal, @PathVariable("notificationId") Long notificationId) {
-        return notificationService.deleteNotification(principal.getMemberId(), notificationId)
+        Long memberId = principal.getMemberId();
+        return notificationService.deleteNotification(memberId, notificationId)
                 .thenApply(v -> ApiResponse.success(
                         notificationService.getNotifications(principal.getMemberId())
                 ));

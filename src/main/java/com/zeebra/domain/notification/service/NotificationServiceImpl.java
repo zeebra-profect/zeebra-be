@@ -36,13 +36,8 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Async("mainNotificationExecutor")
     public CompletableFuture<NotificationResponse> createNotificationAsync(NotificationRequest request) {
-        if (request.getNotificationType() == null) {
-            throw new IllegalArgumentException("타입 값이 없습니다.");
-        }
 
-        if (!isValidNotificationType(request.getNotificationType())) {
-            throw new IllegalArgumentException("유효하지 않은 알림 타입입니다.");
-        }
+        validateNotificationType(request.getNotificationType());
 
         String url = notificationUrlFactory.createUrl(request.getNotificationType(), request.getObject());
         Member member = internalSupport.findByMemberId(request.getMemberId());
@@ -54,13 +49,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Async("mainNotificationExecutor")
     public CompletableFuture<NotificationResponse> createNotificationAsyncPush(NotificationEvent event, NotificationRequest request) {
-        if (request.getNotificationType() == null) {
-            throw new IllegalArgumentException("타입 값이 없습니다.");
-        }
-
-        if (!isValidNotificationType(request.getNotificationType())) {
-            throw new IllegalArgumentException("유효하지 않은 알림 타입입니다.");
-        }
+        validateNotificationType(request.getNotificationType());
 
         String url = notificationUrlFactory.createUrl(request.getNotificationType(), request.getObject());
         Member member = internalSupport.findByMemberId(request.getMemberId());
@@ -127,6 +116,15 @@ public class NotificationServiceImpl implements NotificationService {
         }
 
         return CompletableFuture.runAsync(() -> internalSupport.deleteNotification(notification), notificationWorkerExecutor);
+    }
+
+    public void validateNotificationType(NotificationType type) {
+        if (type == null) {
+            throw new IllegalArgumentException("타입 값이 없습니다.");
+        }
+        if (!isValidNotificationType(type)) {
+            throw new IllegalArgumentException("유효하지 않은 알림 타입입니다.");
+        }
     }
 
 }

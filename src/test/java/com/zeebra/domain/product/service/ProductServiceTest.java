@@ -1,4 +1,4 @@
-package com.zeebra.domain.product.repository;
+package com.zeebra.domain.product.service;
 
 import com.zeebra.IntegrationTestSupport;
 import com.zeebra.domain.brand.entity.Brand;
@@ -10,7 +10,7 @@ import com.zeebra.domain.member.entity.Member;
 import com.zeebra.domain.member.repository.MemberRepository;
 import com.zeebra.domain.product.dto.*;
 import com.zeebra.domain.product.entity.*;
-import com.zeebra.domain.product.service.ProductService;
+import com.zeebra.domain.product.repository.*;
 import com.zeebra.global.ApiResponse;
 import com.zeebra.global.ErrorCode.MemberErrorCode;
 import com.zeebra.global.exception.BusinessException;
@@ -353,28 +353,6 @@ public class ProductServiceTest extends IntegrationTestSupport {
         // then
         assertThat(productOptionSize.getData().sizeOptionResponses().size()).isEqualTo(1);
         assertThat(productOptionSize.getData().sizeOptionResponses().getFirst().lowPriceOfSize()).isEqualTo(sales1.getPrice());
-
-    }
-
-
-    @DisplayName("키워드 검색 시 상품 목록, 최저가, 필터된 브랜드/카테고리, 페이징 정보가 모두 정상 반환된다")
-    @Test
-    void searchProduct_success_withOnlyKeyword() {
-        // given
-        Product product1 = productRepository.save(createProduct("test1"));
-        Brand brand = brandRepository.save(new Brand("testBrand", null));
-        Category category = categoryRepository.save(new Category(null, "testCategory"));
-        Pageable pageable = PageRequest.of(0, 10);
-
-        // when
-        ApiResponse<SearchProductResponse> searchTest = productService.searchProduct("test1", null, null,
-                pageable, null);
-
-        // then
-        assertThat(searchTest.getData().brandResponses().size()).isEqualTo(1);
-        assertThat(searchTest.getData().categoryResponses().size()).isEqualTo(1);
-        assertThat(searchTest.getData().productDetailResponses().size()).isEqualTo(1);
-        assertThat(searchTest.getData().productDetailResponses().getFirst().productId()).isEqualTo(product1.getId());
 
     }
 

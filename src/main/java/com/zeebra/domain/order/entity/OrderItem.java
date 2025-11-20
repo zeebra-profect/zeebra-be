@@ -2,8 +2,6 @@ package com.zeebra.domain.order.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
 
 import com.zeebra.global.ErrorCode.OrderErrorCode;
 import com.zeebra.global.exception.BusinessException;
@@ -132,12 +130,12 @@ public class OrderItem extends BaseEntity {
 	}
 
 	public void updateOrderItemStatus(OrderItemStatus newStatus) {
-		validateStatusTransition(newStatus);
+		this.orderItemStatus.validateStatusTransition(newStatus);
 		this.orderItemStatus = newStatus;
 	}
 
 	public void transitionToRefundRequested() {
-		if (this.orderItemStatus != OrderItemStatus.PAID) {
+		if (!this.orderItemStatus.isRefundable()) {
 			throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
 		}
 		if (this.returnStatus != ReturnStatus.NONE) {
@@ -147,8 +145,7 @@ public class OrderItem extends BaseEntity {
 	}
 
 	public void transitionToRefunded() {
-		if (this.orderItemStatus != OrderItemStatus.REFUND_REQUESTED &&
-			this.orderItemStatus != OrderItemStatus.PAID) {
+		if (!this.canRefund()) {
 			throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
 		}
 		this.orderItemStatus = OrderItemStatus.REFUNDED;
@@ -197,64 +194,33 @@ public class OrderItem extends BaseEntity {
 	}
 
 	public boolean canCancel() {
-		return (this.orderItemStatus == OrderItemStatus.CREATED ||
-			this.orderItemStatus == OrderItemStatus.PAID) &&
+		return this.orderItemStatus.isCancelable() &&
+			this.returnStatus == ReturnStatus.NONE;
+	}
+
+	public boolean canRequestRefund(){
+		return this.orderItemStatus.isRefundable() &&
 			this.returnStatus == ReturnStatus.NONE;
 	}
 
 	public boolean canRefund() {
-		return this.orderItemStatus == OrderItemStatus.PAID &&
-			this.returnStatus == ReturnStatus.NONE;
+		return this.orderItemStatus.isRefundRequested() &&
+			(this.returnStatus == ReturnStatus.NONE || this.returnStatus == ReturnStatus.RETURNED);
 	}
 
 	public boolean canStartShipping() {
-		return this.orderItemStatus == OrderItemStatus.PAID &&
+		return this.orderItemStatus.isShippable() &&
 			this.returnStatus == ReturnStatus.NONE;
 	}
 
 	public boolean canRequestReturn() {
-		return this.orderItemStatus == OrderItemStatus.DELIVERED &&
+		return this.orderItemStatus.isReturnable() &&
 			this.returnStatus == ReturnStatus.NONE;
 	}
 
 	public boolean canComplete() {
-		return (this.orderItemStatus == OrderItemStatus.PAID ||
-			this.orderItemStatus == OrderItemStatus.DELIVERED) &&
+		return this.orderItemStatus.isCompletable() &&
 			this.returnStatus == ReturnStatus.NONE;
 	}
 
-	private void validateStatusTransition(OrderItemStatus newStatus) {
-		Map<OrderItemStatus, List<OrderItemStatus>> allowedTransitions = Map.of(
-			OrderItemStatus.CREATED, List.of(
-				OrderItemStatus.PAID,
-				OrderItemStatus.CANCELED
-			),
-			OrderItemStatus.PAID, List.of(
-				OrderItemStatus.CANCELED,
-				OrderItemStatus.REFUND_REQUESTED,
-				OrderItemStatus.REFUNDED,
-				OrderItemStatus.SHIPPING,
-				OrderItemStatus.COMPLETED
-			),
-			OrderItemStatus.REFUND_REQUESTED, List.of(
-				OrderItemStatus.REFUNDED,
-				OrderItemStatus.PAID
-			),
-			OrderItemStatus.SHIPPING, List.of(
-				OrderItemStatus.DELIVERED
-			),
-			OrderItemStatus.DELIVERED, List.of(
-				OrderItemStatus.COMPLETED
-			),
-			OrderItemStatus.COMPLETED, List.of(),
-			OrderItemStatus.CANCELED, List.of(),
-			OrderItemStatus.REFUNDED, List.of()
-		);
-
-		List<OrderItemStatus> allowed = allowedTransitions.getOrDefault(this.orderItemStatus, List.of());
-
-		if (!allowed.contains(newStatus)) {
-			throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
-		}
-	}
 }

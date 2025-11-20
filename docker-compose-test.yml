@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  postgres-100w:
+    image: postgres:14.19
+    container_name: postgres-100w
+    volumes:
+      - vol1_100w:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: zeebra
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: zeebra_db
+    ports:
+      - "5433:5432"
+    profiles: ["test-100w"]
+
+  postgres-300w:
+    image: postgres:14.19
+    container_name: postgres-300w
+    volumes:
+      - vol1_300w:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: zeebra
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: zeebra_db
+    ports:
+      - "5434:5432"
+    profiles: ["test-300w"]
+
+  postgres-1000w:
+    image: postgres:14.19
+    container_name: postgres-1000w
+    volumes:
+      - vol1_1000w:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: zeebra
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: zeebra_db
+    ports:
+      - "5435:5432"
+    profiles: ["test-1000w"]
+
+volumes:
+  vol1_100w:
+    external: true
+  vol1_300w:
+    external: true
+  vol1_1000w:
+    external: true

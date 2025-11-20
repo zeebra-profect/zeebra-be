@@ -50,10 +50,10 @@ public class SecurityConfig {
                         .requestMatchers("/ws/chat/**").permitAll()
                         .requestMatchers("/api/chat/group/**").permitAll()
 
-                        .requestMatchers("/api/chat/dm/rooms/**").authenticated()
+                        .requestMatchers("/api/chat/dm/**").authenticated()
                         .requestMatchers("/api/chat/rooms/{roomId}/leave").authenticated()
                         .requestMatchers("/api/chat/rooms/{roomId}/trade").authenticated()
-
+                                       
                         .requestMatchers("/api/push/**").authenticated()
                         .requestMatchers("/api/notification/**").authenticated()
 

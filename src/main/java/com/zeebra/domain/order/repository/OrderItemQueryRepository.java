@@ -1,7 +1,6 @@
 package com.zeebra.domain.order.repository;
 
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Repository;
@@ -18,7 +17,6 @@ import com.zeebra.domain.product.entity.QOptionName;
 import com.zeebra.domain.product.entity.QProduct;
 import com.zeebra.domain.product.entity.QProductOption;
 import com.zeebra.domain.product.entity.QSales;
-import com.zeebra.domain.product.entity.Sales;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,45 +34,7 @@ public class OrderItemQueryRepository {
 	private final QOptionName optionName = QOptionName.optionName;
 
 	private final JPAQueryFactory queryFactory;
-	public List<Sales> findCheapestAndOldestSales(Map<Long, Integer> productOptionQuantityMap ){
-		if (productOptionQuantityMap == null || productOptionQuantityMap.isEmpty()) {
-			log.error("[최저가 Sale 목록 조회 실패] productOptionQuantityMap이 null이거나 비어있습니다.");
-			return List.of();
-		}
 
-		try {
-			List<Sales> allSales = productOptionQuantityMap.entrySet().stream()
-				.filter(entry -> entry.getValue() != null && entry.getValue() > 0)
-				.flatMap(entry -> {
-					Long productOptionId = entry.getKey();
-					Integer quantity = entry.getValue();
-
-					List<Sales> sales = queryFactory
-						.select(QSales.sales)
-						.from(QSales.sales)
-						.where(QSales.sales.productOptionId.eq(productOptionId))
-						.orderBy(
-							QSales.sales.price.asc(),
-							QSales.sales.createdTime.asc()
-						)
-						.limit(quantity)
-						.fetch();
-
-					if (sales.size() < quantity) {
-						log.warn("[최저가 Sale 조회 경고] 요청 수량보다 적게 조회되었습니다. productOptionId: {}, 요청: {}개, 조회: {}개",
-							productOptionId, quantity, sales.size());
-					}
-
-					return sales.stream();
-				})
-				.collect(Collectors.toList());
-
-			return allSales;
-		} catch (Exception e){
-			log.error("[최저가 Sale 목록 조회 실패] error: {}", e.getMessage(), e);
-			return List.of();
-		}
-	}
 	public ProductInfo findProductInfoBySaleId(Long saleId) {
 		if (saleId == null) {
 			return null;

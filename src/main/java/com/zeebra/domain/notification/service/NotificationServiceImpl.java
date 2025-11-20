@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.concurrent.DelegatingSecurityContextExecutor;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -43,7 +44,8 @@ public class NotificationServiceImpl implements NotificationService {
         Member member = internalSupport.findByMemberId(request.getMemberId());
         Notification notification = new Notification(member.getId(), request.getNotificationType(), url, request.getImgUrl());
 
-        return CompletableFuture.supplyAsync(() -> internalSupport.saveNotification(notification), notificationWorkerExecutor)
+        return CompletableFuture.supplyAsync(() -> internalSupport.saveNotification(notification)
+                        , new DelegatingSecurityContextExecutor(notificationWorkerExecutor))
                 .thenApply(NotificationResponse::of);
     }
 
@@ -63,7 +65,7 @@ public class NotificationServiceImpl implements NotificationService {
                             savedNotification.getNotificationType()
                     ));
                     return savedNotification;
-                }, notificationWorkerExecutor)
+                }, new DelegatingSecurityContextExecutor(notificationWorkerExecutor))
                 .thenApply(NotificationResponse::of);
 
     }

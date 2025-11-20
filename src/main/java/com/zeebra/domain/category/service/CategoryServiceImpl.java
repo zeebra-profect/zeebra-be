@@ -1,12 +1,16 @@
 package com.zeebra.domain.category.service;
 
-import com.zeebra.domain.cart.repository.CartRepository;
+import java.util.List;
+import java.util.NoSuchElementException;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.zeebra.domain.category.dto.CategoryRequest;
 import com.zeebra.domain.category.dto.CategoryResponse;
 import com.zeebra.domain.category.entity.Category;
 import com.zeebra.domain.category.repository.CategoryRepository;
 import com.zeebra.domain.member.entity.Member;
-import com.zeebra.domain.member.entity.Role;
 import com.zeebra.domain.member.repository.MemberRepository;
 import com.zeebra.global.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.NoSuchElementException;
+
 
 @Transactional(readOnly = true)
 @Service
@@ -34,10 +39,7 @@ public class CategoryServiceImpl implements CategoryService {
             if (!member.isAdmin()) {
                 return ApiResponse.error(null, "카테고리는 관리자만 생성할 수 있습니다.");
             }
-            Category category = categoryRepository.save(new Category(
-                    request.parentCategoryId(),
-                    request.categoryName()
-            ));
+            Category category = categoryRepository.save(Category.builder().name(request.categoryName()).parentId(request.parentCategoryId()).build());
             CategoryResponse categoryResponse = new CategoryResponse(
                     category.getId(),
                     category.getParentId(),
@@ -49,4 +51,9 @@ public class CategoryServiceImpl implements CategoryService {
             return ApiResponse.error(null, "카테고리를 생성하는 과정에서 오류가 발생했습니다.");
         }
     }
+
+@Transactional(readOnly = true)
+public List<CategoryResponse> selectCategories() {
+    return CategoryResponse.of(categoryRepository.findAllByOrderByIdAsc());
+}
 }

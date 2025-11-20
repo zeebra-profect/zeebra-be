@@ -51,16 +51,14 @@ public class SecurityConfigLocal {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(SWAGGER_WHITELIST).permitAll()
                         .requestMatchers("/ws/**").permitAll()  // WebSocket 허용
-                        .requestMatchers("/api/notification").permitAll()
+                        .requestMatchers("/api/notification/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
 
                         .requestMatchers("/ws/chat/**").permitAll()
                         .requestMatchers("/api/chat/group/**").permitAll()
 
-                        .requestMatchers("/api/chat/dm/rooms/**").authenticated()
-                        .requestMatchers("/api/chat/rooms/{roomId}/leave").authenticated()
-                        .requestMatchers("/api/chat/rooms/{roomId}/trade").authenticated()
+                        .requestMatchers("/api/chat/dm/**").authenticated()
 
                         .anyRequest().authenticated()
                 )

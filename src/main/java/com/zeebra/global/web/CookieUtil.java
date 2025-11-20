@@ -44,6 +44,10 @@ public final class CookieUtil {
                 .orElse(null);
     }
 
+    public static String getAccessTokenFromCookieHeader(String cookieHeader) {
+        return getCookieHeader(cookieHeader, ACCESS_TOKEN_COOKIE_NAME);
+    }
+
 
 	public static void addAuthCookies(HttpServletResponse response,
 		String accessToken,

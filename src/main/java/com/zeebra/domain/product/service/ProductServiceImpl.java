@@ -1,5 +1,8 @@
 package com.zeebra.domain.product.service;
 
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+
 import com.zeebra.domain.brand.dto.BrandResponse;
 import com.zeebra.domain.brand.entity.Brand;
 import com.zeebra.domain.category.dto.CategorySearchResponse;
@@ -12,6 +15,8 @@ import com.zeebra.domain.product.dto.*;
 import com.zeebra.domain.product.entity.*;
 import com.zeebra.domain.product.repository.*;
 import com.zeebra.global.ApiResponse;
+import com.zeebra.global.ErrorCode.CommonErrorCode;
+import com.zeebra.global.exception.BusinessException;
 import com.zeebra.global.web.KeywordSanitizer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -180,4 +185,8 @@ public class ProductServiceImpl implements ProductService {
         Pagination pagination = new Pagination(pageable.getPageNumber(), pageable.getPageSize(), totalCount, totalPage);
         return ApiResponse.success(new FavoriteProductList(pagination, getFavoriteProductResponses));
     }
+
+	public void validateProductOptionId(Long productOptionId) {
+		productOptionRepository.findById(productOptionId).orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND, "존재하지 않는 상품입니다."));
+	}
 }

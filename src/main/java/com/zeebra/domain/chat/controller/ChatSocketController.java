@@ -28,6 +28,11 @@ public class ChatSocketController {
 
     ) {
         try { //️ 2. try-catch 블록 추가
+            if (principal == null) {
+                log.warn(" WebSocket - 인증되지 않은 사용자 메세지 전송 시도: (Room : {})", requestDto.getChatRoomId());
+                return;
+            }
+
             UsernamePasswordAuthenticationToken auth =
                     (UsernamePasswordAuthenticationToken) principal;
 

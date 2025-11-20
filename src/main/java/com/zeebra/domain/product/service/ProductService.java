@@ -1,11 +1,17 @@
 package com.zeebra.domain.product.service;
 
-import com.zeebra.domain.product.dto.*;
-import com.zeebra.global.ApiResponse;
+import java.util.List;
 
 import org.springframework.data.domain.Pageable;
 
-import java.util.List;
+import com.zeebra.domain.product.dto.FavoriteProductList;
+import com.zeebra.domain.product.dto.FavoriteProductResponse;
+import com.zeebra.domain.product.dto.ProductDetailResponse;
+import com.zeebra.domain.product.dto.ProductRequest;
+import com.zeebra.domain.product.dto.ProductResponse;
+import com.zeebra.domain.product.dto.SearchProductResponse;
+import com.zeebra.domain.product.dto.SizeOptionResponseList;
+import com.zeebra.global.ApiResponse;
 
 public interface ProductService {
 
@@ -22,4 +28,6 @@ public interface ProductService {
     public ApiResponse<SearchProductResponse> searchProduct(String keyWord, List<Long> categoryIds, List<Long> brandIds, Pageable pageable, String productSort);
 
     public ApiResponse<FavoriteProductList> getFavoriteProduct(Long memberId, Pageable pageable);
+
+	void validateProductOptionId(Long productOptionId);
 }

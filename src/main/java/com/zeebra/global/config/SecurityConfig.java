@@ -1,5 +1,8 @@
 package com.zeebra.global.config;
 
+import com.zeebra.global.security.jwt.AuthProblemHandler;
+import com.zeebra.global.security.jwt.JwtFilter;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -15,11 +18,6 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 
-import com.zeebra.global.security.jwt.AuthProblemHandler;
-import com.zeebra.global.security.jwt.JwtFilter;
-
-import lombok.RequiredArgsConstructor;
-
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -27,54 +25,57 @@ import lombok.RequiredArgsConstructor;
 @Profile("!local")
 public class SecurityConfig {
 
-	private static final String[] SWAGGER_WHITELIST = {
-		"/swagger-ui.html",
-		"/swagger-ui/**",
-		"/v3/api-docs",
-		"/v3/api-docs/**"
-	};
+    private static final String[] SWAGGER_WHITELIST = {
+            "/swagger-ui.html",
+            "/swagger-ui/**",
+            "/v3/api-docs",
+            "/v3/api-docs/**"
+    };
 
-	private final JwtFilter jwtFilter;
-	private final AuthProblemHandler authProblemHandler;
+    private final JwtFilter jwtFilter;
+    private final AuthProblemHandler authProblemHandler;
 
-	@Bean
-	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
-		http
-			.headers(headers -> headers
-				.contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'self'; script-src 'self' "))
-				.frameOptions(frameOptions -> frameOptions.deny()))
-			.cors(AbstractHttpConfigurer::disable)
-			.authorizeHttpRequests(auth -> auth
-				.requestMatchers(SWAGGER_WHITELIST).permitAll()
-				.requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**").permitAll()
-				.requestMatchers("/api/auth/**").permitAll()
-                    .requestMatchers("/ws/chat/**").permitAll()
-                    .requestMatchers("/api/chat/group/**").permitAll()
+        http
+                .headers(headers -> headers
+                        .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'self'; script-src 'self' "))
+                        .frameOptions(frameOptions -> frameOptions.deny()))
+                .cors(AbstractHttpConfigurer::disable)
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(SWAGGER_WHITELIST).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**").permitAll()
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/ws/chat/**").permitAll()
+                        .requestMatchers("/api/chat/group/**").permitAll()
 
-                    .requestMatchers("/api/chat/dm/rooms/**").authenticated()
-                    .requestMatchers("/api/chat/rooms/{roomId}/leave").authenticated()
-                    .requestMatchers("/api/chat/rooms/{roomId}/trade").authenticated()
+                        .requestMatchers("/api/chat/dm/rooms/**").authenticated()
+                        .requestMatchers("/api/chat/rooms/{roomId}/leave").authenticated()
+                        .requestMatchers("/api/chat/rooms/{roomId}/trade").authenticated()
 
-				.anyRequest().authenticated())
-			.csrf(csrf -> csrf
-				.ignoringRequestMatchers("/api/auth/**", "/api/products", "/api/products/**",
-                        "/ws/chat/**", "/api/chat/group/**")
-				.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
-			.formLogin(AbstractHttpConfigurer::disable)
-			.httpBasic(AbstractHttpConfigurer::disable)
-			.exceptionHandling(ex -> ex
-				.authenticationEntryPoint(authProblemHandler)
-				.accessDeniedHandler(authProblemHandler))
-            .sessionManagement(session -> 
-                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-			.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
-		return http.build();
-	}
+                        .requestMatchers("/api/push/**").authenticated()
+                        .requestMatchers("/api/notification/**").authenticated()
 
-	@Bean
-	public PasswordEncoder passwordEncoder() {
-		return new BCryptPasswordEncoder(12);
-	}
+                        .anyRequest().authenticated())
+                .csrf(csrf -> csrf
+                        .ignoringRequestMatchers("/api/auth/**", "/api/products", "/api/products/**",
+                                "/ws/chat/**", "/api/chat/group/**")
+                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
+                .formLogin(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable)
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(authProblemHandler)
+                        .accessDeniedHandler(authProblemHandler))
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+        return http.build();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder(12);
+    }
 
 }

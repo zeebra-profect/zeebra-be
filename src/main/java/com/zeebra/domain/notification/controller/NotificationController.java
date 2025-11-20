@@ -3,6 +3,8 @@ package com.zeebra.domain.notification.controller;
 import com.zeebra.domain.notification.dto.NotificationRequest;
 import com.zeebra.domain.notification.dto.NotificationResponse;
 import com.zeebra.domain.notification.dto.NotificationsResponse;
+import com.zeebra.domain.notification.entity.NotificationType;
+import com.zeebra.domain.notification.event.NotificationEvent;
 import com.zeebra.domain.notification.service.NotificationService;
 import com.zeebra.global.ApiResponse;
 import com.zeebra.global.security.jwt.JwtProvider;
@@ -61,7 +63,7 @@ public class NotificationController {
     @PostMapping
     public ApiResponse<NotificationResponse> createNotification(@AuthenticationPrincipal JwtProvider.JwtUserPrincipal principal, @RequestBody NotificationRequest request) {
         request.setMemberId(principal.getMemberId());
-//        eventPublisher.publishEvent(new NotificationEvent(request.getMemberId(), request.getNotificationType(), "ㅇㅅㅇ", request.getObject(), null));
-        return ApiResponse.success(notificationService.createNotificationAsyncPush(request).join());
+        NotificationEvent event = new NotificationEvent(principal.getMemberId(), NotificationType.TEST, principal.getUserLoginId(), null);
+        return ApiResponse.success(notificationService.createNotificationAsyncPush(event, request).join());
     }
 }

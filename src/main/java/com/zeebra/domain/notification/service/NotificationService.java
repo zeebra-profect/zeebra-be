@@ -3,6 +3,7 @@ package com.zeebra.domain.notification.service;
 import com.zeebra.domain.notification.dto.NotificationRequest;
 import com.zeebra.domain.notification.dto.NotificationResponse;
 import com.zeebra.domain.notification.dto.NotificationsResponse;
+import com.zeebra.domain.notification.event.NotificationEvent;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -10,7 +11,7 @@ public interface NotificationService {
 
     CompletableFuture<NotificationResponse> createNotificationAsync(NotificationRequest notificationRequest);
 
-    CompletableFuture<NotificationResponse> createNotificationAsyncPush(NotificationRequest notificationRequest);
+    CompletableFuture<NotificationResponse> createNotificationAsyncPush(NotificationEvent event, NotificationRequest notificationRequest);
 
     NotificationResponse getNotificationById(Long notificationId);
 

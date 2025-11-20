@@ -27,7 +27,7 @@ public enum NotificationType {
         this.notificationTitle = notificationTitle;
     }
 
-    public void createMessage(String str) {
+    public String createMessage(String str) {
 
         String result = null;
 
@@ -48,6 +48,8 @@ public enum NotificationType {
         this.noticeBasicText = result;
         System.out.println("myText: " + this.noticeBasicText);
         System.out.println("result: " + result);
+
+        return result;
     }
 
 

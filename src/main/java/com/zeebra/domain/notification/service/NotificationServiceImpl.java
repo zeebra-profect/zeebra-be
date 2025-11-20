@@ -1,41 +1,41 @@
 package com.zeebra.domain.notification.service;
 
+import com.zeebra.domain.common.InternalSupport;
 import com.zeebra.domain.member.entity.Member;
-import com.zeebra.domain.member.repository.MemberRepository;
 import com.zeebra.domain.notification.component.NotificationUrlFactory;
 import com.zeebra.domain.notification.dto.NotificationRequest;
 import com.zeebra.domain.notification.dto.NotificationResponse;
 import com.zeebra.domain.notification.dto.NotificationsResponse;
 import com.zeebra.domain.notification.entity.Notification;
 import com.zeebra.domain.notification.entity.NotificationType;
+import com.zeebra.domain.notification.event.NotificationEvent;
+import com.zeebra.domain.notification.event.WebPushEvent;
 import com.zeebra.domain.notification.repository.NotificationRepository;
-import com.zeebra.domain.webpush.service.WebPushService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 @Service
 @RequiredArgsConstructor
 public class NotificationServiceImpl implements NotificationService {
     private final NotificationRepository notificationRepository;
-    private final MemberRepository memberRepository;
     private final NotificationUrlFactory notificationUrlFactory;
-    private final WebPushService webPushService;
+    private final InternalSupport internalSupport;
+    private final ApplicationEventPublisher applicationEventPublisher;
+    private final Executor notificationWorkerExecutor;
 
     private boolean isValidNotificationType(NotificationType type) {
         return Arrays.asList(NotificationType.values()).contains(type);
     }
 
-    @Async("notificationAsyncExecutor")
-    @Transactional
+    @Async("mainNotificationExecutor")
     public CompletableFuture<NotificationResponse> createNotificationAsync(NotificationRequest request) {
-        System.out.println("Thread executing createNotificationAsync: " + Thread.currentThread().getName());
-
         if (request.getNotificationType() == null) {
             throw new IllegalArgumentException("타입 값이 없습니다.");
         }
@@ -44,19 +44,16 @@ public class NotificationServiceImpl implements NotificationService {
             throw new IllegalArgumentException("유효하지 않은 알림 타입입니다.");
         }
 
-        CompletableFuture<Member> member = findByMemberId(request.getMemberId());
         String url = notificationUrlFactory.createUrl(request.getNotificationType(), request.getObject());
-        Notification notification = new Notification(member.join().getId(), request.getNotificationType(), url, request.getImgUrl());
-        Notification savedNotification = saveNotificationAsync(notification).join();
+        Member member = internalSupport.findByMemberId(request.getMemberId());
+        Notification notification = new Notification(member.getId(), request.getNotificationType(), url, request.getImgUrl());
 
-        return CompletableFuture.completedFuture(NotificationResponse.of(savedNotification));
+        return CompletableFuture.supplyAsync(() -> internalSupport.saveNotification(notification), notificationWorkerExecutor)
+                .thenApply(NotificationResponse::of);
     }
 
-    @Async("notificationAsyncExecutor")
-    @Transactional
-    public CompletableFuture<NotificationResponse> createNotificationAsyncPush(NotificationRequest request) {
-        System.out.println("Thread executing createNotificationAsync: " + Thread.currentThread().getName());
-
+    @Async("mainNotificationExecutor")
+    public CompletableFuture<NotificationResponse> createNotificationAsyncPush(NotificationEvent event, NotificationRequest request) {
         if (request.getNotificationType() == null) {
             throw new IllegalArgumentException("타입 값이 없습니다.");
         }
@@ -65,14 +62,21 @@ public class NotificationServiceImpl implements NotificationService {
             throw new IllegalArgumentException("유효하지 않은 알림 타입입니다.");
         }
 
-        CompletableFuture<Member> member = findByMemberId(request.getMemberId());
         String url = notificationUrlFactory.createUrl(request.getNotificationType(), request.getObject());
-        Notification notification = new Notification(member.join().getId(), request.getNotificationType(), url, request.getImgUrl());
-        Notification savedNotification = saveNotificationAsync(notification).join();
+        Member member = internalSupport.findByMemberId(request.getMemberId());
+        Notification notification = new Notification(member.getId(), request.getNotificationType(), url, request.getImgUrl());
 
-        webPushService.sendPush(member.join().getId(), savedNotification);
+        return CompletableFuture.supplyAsync(() -> {
+                    Notification savedNotification = internalSupport.saveNotification(notification);
+                    applicationEventPublisher.publishEvent(new WebPushEvent(
+                            member.getId(),
+                            event.getDisplayText(),
+                            savedNotification.getNotificationType()
+                    ));
+                    return savedNotification;
+                }, notificationWorkerExecutor)
+                .thenApply(NotificationResponse::of);
 
-        return CompletableFuture.completedFuture(NotificationResponse.of(savedNotification));
     }
 
 
@@ -83,13 +87,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     public NotificationsResponse getNotifications(Long memberId) {
-
-        if (memberId == null) {
-            throw new NullPointerException("사용자의 id가 null입니다.");
-        }
-
-        Member member = memberRepository.findById(memberId).orElseThrow(() -> new NoSuchElementException("해당하는 사용자가 없습니다."));
-
+        Member member = internalSupport.findByMemberId(memberId);
         List<NotificationResponse> responses = new ArrayList<>();
         NotificationsResponse response = new NotificationsResponse(responses);
         for (Optional<Notification> notification : notificationRepository.findByMemberIdOrderByCreatedTimeDesc(member.getId())) {
@@ -104,74 +102,31 @@ public class NotificationServiceImpl implements NotificationService {
         return response;
     }
 
-    @Async("notificationAsyncExecutor")
-    @Transactional
+    @Async("mainNotificationExecutor")
     public CompletableFuture<Void> readNotification(Long memberId, Long notificationId) {
-        if (memberId == null) {
-            throw new NullPointerException("사용자의 id가 null입니다.");
-        }
-        if (notificationId == null) {
-            throw new NullPointerException("알림 id가 null입니다.");
+        Member member = internalSupport.findByMemberId(memberId);
+        Notification notification = internalSupport.findByNotificationId(notificationId);
+
+        if (!Objects.equals(member.getId(), notification.getMemberId())) {
+            throw new AccessDeniedException("권한이 없습니다.");
         }
 
-        CompletableFuture<Member> memberFuture = findByMemberId(memberId);
-        CompletableFuture<Notification> notificationFuture = findByNotificationId(notificationId);
+        notification.read();
 
-        return memberFuture.thenCombine(notificationFuture, (member, notification) -> {
-                    if (!Objects.equals(member.getId(), notification.getMemberId())) {
-                        throw new AccessDeniedException("권한이 없습니다.");
-                    }
-                    notification.read();
-                    return notification;
-                }).thenCompose(notification -> saveNotificationAsync(notification))
-                .thenApply(saved -> null);
+        return CompletableFuture.supplyAsync(() -> internalSupport.saveNotification(notification), notificationWorkerExecutor)
+                .thenApply(saved -> null); // Void 반환
     }
 
-    @Async("notificationAsyncExecutor")
-    @Transactional
+    @Async("mainNotificationExecutor")
     public CompletableFuture<Void> deleteNotification(Long memberId, Long notificationId) {
-        if (memberId == null) {
-            throw new NullPointerException("사용자의 id가 null입니다.");
+        Member member = internalSupport.findByMemberId(memberId);
+        Notification notification = internalSupport.findByNotificationId(notificationId);
+
+        if (!Objects.equals(member.getId(), notification.getMemberId())) {
+            throw new AccessDeniedException("권한이 없습니다.");
         }
-        if (notificationId == null) {
-            throw new NullPointerException("알림 id가 null입니다.");
-        }
 
-        CompletableFuture<Member> memberFuture = findByMemberId(memberId);
-        CompletableFuture<Notification> notificationFuture = findByNotificationId(notificationId);
-
-        return memberFuture.thenCombine(notificationFuture, (member, notification) -> {
-            if (!Objects.equals(member.getId(), notification.getMemberId())) {
-                throw new AccessDeniedException("권한이 없습니다.");
-            }
-            notification.read();
-            return notification;
-        }).thenCompose(notification -> deleteNotificationAsync(notification));
+        return CompletableFuture.runAsync(() -> internalSupport.deleteNotification(notification), notificationWorkerExecutor);
     }
 
-
-    // 헬퍼 메서드 (논블로킹)
-
-    @Async("notificationAsyncExecutor")
-    public CompletableFuture<Member> findByMemberId(Long memberId) {
-        return CompletableFuture.completedFuture(memberRepository.findById(memberId).orElseThrow(() -> new NoSuchElementException("해당하는 사용자가 없습니다.")));
-    }
-
-    @Async("notificationAsyncExecutor")
-    public CompletableFuture<Notification> findByNotificationId(Long notificationId) {
-        return CompletableFuture.completedFuture(notificationRepository.findByNotificationId(notificationId).orElseThrow(() -> new NoSuchElementException("해당하는 알림이 없습니다.")));
-    }
-
-    @Async("notificationAsyncExecutor")
-    @Transactional
-    public CompletableFuture<Void> deleteNotificationAsync(Notification notification) {
-        notificationRepository.delete(notification);
-        return CompletableFuture.completedFuture(null);
-    }
-
-    @Async("notificationAsyncExecutor")
-    @Transactional
-    public CompletableFuture<Notification> saveNotificationAsync(Notification notification) {
-        return CompletableFuture.completedFuture(notificationRepository.save(notification));
-    }
 }

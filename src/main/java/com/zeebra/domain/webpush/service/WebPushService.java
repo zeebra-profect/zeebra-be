@@ -1,133 +1,70 @@
 package com.zeebra.domain.webpush.service;
 
+import com.zeebra.domain.common.InternalSupport;
 import com.zeebra.domain.member.entity.Member;
-import com.zeebra.domain.member.repository.MemberRepository;
-import com.zeebra.domain.notification.entity.Notification;
 import com.zeebra.domain.webpush.dto.WebPushRequest;
 import com.zeebra.domain.webpush.entity.WebPush;
 import com.zeebra.domain.webpush.repository.WebPushRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import nl.martijndwars.webpush.PushService;
-import org.springframework.beans.factory.annotation.Value;
+import org.apache.http.HttpResponse;
 import org.springframework.scheduling.annotation.Async;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.security.GeneralSecurityException;
-import java.util.List;
+import java.nio.charset.StandardCharsets;
 import java.util.NoSuchElementException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
+@RequiredArgsConstructor
 public class WebPushService {
     private final WebPushRepository webPushRepository;
-    private final MemberRepository memberRepository;
-
-    @Value("${vapid.public.key}")
-    private String vapidPublicKey;
-
-    @Value("${vapid.private.key}")
-    private String vapidPrivateKey;
-
-    @Value("${vapid.subject}")
-    private String vapidSubject;
+    private final InternalSupport internalSupport;
+    private final Executor webPushWorkerExecutor;
+    private final PushService pushService;
 
     public boolean isSubscribed(Long memberId) {
-
-        if (memberId == null) {
-            throw new NullPointerException("사용자의 id가 null입니다.");
-        }
-
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new NoSuchElementException("해당하는 사용자가 없습니다."));
-
-        if (member.getId() != memberId) {
-            throw new AccessDeniedException("권한이 없습니다.");
-        }
-
+        Member member = internalSupport.findByMemberId(memberId);
         return !webPushRepository.findByMemberId(memberId).isEmpty();
     }
 
-    @Async
-    public void sendPush(Long memberId, Notification notification) {
-        if (memberId == null) {
-            throw new NullPointerException("사용자의 id가 null입니다.");
-        }
-
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new NoSuchElementException("해당하는 사용자가 없습니다."));
-
-        if (member.getId() != memberId) {
-            throw new AccessDeniedException("권한이 없습니다.");
-        }
-
-        List<WebPush> webPushList = webPushRepository.findByMemberId(memberId);
-        if (webPushList.isEmpty()) {
-            log.info("해당 멤버의 구독 정보가 없습니다.");
-            return;
-        }
-
-        PushService pushService = initializePushService();
+    @Async("mainWebPushExecutor")
+    public CompletableFuture<Boolean> sendPush(Long memberId, String title, String body) {
+        WebPush webPush = findByMemberId(memberId);
 
         if (pushService == null) {
-            return;
+            throw new NullPointerException("PushService 초기화 실패");
         }
 
-        String payload = createPushPayload(notification);
+        String content = String.format("{\"title\":\"%s\",\"body\":\"%s\"}",
+                title,
+                body);
 
-        int successCount = 0;
-        int failCount = 0;
-
-        for (WebPush webPush : webPushList) {
+        return CompletableFuture.supplyAsync(() -> {
             try {
-                nl.martijndwars.webpush.Notification pushNotification =
-                        new nl.martijndwars.webpush.Notification(
-                                webPush.getEndpoint(),
-                                webPush.getP256dh(),
-                                webPush.getAuth(),
-                                payload.getBytes(java.nio.charset.StandardCharsets.UTF_8)
-                        );
-//                System.out.println("payload string: '" + payload + "'");
-//                System.out.println("payload length: " + payload.length());
-//                System.out.println("VAPID PUBLIC KEY = " + vapidPublicKey);
-//                System.out.println("VAPID PRIVATE KEY = " + vapidPrivateKey);
-                org.apache.http.HttpResponse response = pushService.send(pushNotification);
-                int statusCode = response.getStatusLine().getStatusCode();
-
-                if (statusCode == 201) {
-                    successCount++;
-                    log.debug("푸시 발송 성공 - webPushId: {}", webPush.getWebPushId());
-                } else if (statusCode == 410) {
-                    // 구독 만료 - 삭제
-                    webPushRepository.delete(webPush);
-                    log.info("만료된 구독 삭제 - webPushId: {}", webPush.getWebPushId());
-                    failCount++;
+                HttpResponse response = send(pushService, webPush, content);
+                int status = response.getStatusLine().getStatusCode();
+                boolean success = (status == 201 || status == 200);
+                if (success) {
+                    log.debug("푸시 성공 - memberId: {}", memberId);
                 } else {
-                    log.warn("푸시 발송 실패 - webPushId: {}, statusCode: {}",
-                            webPush.getWebPushId(), statusCode);
-                    failCount++;
+                    log.warn("푸시 실패 - memberId: {}, status: {}", memberId, status);
                 }
-
+                return success;
             } catch (Exception e) {
-                failCount++;
-                log.error("푸시 발송 중 예외 - webPushId: {}, error: {}",
-                        webPush.getWebPushId(), e.getMessage());
+                log.error("푸시 예외 - memberId: {}", memberId, e);
+                return false;
             }
-        }
-
-        log.info("푸시 발송 완료 - memberId: {}, 성공: {}, 실패: {}",
-                memberId, successCount, failCount);
-
+        }, webPushWorkerExecutor).thenApply(result -> result);
     }
 
     @Transactional
     public String saveSubscription(Long memberId, WebPushRequest request) {
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new NoSuchElementException("해당하는 사용자가 없습니다."));
-
+        Member member = internalSupport.findByMemberId(memberId);
         webPushRepository.findByMemberIdAndDeviceInfo(memberId, request.getDeviceInfo())
                 .ifPresent(existing -> {
                     log.info("기존 구독 정보 삭제 - id: {}", existing.getMemberId());
@@ -148,29 +85,25 @@ public class WebPushService {
 
     @Transactional
     public String deleteSubscription(Long memberId) {
-        Member member = memberRepository.findById(memberId).orElseThrow(() -> new NoSuchElementException("해당하는 사용자가 없습니다."));
+        Member member = internalSupport.findByMemberId(memberId);
         webPushRepository.deleteByMemberId(memberId);
         return "구독 해지 성공";
     }
 
-    private PushService initializePushService() {
-        try {
-            PushService pushService = new PushService();
-            pushService.setPublicKey(vapidPublicKey);
-            pushService.setPrivateKey(vapidPrivateKey);
-            pushService.setSubject(vapidSubject);
-            return pushService;
-        } catch (GeneralSecurityException e) {
-            log.error("푸시 서비스 초기화 실패 (VAPID 키 오류): {}", e.getMessage());
-            return null;
-        }
+    // 헬퍼 메서드
+
+    public WebPush findByMemberId(Long memberId) {
+        Member member = internalSupport.findByMemberId(memberId);
+        return webPushRepository.findByMemberId(memberId).orElseThrow(() -> new NoSuchElementException("해당 멤버의 구독 정보가 없습니다."));
     }
 
-    private String createPushPayload(Notification notification) {
-        return String.format("{\"title\":\"%s\",\"body\":\"%s\"}",
-                notification.getNotificationType().getNoticeBasicText(),
-                notification.getNotificationType().getNoticeBasicText());
+    public HttpResponse send(PushService pushService, WebPush webPush, String content)
+            throws Exception {
+        var notification = new nl.martijndwars.webpush.Notification(
+                webPush.getEndpoint(), webPush.getP256dh(), webPush.getAuth(),
+                content.getBytes(StandardCharsets.UTF_8)
+        );
+        return pushService.send(notification);
     }
-
-
 }
+

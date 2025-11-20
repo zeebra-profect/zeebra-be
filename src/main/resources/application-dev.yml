@@ -39,3 +39,10 @@ spring.jpa:
 toss:
   payments:
     secret-key: ${TOSS_PAYMENT_SECRET_KEY}
+
+  vapid:
+    public:
+      key: BN6WSz7suZPHtrPslZQLuwGf1ZG80OXvnInn1iJ-MLL3HQ_rrUPe0v8Wmo6zaqMaZI_qtrPKqQRjQopPcPORQkU
+    private:
+      key: t4LDNFeIXhuonUykBoJMSJBhKBGIe873T340l51FFIY
+    subject: mailto:bbyubbu@naver.com

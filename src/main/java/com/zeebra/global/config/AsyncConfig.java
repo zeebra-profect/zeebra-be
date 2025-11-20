@@ -7,6 +7,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.AsyncConfigurer;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -29,6 +31,20 @@ public class AsyncConfig implements AsyncConfigurer {
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.setWaitForTasksToCompleteOnShutdown(true);
         executor.setAwaitTerminationSeconds(60);
+        executor.setTaskDecorator(runnable -> {
+            // 현재 스레드의 SecurityContext를 캡처
+            SecurityContext context = SecurityContextHolder.getContext();
+            return () -> {
+                try {
+                    // 비동기 스레드에 SecurityContext 설정
+                    SecurityContextHolder.setContext(context);
+                    runnable.run();
+                } finally {
+                    // 실행 후 정리
+                    SecurityContextHolder.clearContext();
+                }
+            };
+        });
         executor.initialize();
         return executor;
     }
@@ -46,6 +62,20 @@ public class AsyncConfig implements AsyncConfigurer {
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.setWaitForTasksToCompleteOnShutdown(true);
         executor.setAwaitTerminationSeconds(60);
+        executor.setTaskDecorator(runnable -> {
+            // 현재 스레드의 SecurityContext를 캡처
+            SecurityContext context = SecurityContextHolder.getContext();
+            return () -> {
+                try {
+                    // 비동기 스레드에 SecurityContext 설정
+                    SecurityContextHolder.setContext(context);
+                    runnable.run();
+                } finally {
+                    // 실행 후 정리
+                    SecurityContextHolder.clearContext();
+                }
+            };
+        });
         executor.initialize();
         return executor;
     }

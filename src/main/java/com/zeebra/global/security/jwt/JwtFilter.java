@@ -1,9 +1,18 @@
 package com.zeebra.global.security.jwt;
 
+import java.io.IOException;
+import java.util.Optional;
+
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
 import com.zeebra.domain.member.entity.Member;
 import com.zeebra.domain.member.repository.MemberRepository;
 import com.zeebra.global.ErrorCode.AuthErrorCode;
 import com.zeebra.global.web.CookieUtil;
+
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
@@ -11,13 +20,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Component;
-import org.springframework.web.filter.OncePerRequestFilter;
-
-import java.io.IOException;
-import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -43,6 +45,12 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String requestPath = request.getRequestURI();
         String method = request.getMethod();
+		String path = request.getRequestURI();
+		String accessTokens = CookieUtil.getCookieValue(request, ACCESS_TOKEN_COOKIE_NAME);
+
+		System.out.println("[JwtFilter] " + method + " " + path
+			+ " / hasAccessToken=" + (accessTokens != null));
+
 
         if (isPublicPath(requestPath)) {
             filterChain.doFilter(request, response);

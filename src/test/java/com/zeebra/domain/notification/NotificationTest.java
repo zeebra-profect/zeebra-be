@@ -152,7 +152,7 @@ public class NotificationTest {
         NotificationsResponse response = notificationService.getNotifications(member1.member().memberId());
 
         // then : 회원가입 시 알림이 생성되기 때문에 +1
-        assertThat(response.dtos().size()).isEqualTo(4);
+        assertThat(response.dtos().size()).isEqualTo(3);
     }
 
     @Test

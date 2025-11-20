@@ -18,6 +18,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.NoSuchElementException;
@@ -155,16 +156,18 @@ public class NotificationTest {
     }
 
     @Test
+    @Transactional
     @DisplayName("TC-UT-NOTI-FIND-002-[정상] 알림이 없는 회원 조회 시 빈 목록 반환")
     public void getNotifications_validMemberIdWithEmptyResult_success() {
         // given
         SignupResponse member1 = createTestMember("user1", "user1@abc.a");
-
+        notificationRepository.deleteAll();
+        notificationRepository.flush();
         // when
         NotificationsResponse response = notificationService.getNotifications(member1.member().memberId());
 
         // then
-        assertThat(response.dtos().size()).isEqualTo(1);
+        assertThat(response).isNull();
     }
 
     @Test

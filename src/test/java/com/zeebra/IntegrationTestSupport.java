@@ -9,6 +9,5 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest
 @ActiveProfiles("test")
 @Import(TestContainerConfig.class)
-@Transactional // 각 테스트 후 롤백
 public abstract class IntegrationTestSupport {
 }

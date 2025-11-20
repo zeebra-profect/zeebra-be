@@ -13,10 +13,15 @@ import com.zeebra.domain.category.repository.CategoryRepository;
 import com.zeebra.domain.member.entity.Member;
 import com.zeebra.domain.member.repository.MemberRepository;
 import com.zeebra.global.ApiResponse;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.NoSuchElementException;
+
+
+@Transactional(readOnly = true)
 @Service
 @RequiredArgsConstructor
 @Slf4j

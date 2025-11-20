@@ -67,8 +67,14 @@ dependencies {
 
     testImplementation("org.assertj:assertj-core:3.27.3")
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.13.4")
-    testCompileOnly 'org.projectlombok:lombok'
-    testAnnotationProcessor 'org.projectlombok:lombok'
+    
+    // 테스트 환경 설정
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.testcontainers:postgresql:1.19.3'
+    testImplementation 'org.testcontainers:testcontainers:1.19.3'
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    testImplementation 'org.testcontainers:junit-jupiter:1.19.3'
+
 }
 
 tasks.named('test') {

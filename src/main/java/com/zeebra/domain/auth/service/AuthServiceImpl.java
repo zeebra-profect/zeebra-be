@@ -63,7 +63,7 @@ public class AuthServiceImpl implements AuthService {
                 encodedPassword);
 
         Member saved = memberRepository.save(member);
-        eventPublisher.publishEvent(new NotificationEvent(member.getId(), NotificationType.SIGN_UP, member.getNickname(), null, null) {
+        eventPublisher.publishEvent(new NotificationEvent(member.getId(), NotificationType.SIGN_UP, member.getNickname(), null) {
         });
 
         return SignupResponse.of(saved);
@@ -90,7 +90,7 @@ public class AuthServiceImpl implements AuthService {
         String refreshToken = jwtProvider.createRefreshToken(member.getId(), member.getRole().toString(), refreshTokenDays);
 
         MemberInfo memberInfo = MemberInfo.of(member);
-        eventPublisher.publishEvent(new NotificationEvent(member.getId(), NotificationType.LOGIN, member.getNickname(), null, null));
+        eventPublisher.publishEvent(new NotificationEvent(member.getId(), NotificationType.LOGIN, member.getNickname(), null));
 
         return new LoginSuccess(accessToken, refreshToken, accessTokenMinutes, refreshTokenDays, memberInfo);
     }

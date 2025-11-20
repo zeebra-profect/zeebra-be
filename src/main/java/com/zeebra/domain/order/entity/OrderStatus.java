@@ -61,15 +61,15 @@ public enum OrderStatus {
 		}
 	}
 
+	public boolean isCreated() {
+		return this == CREATED;
+	}
+
 	public boolean isProcessing() {
 		return this == CREATED;
 	}
 
-	public boolean isCancelable() {
-		return this == CREATED || this == PAYMENT_PENDING || this == PAID || this == CONFIRMED;
-	}
-
-	public boolean isRefundable() {
-		return this == PAID || this == CONFIRMED;
+	public boolean isFailed() {
+		return this == FAILED;
 	}
 }

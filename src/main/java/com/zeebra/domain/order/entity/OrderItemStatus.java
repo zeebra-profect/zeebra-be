@@ -50,31 +50,31 @@ public enum OrderItemStatus {
 		}
 	}
 
+	public boolean isCreated() {
+		return this == CREATED;
+	}
+
 	public boolean isCancelable() {
-		return this == OrderItemStatus.CREATED || this == OrderItemStatus.PAID;
+		return this == CREATED || this == PAID;
 	}
 
 	public boolean isRefundable() {
-		return this == OrderItemStatus.PAID || this == OrderItemStatus.SHIPPING || this == OrderItemStatus.DELIVERED;
+		return this == PAID || this == SHIPPING || this == DELIVERED;
 	}
 
 	public boolean isRefundRequested() {
-		return this == OrderItemStatus.REFUND_REQUESTED;
+		return this == REFUND_REQUESTED;
 	}
 
 	public boolean isShippable() {
-		return this == OrderItemStatus.PAID;
+		return this == PAID;
 	}
 
 	public boolean isReturnable() {
-		return this == OrderItemStatus.DELIVERED || this == OrderItemStatus.SHIPPING;
+		return this == DELIVERED || this == SHIPPING;
 	}
 
 	public boolean isCompletable() {
-		return this == OrderItemStatus.PAID || this == OrderItemStatus.DELIVERED;
-	}
-
-	public boolean isCompleted() {
-		return this == OrderItemStatus.COMPLETED;
+		return this == PAID || this == DELIVERED;
 	}
 }

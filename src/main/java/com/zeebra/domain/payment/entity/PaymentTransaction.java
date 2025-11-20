@@ -16,6 +16,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -57,6 +58,7 @@ public class PaymentTransaction extends BaseEntity {
     @Column(name = "parent_transaction_id")
     private Long parentTransactionId;
 
+	@Builder
     public PaymentTransaction(
 		Long paymentId,
 		PaymentTransactionType paymentTransactionType,

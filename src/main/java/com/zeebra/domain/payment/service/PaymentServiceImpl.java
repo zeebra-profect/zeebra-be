@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -12,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zeebra.domain.order.dto.OrderInfo;
+import com.zeebra.domain.order.dto.OrderItemLine;
 import com.zeebra.domain.order.entity.OrderItemStatus;
 import com.zeebra.domain.order.entity.OrderStatus;
 import com.zeebra.domain.order.service.OrderService;
@@ -33,6 +35,7 @@ import com.zeebra.domain.payment.repository.PaymentHistoryRepository;
 import com.zeebra.domain.payment.repository.PaymentQueryRepository;
 import com.zeebra.domain.payment.repository.PaymentRepository;
 import com.zeebra.domain.payment.repository.PaymentTransactionRepository;
+import com.zeebra.domain.product.service.SalesService;
 import com.zeebra.global.ErrorCode.PaymentErrorCode;
 import com.zeebra.global.exception.BusinessException;
 
@@ -43,8 +46,6 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @RequiredArgsConstructor
 public class PaymentServiceImpl implements PaymentService {
-	private static final String SUCCESS_URL = "/payments/success";
-	private static final String FAIL_URL = "/payments/fail";
 	private static final String TOSS_ORDER_ID_PREFIX = "ORD_";
 	private static final int MAX_RETRY_COUNT = 3;
 
@@ -55,20 +56,25 @@ public class PaymentServiceImpl implements PaymentService {
 	private final OrderService orderService;
 	private final TossPaymentService tossPaymentService;
 	private final ObjectMapper objectMapper;
+	private final SalesService salesService;
 
 	@Transactional
 	public CreatePaymentResponse createPayment(CreatePaymentRequest request, Long memberId) {
+
+		request.validateInternalAmount();
 		OrderInfo order = orderService.getOrder(memberId, request.orderId());
 
-		validateOrderCanBeProcessed(order);
-		validatePaymentAmount(request, order);
+		order.validatePaymentCreatable();
+		order.validatePaymentAmount(request.amount());
 
-		// sales 상태 검증해야 함
+		List<OrderItemLine>  itemLines = orderService.getOrderItemLine(order.orderId());
+
+		salesService.validatePurchasable(itemLines);
 
 		Payment payment = savePaymentWithHistory(request, order);
-		updateOrderStatusToPending(order.orderId(), request.clientRequestId());
+		orderService.updateOrderStatus(order.orderId(), OrderStatus.PAYMENT_PENDING, request.clientRequestId());
 
-		return CreatePaymentResponse.of(payment, SUCCESS_URL, FAIL_URL);
+		return CreatePaymentResponse.of(payment);
 	}
 
 	public ApprovePaymentResponse approvePayment(ApprovePaymentRequest request, Long memberId) {
@@ -306,30 +312,6 @@ public class PaymentServiceImpl implements PaymentService {
 		}
 	}
 
-	private void validateOrderCanBeProcessed(OrderInfo order) {
-		if (order.orderStatus() != OrderStatus.CREATED) {
-			log.error("[결제 생성 실패] 이미 처리된 주문입니다. orderId: {}, status: {}",
-				order.orderId(), order.orderStatus());
-			throw new BusinessException(PaymentErrorCode.PAYMENT_ALREADY_PROCESSED);
-		}
-	}
-
-	private void validatePaymentAmount(CreatePaymentRequest request, OrderInfo order) {
-		BigDecimal calculatedAmount = request.price().subtract(request.discount());
-
-		if (calculatedAmount.compareTo(request.amount()) != 0) {
-			log.error("[결제 생성 실패] 계산된 금액이 일치하지 않습니다. price: {}, discount: {}, amount: {}",
-				request.price(), request.discount(), request.amount());
-			throw new BusinessException(PaymentErrorCode.INVALID_AMOUNT);
-		}
-
-		if (order.totalAmount().compareTo(request.amount()) != 0) {
-			log.error("[결제 생성 실패] 주문 금액과 결제 금액이 일치하지 않습니다. orderId: {}, orderAmount: {}, paymentAmount: {}",
-				order.orderId(), order.totalAmount(), request.amount());
-			throw new BusinessException(PaymentErrorCode.PAYMENT_AMOUNT_MISMATCH);
-		}
-	}
-
 	// ========== Payment Helper Methods ==========
 
 	private Payment reloadPayment(Long paymentId) {
@@ -347,7 +329,15 @@ public class PaymentServiceImpl implements PaymentService {
 	}
 
 	private Payment savePaymentWithHistory(CreatePaymentRequest request, OrderInfo order) {
-		Payment payment = createPayment(request, order);
+		String tossOrderId = generateTossOrderId(order.orderNumber());
+		Payment payment =  Payment.createPayment(
+			request.orderId(),
+			tossOrderId,
+			request.orderName(),
+			request.amount(),
+			request.clientRequestId()
+		);
+
 		Payment savedPayment = paymentRepository.save(payment);
 
 		savePaymentHistory(savedPayment, savedPayment.getPaymentStatus(), request.clientRequestId());
@@ -355,23 +345,9 @@ public class PaymentServiceImpl implements PaymentService {
 		return savedPayment;
 	}
 
-	private Payment createPayment(CreatePaymentRequest request, OrderInfo order) {
-		String tossOrderId = generateTossOrderId(order.orderNumber());
-
-		return Payment.createPayment(
-			request.orderId(),
-			tossOrderId,
-			request.orderName(),
-			request.amount(),
-			request.clientRequestId()
-		);
-	}
-
 	private String generateTossOrderId(String orderNumber) {
 		String uniqueId = UUID.randomUUID().toString().replace("-", "").substring(0, 12);
 		String tossOrderId = TOSS_ORDER_ID_PREFIX + orderNumber + "_" + uniqueId;
-
-		log.debug("[tossOrderId 생성] orderNumber: {}, tossOrderId: {}", orderNumber, tossOrderId);
 
 		return tossOrderId;
 	}
@@ -400,9 +376,6 @@ public class PaymentServiceImpl implements PaymentService {
 		);
 
 		paymentTransactionRepository.save(transaction);
-
-		log.debug("[PaymentTransaction 저장] paymentId: {}, type: {}, status: {}",
-			payment.getId(), type, status);
 	}
 
 	private void updatePaymentTransactionStatus(
@@ -559,10 +532,6 @@ public class PaymentServiceImpl implements PaymentService {
 	}
 
 	// ========== Order Helper Methods ==========
-
-	private void updateOrderStatusToPending(Long orderId, String clientRequestId) {
-		orderService.updateOrderStatus(orderId, OrderStatus.PAYMENT_PENDING, clientRequestId);
-	}
 
 	private void updateOrderStatus(Long orderId, OrderStatus status, String idempotencyKey) {
 		try {

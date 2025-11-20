@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.zeebra.domain.member.entity.Member;
 import com.zeebra.domain.member.repository.MemberRepository;
+import com.zeebra.domain.order.dto.OrderItemLine;
 import com.zeebra.domain.product.dto.OrderSalesItem;
 import com.zeebra.domain.product.dto.SalesDetailResponse;
 import com.zeebra.domain.product.dto.SalesListResponse;
@@ -187,6 +189,26 @@ public class SalesServiceImp implements SalesService {
 		if (sales.getSalesStatus() != SalesStatus.ON_SALE){
 			throw new BusinessException(CommonErrorCode.INVALID_REQUEST, "판매 중인 상품이 없습니다.");
 		}
+	}
+
+	public void validatePurchasable(List<OrderItemLine> itemLines) {
+		 List<Long> salesIds = itemLines.stream()
+			 .map(OrderItemLine::salesId)
+			 .distinct()
+			 .collect(Collectors.toList());
+
+		 List<Sales> salesList = salesRepository.findAllById(salesIds);
+
+		 Map<Long, Sales> salesMap = salesList.stream()
+			 .collect(Collectors.toMap(Sales::getId, Function.identity()));
+
+		 for (OrderItemLine itemLine : itemLines) {
+			 Sales sales = salesMap.get(itemLine.salesId());
+			 if (sales == null) {
+				 throw new BusinessException(OrderErrorCode.PRODUCT_NOT_FOUND);
+			 }
+			 sales.validatePurchasable(itemLine.quantity());
+		 }
 	}
 
 	private void validateSalesAvailability(Map<Long, Integer> productOptionQuantityMap, List<OrderSalesItem> cheapestSales) {

@@ -1,0 +1,10 @@
+package com.zeebra.domain.payment.service;
+
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+
+@ActiveProfiles("test")
+@SpringBootTest
+public class PaymentServiceTest {
+
+}

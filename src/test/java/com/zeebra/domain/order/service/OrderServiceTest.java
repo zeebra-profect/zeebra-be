@@ -33,7 +33,6 @@ import com.zeebra.domain.order.entity.Order;
 import com.zeebra.domain.order.entity.OrderItem;
 import com.zeebra.domain.order.entity.OrderItemStatus;
 import com.zeebra.domain.order.entity.OrderStatus;
-import com.zeebra.domain.order.entity.OrderType;
 import com.zeebra.domain.order.repository.OrderHistoryRepository;
 import com.zeebra.domain.order.repository.OrderItemRepository;
 import com.zeebra.domain.order.repository.OrderRepository;
@@ -113,7 +112,7 @@ public class OrderServiceTest {
 		createSales(productOption.getId(), BigDecimal.valueOf(60000), 1, SalesStatus.ON_SALE);
 		Cart cart = createCart(1L);
 		createCartItem(cart.getId(), productOption.getId(), BigDecimal.valueOf(60000), 1);
-		CreateOrderRequest request = new CreateOrderRequest("idem-key-001", cart.getId(), OrderType.CART);
+		CreateOrderRequest request = CreateOrderRequest.fromCart("idem-key-001", cart.getId());
 
 		//when
 		CreateOrderResponse response = orderService.createOrder(1L, request);
@@ -141,7 +140,7 @@ public class OrderServiceTest {
 		Product product = createProduct();
 		ProductOption productOption = createProductOption(product.getId());
 		Sales sales = createSales(productOption.getId(), BigDecimal.valueOf(60000), 1, SalesStatus.ON_SALE);
-		CreateOrderRequest request = new CreateOrderRequest("idem-key-001", productOption.getId(), OrderType.DIRECT);
+		CreateOrderRequest request = CreateOrderRequest.fromDirect("idem-key-001", productOption.getId());
 
 		//when
 		CreateOrderResponse response = orderService.createOrder(1L, request);
@@ -171,7 +170,7 @@ public class OrderServiceTest {
 		Sales sales = createSales(productOption.getId(), BigDecimal.valueOf(60000), 1, SalesStatus.ON_SALE);
 		Trade trade = Trade.builder().chatRoom(ChatRoom.builder().saleId(sales.getId()).chatRoomType(ChatRoomType.DM).build()).price(BigDecimal.valueOf(50000)).build();
 		SalesItem salesItem = SalesItem.of(trade.getId(), sales.getId(), 1, BigDecimal.valueOf(50000));
-		CreateOrderRequest request = new CreateOrderRequest("idem-key-001", salesItem);
+		CreateOrderRequest request = CreateOrderRequest.fromSalesItem("idem-key-001", salesItem);
 
 		//when
 		CreateOrderResponse response = orderService.createOrder(1L, request);
@@ -201,7 +200,7 @@ public class OrderServiceTest {
 		Sales sales = createSales(productOption.getId(), BigDecimal.valueOf(50000), 1, SalesStatus.ON_SALE);
 		Cart cart = createCart(1L);
 		createCartItem(cart.getId(), productOption.getId(), BigDecimal.valueOf(60000), 1);
-		CreateOrderRequest request = new CreateOrderRequest("idem-key-001", cart.getId(), OrderType.CART);
+		CreateOrderRequest request = CreateOrderRequest.fromCart("idem-key-001", cart.getId());
 
 		//when
 		CreateOrderResponse first = orderService.createOrder(1L, request);
@@ -219,7 +218,7 @@ public class OrderServiceTest {
 	@Test
 	void createOrderByCartIdWithNonExistentCart(){
 		//given
-		CreateOrderRequest request = new CreateOrderRequest("idem-key-001", 1L, OrderType.CART);
+		CreateOrderRequest request = CreateOrderRequest.fromCart("idem-key-001", 1L);
 		//when //then
 		assertThatThrownBy(() -> orderService.createOrder(1L, request)).isInstanceOf(BusinessException.class).hasMessage("해당 장바구니를 찾을 수 없습니다.");
 	}
@@ -229,7 +228,7 @@ public class OrderServiceTest {
 	void createOrderWithEmptyCart(){
 		//given
 		Cart emptyCart = createCart(1L);
-		CreateOrderRequest request = new CreateOrderRequest("idem-key-001", emptyCart.getId(), OrderType.CART);
+		CreateOrderRequest request = CreateOrderRequest.fromCart("idem-key-001", emptyCart.getId());
 
 		//when //then
 		assertThatThrownBy(() -> orderService.createOrder(1L, request) ).isInstanceOf(BusinessException.class).hasMessage("유효하지 않은 주문 요청입니다");
@@ -243,7 +242,7 @@ public class OrderServiceTest {
 		ProductOption productOption = createProductOption(product.getId());
 		Cart cart = createCart(1L);
 		createCartItem(cart.getId(), productOption.getId(), BigDecimal.valueOf(60000), 1);
-		CreateOrderRequest request = new CreateOrderRequest("idem-key-001", cart.getId(), OrderType.CART);
+		CreateOrderRequest request = CreateOrderRequest.fromCart("idem-key-001", cart.getId());
 		//when //then
 		assertThatThrownBy(() -> orderService.createOrder(1L, request)).isInstanceOf(BusinessException.class).hasMessage("상품 재고가 부족합니다.");
 	}
@@ -257,7 +256,7 @@ public class OrderServiceTest {
 		Sales sales = createSales(productOption.getId(), BigDecimal.valueOf(50000), 1, SalesStatus.CONFIRMED);
 		Cart cart = createCart(1L);
 		createCartItem(cart.getId(), productOption.getId(), BigDecimal.valueOf(60000), 1);
-		CreateOrderRequest request = new CreateOrderRequest("idem-key-001", cart.getId(), OrderType.CART);
+		CreateOrderRequest request = CreateOrderRequest.fromCart("idem-key-001", cart.getId());
 
 		//when //then
 		assertThatThrownBy(()-> orderService.createOrder(1L, request)).isInstanceOf(BusinessException.class).hasMessage("상품 재고가 부족합니다.");
@@ -272,7 +271,7 @@ public class OrderServiceTest {
 		Sales sales = createSales(productOption.getId(), BigDecimal.valueOf(50000), 1, SalesStatus.ON_SALE);
 		Cart cart = createCart(1L);
 		createCartItem(cart.getId(), productOption.getId(), BigDecimal.valueOf(60000), 2);
-		CreateOrderRequest request = new CreateOrderRequest("idem-key-001", cart.getId(), OrderType.CART);
+		CreateOrderRequest request = CreateOrderRequest.fromCart("idem-key-001", cart.getId());
 
 		//when //then
 		assertThatThrownBy(() -> orderService.createOrder(1L, request)).isInstanceOf(BusinessException.class).hasMessage("상품 재고가 부족합니다.");
@@ -283,7 +282,7 @@ public class OrderServiceTest {
 	void createOrderByProductOptionIdWithNonExistentProductOptionId(){
 		//given
 		Long nonExistentProductOptionId = 9999L;
-		CreateOrderRequest request = new CreateOrderRequest("idem-key-001", nonExistentProductOptionId, OrderType.DIRECT);
+		CreateOrderRequest request = CreateOrderRequest.fromDirect("idem-key-001", nonExistentProductOptionId);
 
 		//when //then
 		assertThatThrownBy(()-> orderService.createOrder(1L, request)).isInstanceOf(BusinessException.class).hasMessage(
@@ -297,7 +296,7 @@ public class OrderServiceTest {
 		Product product = createProduct();
 		ProductOption productOption = createProductOption(product.getId());
 
-		CreateOrderRequest request = new CreateOrderRequest("idem-key-001", productOption.getId(), OrderType.DIRECT);
+		CreateOrderRequest request = CreateOrderRequest.fromDirect("idem-key-001", productOption.getId());
 
 		//when //then
 		assertThatThrownBy(()-> orderService.createOrder(1L, request)).isInstanceOf(BusinessException.class).hasMessage("판매 중인 상품을 찾을 수 없습니다.");
@@ -311,7 +310,7 @@ public class OrderServiceTest {
 		ProductOption productOption = createProductOption(product.getId());
 		Sales sales = createSales(productOption.getId(), BigDecimal.valueOf(50000), 1, SalesStatus.CONFIRMED);
 
-		CreateOrderRequest request = new CreateOrderRequest("idem-key-001", productOption.getId(), OrderType.DIRECT);
+		CreateOrderRequest request = CreateOrderRequest.fromDirect("idem-key-001", productOption.getId());
 
 		//when //then
 		assertThatThrownBy(()-> orderService.createOrder(1L, request)).isInstanceOf(BusinessException.class).hasMessage("판매 중인 상품을 찾을 수 없습니다.");
@@ -326,7 +325,7 @@ public class OrderServiceTest {
 		Long invalidSalesId = 9999L;
 		Trade trade = Trade.builder().chatRoom(ChatRoom.builder().saleId(invalidSalesId).chatRoomType(ChatRoomType.DM).build()).price(BigDecimal.valueOf(50000)).build();
 		SalesItem salesItem = SalesItem.of(trade.getId(), invalidSalesId, 1, BigDecimal.valueOf(50000));
-		CreateOrderRequest request = new CreateOrderRequest("idem-key-001", salesItem);
+		CreateOrderRequest request = CreateOrderRequest.fromSalesItem("idem-key-001", salesItem);
 
 		//when //then
 		assertThatThrownBy(() -> orderService.createOrder(1L, request)).isInstanceOf(BusinessException.class).hasMessage("해당 판매 상품을 찾을 수 없습니다.");
@@ -346,7 +345,7 @@ public class OrderServiceTest {
 		createCartItem(cart.getId(), productOption.getId(), BigDecimal.valueOf(60000), 1);
 
 		String clientRequestId = "idem-key-001";
-		CreateOrderRequest request = new CreateOrderRequest(clientRequestId, cart.getId(), OrderType.CART);
+		CreateOrderRequest request = CreateOrderRequest.fromCart(clientRequestId, cart.getId());
 
 		CreateOrderResponse createOrderResponse = orderService.createOrder(memberId, request);
 		Long orderId = createOrderResponse.order().orderId();
@@ -378,7 +377,7 @@ public class OrderServiceTest {
 		createCartItem(cart.getId(), productOption.getId(), BigDecimal.valueOf(60000), 1);
 
 		String clientRequestId = "idem-key-001";
-		CreateOrderRequest request = new CreateOrderRequest(clientRequestId, cart.getId(), OrderType.CART);
+		CreateOrderRequest request = CreateOrderRequest.fromCart(clientRequestId, cart.getId());
 
 		CreateOrderResponse createOrderResponse = orderService.createOrder(1L, request);
 		Long orderId = createOrderResponse.order().orderId();
@@ -401,7 +400,7 @@ public class OrderServiceTest {
 		createCartItem(cart.getId(), productOption.getId(), BigDecimal.valueOf(60000), 1);
 
 		String clientRequestId = "idem-key-001";
-		CreateOrderRequest request = new CreateOrderRequest(clientRequestId, cart.getId(), OrderType.CART);
+		CreateOrderRequest request = CreateOrderRequest.fromCart(clientRequestId, cart.getId());
 
 		CreateOrderResponse createOrderResponse = orderService.createOrder(1L, request);
 		Long orderId = createOrderResponse.order().orderId();
@@ -447,9 +446,9 @@ public class OrderServiceTest {
 
 		SalesItem salesItem = SalesItem.of(1L, sales.getId(), 1, BigDecimal.valueOf(45000));
 
-		CreateOrderRequest request1 = new CreateOrderRequest("idem-key-001", cart.getId(), OrderType.CART);
-		CreateOrderRequest request2 = new CreateOrderRequest("idem-key-002", salesItem);
-		CreateOrderRequest request3 = new CreateOrderRequest("idem-key-003", productOption.getId(), OrderType.DIRECT);
+		CreateOrderRequest request1 = CreateOrderRequest.fromCart("idem-key-001", cart.getId());
+		CreateOrderRequest request2 = CreateOrderRequest.fromSalesItem("idem-key-002", salesItem);
+		CreateOrderRequest request3 = CreateOrderRequest.fromDirect("idem-key-003", productOption.getId());
 
 		CreateOrderResponse createdOrder1 = orderService.createOrder(1L, request1);
 		CreateOrderResponse createdOrder2 = orderService.createOrder(1L, request2);
@@ -505,7 +504,7 @@ public class OrderServiceTest {
 		Sales sales = createSales(productOption.getId(), BigDecimal.valueOf(50000), 1, SalesStatus.ON_SALE);
 		Cart cart = createCart(1L);
 		createCartItem(cart.getId(), productOption.getId(), BigDecimal.valueOf(60000), 1);
-		CreateOrderRequest request = new CreateOrderRequest("idem-key-001", cart.getId(), OrderType.CART);
+		CreateOrderRequest request = CreateOrderRequest.fromCart("idem-key-001", cart.getId());
 
 		CreateOrderResponse created = orderService.createOrder(1L, request);
 
@@ -529,7 +528,7 @@ public class OrderServiceTest {
 		Sales sales = createSales(productOption.getId(), BigDecimal.valueOf(50000), 1, SalesStatus.ON_SALE);
 		Cart cart = createCart(1L);
 		createCartItem(cart.getId(), productOption.getId(), BigDecimal.valueOf(60000), 1);
-		CreateOrderRequest request = new CreateOrderRequest("idem-key-001", cart.getId(), OrderType.CART);
+		CreateOrderRequest request = CreateOrderRequest.fromCart("idem-key-001", cart.getId());
 		CreateOrderResponse created = orderService.createOrder(1L, request);
 
 		String clientRequestId = "idem-key-002";
@@ -556,7 +555,7 @@ public class OrderServiceTest {
 		Cart cart = createCart(1L);
 		createCartItem(cart.getId(), productOption.getId(), BigDecimal.valueOf(60000), 1);
 		String clientRequestId = "idem-key-001";
-		CreateOrderRequest request = new CreateOrderRequest(clientRequestId, cart.getId(), OrderType.CART);
+		CreateOrderRequest request = CreateOrderRequest.fromCart(clientRequestId, cart.getId());
 
 		CreateOrderResponse created = orderService.createOrder(1L, request);
 		Long orderId = created.order().orderId();
@@ -575,7 +574,7 @@ public class OrderServiceTest {
 		Sales sales = createSales(productOption.getId(), BigDecimal.valueOf(50000), 1, SalesStatus.ON_SALE);
 		Cart cart = createCart(1L);
 		createCartItem(cart.getId(), productOption.getId(), BigDecimal.valueOf(60000), 1);
-		CreateOrderRequest request = new CreateOrderRequest("idem-key-001", cart.getId(), OrderType.CART);
+		CreateOrderRequest request = CreateOrderRequest.fromCart("idem-key-001", cart.getId());
 		CreateOrderResponse created = orderService.createOrder(1L, request);
 		Long orderId = created.order().orderId();
 
@@ -599,7 +598,7 @@ public class OrderServiceTest {
 		Sales sales = createSales(productOption.getId(), BigDecimal.valueOf(50000), 1, SalesStatus.ON_SALE);
 		Cart cart = createCart(1L);
 		createCartItem(cart.getId(), productOption.getId(), BigDecimal.valueOf(60000), 1);
-		CreateOrderRequest request = new CreateOrderRequest("idem-key-001", cart.getId(), OrderType.CART);
+		CreateOrderRequest request = CreateOrderRequest.fromCart("idem-key-001", cart.getId());
 		CreateOrderResponse created = orderService.createOrder(1L, request);
 		Long orderId = created.order().orderId();
 		Long orderItemId = created.order().orderItems().get(0).orderItemId();

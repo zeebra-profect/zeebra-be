@@ -3,6 +3,8 @@ package com.zeebra.domain.product.entity;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import com.zeebra.global.ErrorCode.SalesErrorCode;
+import com.zeebra.global.exception.BusinessException;
 import com.zeebra.global.jpa.BaseEntity;
 
 import jakarta.persistence.Entity;
@@ -47,4 +49,16 @@ public class Sales extends BaseEntity {
         this.stock = stock;
         this.salesStatus = salesStatus;
     }
+
+	public void validatePurchasable(int quantity) {
+		if (this.salesStatus.isOnSale()){
+			throw new BusinessException(SalesErrorCode.SALES_NOT_AVAILABLE);
+		}
+		if (quantity <= 0) {
+			throw new BusinessException(SalesErrorCode.INVALID_QUANTITY);
+		}
+		if (quantity > this.stock) {
+			throw new BusinessException(SalesErrorCode.OUT_OF_STOCK);
+		}
+	}
 }

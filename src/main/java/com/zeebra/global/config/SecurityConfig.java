@@ -61,7 +61,8 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf
                         .ignoringRequestMatchers("/api/auth/**", "/api/products", "/api/products/**",
                                 "/ws/chat/**", "/api/chat/group/**",
-                                "/api/notification/**", "/api/push/**")
+                                "/api/notification/**", "/api/push/**",
+                                "/api/favorite-products/**", "/api/members/**")
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)

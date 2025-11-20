@@ -10,7 +10,6 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest
 @ActiveProfiles("test")
 @Import(TestContainerConfig.class)
-@Transactional
 @Sql(
         scripts = "/sql/fulltext-search-setup.sql",
         executionPhase = Sql.ExecutionPhase.BEFORE_TEST_CLASS

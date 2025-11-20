@@ -32,8 +32,6 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 @ActiveProfiles("test")
-//@Testcontainers
-@SpringBootTest
 public class ProductServiceTest extends IntegrationTestSupport {
 
     @Autowired
@@ -65,9 +63,6 @@ public class ProductServiceTest extends IntegrationTestSupport {
 
     @Autowired
     private CategoryRepository categoryRepository;
-
-    @Autowired
-    private EntityManager em;
 
     @AfterEach
     void tearDown() {
@@ -174,14 +169,8 @@ public class ProductServiceTest extends IntegrationTestSupport {
         Product product = createProduct("test1");
         Product saveProduct = productRepository.save(product);
 
-        em.flush();
-        em.clear();
-
         // when
         ApiResponse<FavoriteProductResponse> favoriteProductResponse = productService.addFavoriteProduct(saveMember.getId(), saveProduct.getId());
-
-        em.flush();
-        em.clear();
 
         // then
         Product updatedProduct = productRepository.findById(saveProduct.getId()).orElseThrow();
@@ -221,18 +210,11 @@ public class ProductServiceTest extends IntegrationTestSupport {
         Product product = createProduct("test1");
         Product saveProduct = productRepository.save(product);
 
-        em.flush();
-        em.clear();
-
         productService.addFavoriteProduct(saveMember.getId(), saveProduct.getId());
         Product saveUpdateProduct = productRepository.findById(saveProduct.getId()).orElseThrow();
-        em.flush();
-        em.clear();
 
         // when
         productService.deleteFavoriteProduct(saveMember.getId(), saveProduct.getId());
-        em.flush();
-        em.clear();
 
         // then
         Product deleteUpdateProduct = productRepository.findById(saveProduct.getId()).orElseThrow();

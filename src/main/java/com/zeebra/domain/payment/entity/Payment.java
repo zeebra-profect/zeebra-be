@@ -3,14 +3,11 @@ package com.zeebra.domain.payment.entity;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-import com.zeebra.global.ErrorCode.PaymentErrorCode;
-import com.zeebra.global.exception.BusinessException;
 import com.zeebra.global.jpa.BaseEntity;
 
 import jakarta.persistence.Column;
@@ -114,7 +111,7 @@ public class Payment extends BaseEntity {
 	}
 
 	public void updatePaymentStatus(PaymentStatus newStatus) {
-		validateStatusTransaction(newStatus);
+		this.paymentStatus.validateStatusTransition(newStatus);
 		this.paymentStatus = newStatus;
 	}
 
@@ -132,47 +129,5 @@ public class Payment extends BaseEntity {
 
 	public void updateFailureReason(String failureReason) {
 		this.failureReason = failureReason;
-	}
-
-	private void validateStatusTransaction(PaymentStatus newStatus){
-		Map<PaymentStatus, List<PaymentStatus>> allowedTransitions = Map.of(
-			PaymentStatus.PENDING, List.of(
-				PaymentStatus.APPROVING,
-				PaymentStatus.WAITING_FOR_DEPOSIT,
-				PaymentStatus.FAILED,
-				PaymentStatus.EXPIRED
-			),
-			PaymentStatus.APPROVING, List.of(
-				PaymentStatus.APPROVED,
-				PaymentStatus.FAILED
-			),
-			PaymentStatus.WAITING_FOR_DEPOSIT, List.of(
-				PaymentStatus.APPROVED,
-				PaymentStatus.EXPIRED
-			),
-			PaymentStatus.APPROVED, List.of(
-				PaymentStatus.VOIDED,
-				PaymentStatus.REFUNDED,
-				PaymentStatus.PARTIALLY_REFUNDED,
-				PaymentStatus.DONE
-			),
-			PaymentStatus.FAILED, List.of(
-				PaymentStatus.APPROVING,
-				PaymentStatus.WAITING_FOR_DEPOSIT,
-				PaymentStatus.EXPIRED
-			),
-			PaymentStatus.VOIDED, List.of(),
-			PaymentStatus.REFUNDED, List.of(),
-			PaymentStatus.PARTIALLY_REFUNDED, List.of(
-				PaymentStatus.REFUNDED,
-				PaymentStatus.DONE
-			),
-			PaymentStatus.EXPIRED, List.of(),
-			PaymentStatus.DONE, List.of()
-		);
-		List<PaymentStatus> allowed = allowedTransitions.getOrDefault(this.paymentStatus, List.of());
-		if (!allowed.contains(newStatus)) {
-			throw new BusinessException(PaymentErrorCode.INVALID_STATUS_TRANSITION);
-		}
 	}
 }

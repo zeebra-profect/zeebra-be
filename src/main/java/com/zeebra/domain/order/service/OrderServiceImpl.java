@@ -19,6 +19,7 @@ import com.zeebra.domain.cart.service.CartService;
 import com.zeebra.domain.order.dto.CreateOrderRequest;
 import com.zeebra.domain.order.dto.CreateOrderResponse;
 import com.zeebra.domain.order.dto.OrderInfo;
+import com.zeebra.domain.order.dto.OrderItemLine;
 import com.zeebra.domain.order.dto.OrderItemResponse;
 import com.zeebra.domain.order.dto.OrderResponse;
 import com.zeebra.domain.order.dto.ProductInfo;
@@ -173,10 +174,20 @@ public class OrderServiceImpl implements OrderService {
 		return OrderResponse.of(order, orderItems);
 	}
 
+	@Transactional(readOnly = true)
+	public List<OrderItemLine> getOrderItemLine(Long orderId) {
+		List<OrderItem> orderItems = orderItemRepository.findByOrderId(orderId);
+		if (orderItems.isEmpty()) {
+			throw new BusinessException(OrderErrorCode.ORDER_HAS_NO_ITEMS);
+		}
+		return OrderItemLine.of(orderItems);
+	}
+
 	private Optional<CreateOrderResponse> findExistingOrder(String clientRequestId) {
 		validateIdempotencyKey(clientRequestId);
 
 		return orderRepository.findByIdempotencyKey(clientRequestId)
+			.filter(order -> !order.getOrderStatus().isFailed())
 			.map(order -> handleExistingOrder(order));
 	}
 
@@ -191,7 +202,6 @@ public class OrderServiceImpl implements OrderService {
 	}
 
 	private CreateOrderResponse handleExistingOrder(Order order) {
-		order.validateCreatable();
 		List<OrderItemResponse> orderItems = orderItemQueryRepository.findOrderItemsByOrderId(order.getId());
 		return CreateOrderResponse.of(OrderResponse.of(order, orderItems));
 	}

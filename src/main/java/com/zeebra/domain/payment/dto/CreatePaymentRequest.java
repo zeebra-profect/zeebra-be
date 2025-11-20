@@ -4,6 +4,9 @@ import java.math.BigDecimal;
 
 import org.hibernate.validator.constraints.Length;
 
+import com.zeebra.global.ErrorCode.PaymentErrorCode;
+import com.zeebra.global.exception.BusinessException;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -15,7 +18,15 @@ public record CreatePaymentRequest(
 	@NotNull @Positive BigDecimal price,
 	@NotNull @PositiveOrZero BigDecimal discount,
 	@NotNull @Positive BigDecimal amount,
-	// @NotNull PaymentMethod paymentMethod,
 	@NotBlank String clientRequestId
 ) {
+	public BigDecimal calculateExpectedAmount() {
+		return price.subtract(discount);
+	}
+
+	public void validateInternalAmount() {
+		if (!calculateExpectedAmount().equals(amount)) {
+			throw new BusinessException(PaymentErrorCode.INVALID_AMOUNT);
+		}
+	}
 }

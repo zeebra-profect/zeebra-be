@@ -12,11 +12,11 @@ public record CreatePaymentResponse(
 	String successUrl,
 	String failUrl
 ) {
-	public static CreatePaymentResponse of(
-			Payment payment,
-			String successUrl, 
-			String failUrl) {
-		return new CreatePaymentResponse(payment.getId(), Amount.of(payment.getPaymentAmount()), payment.getOrderNameSnapshot(), payment.getTossOrderId(), successUrl, failUrl);
+	private static final String SUCCESS_URL = "/payments/success";
+	private static final String FAIL_URL = "/payments/fail";
+
+	public static CreatePaymentResponse of(Payment payment) {
+		return new CreatePaymentResponse(payment.getId(), Amount.of(payment.getPaymentAmount()), payment.getOrderNameSnapshot(), payment.getTossOrderId(), SUCCESS_URL, FAIL_URL);
 	}
 
 	public record Amount(BigDecimal value, String currency) {

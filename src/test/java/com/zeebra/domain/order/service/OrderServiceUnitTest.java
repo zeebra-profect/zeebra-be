@@ -9,10 +9,10 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
@@ -62,37 +62,20 @@ public class OrderServiceUnitTest {
 	private OrderItemQueryRepository orderItemQueryRepository;
 	@Mock
 	private OrderHistoryRepository orderHistoryRepository;
-	// @Mock
-	// private ProductRepository productRepository;
-	// @Mock
-	// private SalesRepository salesRepository;
 	@Mock
 	private SalesService salesService;
 	@Mock
 	private CartService cartService;
 	@Mock
 	private ProductService productService;
-
+	@InjectMocks
 	private OrderServiceImpl orderService;
 
-	@BeforeEach
-	void setUp() throws Exception {
-		orderService = new OrderServiceImpl(
-			orderRepository,
-			orderQueryRepository,
-			orderItemRepository,
-			orderItemQueryRepository,
-			orderHistoryRepository,
-			cartService,
-			salesService,
-			productService
-		);
-	}
 	@DisplayName("clientRequestId가 없으면 주문 생성에 실패햡니다.")
 	@Test
 	void createOrderWithNullClientRequestId(){
 		//given
-		CreateOrderRequest request = new CreateOrderRequest(null, 1L, OrderType.CART);
+		CreateOrderRequest request = CreateOrderRequest.fromCart(null, 1L);
 
 		// when // then
 		assertThatThrownBy(() -> orderService.createOrder(1L, request))
@@ -111,7 +94,7 @@ public class OrderServiceUnitTest {
 		Long memberId = 1L;
 		Long orderId = 1L;
 		String clientRequestId = "idem-key-001";
-		CreateOrderRequest request = new CreateOrderRequest(clientRequestId, 1L, OrderType.CART);
+		CreateOrderRequest request = CreateOrderRequest.fromCart(clientRequestId, 1L);
 
 		Order existingOrder = org.mockito.Mockito.mock(Order.class);
 		given(existingOrder.getId()).willReturn(orderId);
@@ -142,7 +125,7 @@ public class OrderServiceUnitTest {
 		Long memberId = 1L;
 		Long cartId = 1L;
 		String clientRequestId = "idem-key-001";
-		CreateOrderRequest request = new CreateOrderRequest(clientRequestId, cartId, OrderType.CART);
+		CreateOrderRequest request = CreateOrderRequest.fromCart(clientRequestId, cartId);
 		given(orderRepository.findByIdempotencyKey(clientRequestId)).willReturn(Optional.empty());
 		CartItemInfo cartItem = new CartItemInfo(1L, 1L, BigDecimal.valueOf(50000), 1);
 		given(cartService.getCartItemsByCartId(cartId, memberId)).willReturn(List.of(cartItem));
@@ -179,7 +162,7 @@ public class OrderServiceUnitTest {
 		Long memberId = 1L;
 		Long productOptionId = 1L;
 		String clientRequestId = "idem-key-001";
-		CreateOrderRequest request = new CreateOrderRequest(clientRequestId, productOptionId, OrderType.DIRECT);
+		CreateOrderRequest request = CreateOrderRequest.fromDirect(clientRequestId, productOptionId);
 		given(orderRepository.findByIdempotencyKey(clientRequestId)).willReturn(Optional.empty());
 		OrderSalesItem salesItem = OrderSalesItem.of(new Sales(1L, productOptionId, BigDecimal.valueOf(50000),1, SalesStatus.ON_SALE));
 		given(salesService.findCheapestSalesByProductOptionId(productOptionId)).willReturn(salesItem);
@@ -215,7 +198,7 @@ public class OrderServiceUnitTest {
 		Long tradeId = 1L;
 		Long salesId = 1L;
 		SalesItem salesItem = SalesItem.of(tradeId, salesId, 1, BigDecimal.valueOf(50000));
-		CreateOrderRequest request = new CreateOrderRequest(clientRequestId, salesItem);
+		CreateOrderRequest request = CreateOrderRequest.fromSalesItem(clientRequestId, salesItem);
 		given(orderRepository.findByIdempotencyKey(clientRequestId)).willReturn(Optional.empty());
 
 		given(orderRepository.save(any(Order.class)))
@@ -248,7 +231,7 @@ public class OrderServiceUnitTest {
 		Long cartId = 1L;
 		String clientRequestId = "idem-key-001";
 
-		CreateOrderRequest request = new CreateOrderRequest(clientRequestId, cartId, OrderType.CART);
+		CreateOrderRequest request = CreateOrderRequest.fromCart(clientRequestId, cartId);
 
 		given(orderRepository.findByIdempotencyKey(clientRequestId)).willReturn(Optional.empty());
 		given(cartService.getCartItemsByCartId(cartId, memberId)).willReturn(List.of());
@@ -328,7 +311,7 @@ public class OrderServiceUnitTest {
 		Long memberId = 1L;
 		Long cartId = 1L;
 		String clientRequestId = "idem-key-001";
-		CreateOrderRequest request = new CreateOrderRequest(clientRequestId, cartId, OrderType.CART);
+		CreateOrderRequest request = CreateOrderRequest.fromCart(clientRequestId, cartId);
 
 		given(orderRepository.findByIdempotencyKey(clientRequestId)).willReturn(Optional.empty());
 		CartItemInfo cartItem = new CartItemInfo(1L, 1L, BigDecimal.valueOf(50000), 1);
@@ -353,7 +336,7 @@ public class OrderServiceUnitTest {
 		Long productOptionId = 9999L;
 		String clientRequestId = "idem-key-001";
 
-		CreateOrderRequest request = new CreateOrderRequest(clientRequestId, productOptionId, OrderType.DIRECT);
+		CreateOrderRequest request = CreateOrderRequest.fromDirect(clientRequestId, productOptionId);
 		given(orderRepository.findByIdempotencyKey(clientRequestId)).willReturn(Optional.empty());
 		given(salesService.findCheapestSalesByProductOptionId(productOptionId))
 			.willThrow(new BusinessException(OrderErrorCode.PRODUCT_NOT_FOUND));
@@ -379,7 +362,7 @@ public class OrderServiceUnitTest {
 		Long tradeId = 1L;
 		Long salesId = 1L;
 		SalesItem salesItem = SalesItem.of(tradeId, salesId, 0, BigDecimal.valueOf(50000));
-		CreateOrderRequest request = new CreateOrderRequest(clientRequestId, salesItem);
+		CreateOrderRequest request = CreateOrderRequest.fromSalesItem(clientRequestId, salesItem);
 
 		given(orderRepository.findByIdempotencyKey(clientRequestId)).willReturn(Optional.empty());
 
@@ -400,7 +383,7 @@ public class OrderServiceUnitTest {
 		Long tradeId = 1L;
 		Long salesId = 1L;
 		SalesItem salesItem = SalesItem.of(tradeId, salesId, 1, BigDecimal.valueOf(-50000));
-		CreateOrderRequest request = new CreateOrderRequest(clientRequestId, salesItem);
+		CreateOrderRequest request = CreateOrderRequest.fromSalesItem(clientRequestId, salesItem);
 
 		given(orderRepository.findByIdempotencyKey(clientRequestId)).willReturn(Optional.empty());
 		//when //then

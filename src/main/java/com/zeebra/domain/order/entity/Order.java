@@ -5,8 +5,6 @@ import java.time.LocalDateTime;
 
 import org.hibernate.annotations.Comment;
 
-import com.zeebra.global.ErrorCode.OrderErrorCode;
-import com.zeebra.global.exception.BusinessException;
 import com.zeebra.global.jpa.BaseEntity;
 
 import jakarta.persistence.Column;
@@ -103,39 +101,5 @@ public class Order extends BaseEntity {
 	public void updateOrderStatus(OrderStatus newStatus) {
 		this.orderStatus.validateStatusTransition(newStatus);
 		this.orderStatus = newStatus;
-	}
-
-	public void validateCreatable() {
-		if (!this.orderStatus.isProcessing()) {
-			throw new BusinessException(OrderErrorCode.ALREADY_IN_PROGRESS);
-		}
-	}
-
-	public void transitionToPaymentPending() {
-		this.orderStatus.validateStatusTransition(OrderStatus.PAYMENT_PENDING);
-		this.orderStatus = OrderStatus.PAYMENT_PENDING;
-	}
-
-	public void transitionToPaid() {
-		this.orderStatus.validateStatusTransition(OrderStatus.PAID);
-		this.orderStatus = OrderStatus.PAID;
-	}
-
-	public void transitionToCancel() {
-		this.orderStatus.validateStatusTransition(OrderStatus.CANCELED);
-		this.orderStatus = OrderStatus.CANCELED;
-	}
-
-	public void transitionToRefund() {
-		this.orderStatus.validateStatusTransition(OrderStatus.REFUNDED);
-		this.orderStatus = OrderStatus.REFUNDED;
-	}
-
-	public boolean canCancel() {
-		return this.orderStatus.isCancelable();
-	}
-
-	public boolean canRefund() {
-		return this.orderStatus.isRefundable();
 	}
 }

@@ -10,6 +10,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -33,6 +34,7 @@ public class PaymentHistory extends BaseEntity {
 	@Column(name = "idempotency_key", nullable = false, length = 128, unique = true)
 	private String idempotencyKey;
 
+	@Builder
     public PaymentHistory(Long paymentId, PaymentStatus paymentStatus, String idempotencyKey) {
         this.paymentId = paymentId;
         this.paymentStatus = paymentStatus;
@@ -40,6 +42,10 @@ public class PaymentHistory extends BaseEntity {
 	}
 
 	public static PaymentHistory createPaymentHistory(Long paymentId, PaymentStatus paymentStatus, String idempotencyKey) {
-		return new PaymentHistory(paymentId, paymentStatus, idempotencyKey);
+		return PaymentHistory.builder()
+			.paymentId(paymentId)
+			.paymentStatus(paymentStatus)
+			.idempotencyKey(idempotencyKey)
+			.build();
 	}
 }

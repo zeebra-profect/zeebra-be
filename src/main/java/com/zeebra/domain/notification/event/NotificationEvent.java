@@ -11,15 +11,14 @@ public class NotificationEvent extends ApplicationEvent {
     private Long memberId;
     private NotificationType notificationType;
     private String displayText;
-    private Object object;
     private String imgUrl;
 
-    public NotificationEvent(Long memberId, NotificationType type, String displayText, Object object, String imgUrl) {
+    // 기본 이벤트
+    public NotificationEvent(Long memberId, NotificationType type, String displayText, String imgUrl) {
         super(NotificationEvent.class);
         this.memberId = memberId;
         this.displayText = displayText;
         this.notificationType = type;
-        this.object = object;
         this.imgUrl = imgUrl;
     }
 

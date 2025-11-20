@@ -44,6 +44,7 @@ public class ProductServiceImpl implements ProductService {
     private final ProductOptionQueryRepository productOptionQueryRepository;
     private final OptionNameRepository optionNameRepository;
     private final MemberService memberService;
+    private final ProductOptionRepository productOptionRepository;
 
     @Override
     public ApiResponse<ProductDetailResponse> getProductDetail(Long productId, Long colorOptionNameId) {

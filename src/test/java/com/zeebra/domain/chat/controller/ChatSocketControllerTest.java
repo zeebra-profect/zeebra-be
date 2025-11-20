@@ -87,6 +87,8 @@ public class ChatSocketControllerTest {
     @Autowired
     private HandlerExceptionResolver handlerExceptionResolver;
 
+    private static final String ACCESS_TOKEN_COOKIE_NAME = "__Host-AT";
+
     @BeforeEach
     void setUp() {
         // 테스트 유저 두명 생성 (DB에 실제 저장)
@@ -154,7 +156,8 @@ public class ChatSocketControllerTest {
 
     private StompHeaders createConnectHeaders(String token) {
         StompHeaders connectHeaders = new StompHeaders();
-        connectHeaders.add("cookie", CookieUtil.ACCESS_TOKEN_COOKIE_NAME + "=" + token);
+        String cookieHeader = ACCESS_TOKEN_COOKIE_NAME + "=" + token;
+        connectHeaders.add("cookie", cookieHeader);
         return connectHeaders;
     }
 

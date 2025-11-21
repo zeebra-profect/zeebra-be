@@ -60,7 +60,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated())
                 .csrf(csrf -> csrf
                         .ignoringRequestMatchers("/api/auth/**", "/api/products", "/api/products/**",
-                                "/ws/chat/**", "/api/chat/group/**",
+                                "/ws/chat/**", "/api/chat/group/**", "/api/**",
                                 "/api/notification/**", "/api/push/**",
                                 "/api/favorite-products/**", "/api/members/**")
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))

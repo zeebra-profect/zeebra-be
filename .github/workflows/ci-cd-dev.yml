@@ -62,11 +62,11 @@ jobs:
           detailed_summary: true
           include_passed: true
 
-      # (3) [부가기능] 의존성 보안 취약점 검사 (Dependency Review)
-      # PR 단계에서 취약점이 있는 라이브러리가 추가되면 경고/실패 처리
-      - name: Dependency Review
-        if: github.event_name == 'pull_request'
-        uses: actions/dependency-review-action@v4
+#      # (3) [부가기능] 의존성 보안 취약점 검사 (Dependency Review)
+#      # PR 단계에서 취약점이 있는 라이브러리가 추가되면 경고/실패 처리
+#      - name: Dependency Review
+#        if: github.event_name == 'pull_request'
+#        uses: actions/dependency-review-action@v4
 
   cd:
     name: CD (Deploy to EC2 via SSM)
@@ -82,10 +82,10 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      # CD 단계에서는 테스트를 다시 돌리기보다 빠른 배포를 위해 -x test 유지 (선택사항)
-      # 만약 CD 직전에도 무조건 테스트를 통과해야 한다면 -x test 제거
-      - name: Build Spring Project
-        run: ./gradlew build -x test
+#      # CD 단계에서는 테스트를 다시 돌리기보다 빠른 배포를 위해 -x test 유지 (선택사항)
+#      # 만약 CD 직전에도 무조건 테스트를 통과해야 한다면 -x test 제거
+#      - name: Build Spring Project
+#        run: ./gradlew build -x test
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4

@@ -14,14 +14,20 @@ public class MemberIdSequenceSynchronizer {
 
 	@PostConstruct
 	public void syncMemberIdSequence() {
+		String sequenceName = jdbcTemplate.queryForObject(
+			"SELECT pg_get_serial_sequence('members', 'member_id')",
+			String.class
+		);
+
 		Long maxId = jdbcTemplate.queryForObject(
 			"SELECT COALESCE(MAX(member_id), 0) FROM members",
 			Long.class
 		);
 
 		jdbcTemplate.queryForObject(
-			"SELECT setval('members_member_id_seq', ?)",
+			"SELECT setval(?::regclass, ?)",
 			Long.class,
+			sequenceName,
 			maxId
 		);
 	}

@@ -23,6 +23,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.test.context.ActiveProfiles;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -199,6 +200,22 @@ public class ProductServiceTest extends IntegrationTestSupport {
     }
 
 
+    @DisplayName("관심상품을 삭제 할때 관심상품 등록을 한 적이 없으면 오류를 반환한다.")
+    @Test
+    void deleteFavoriteProduct_WhenFavoriteNotExists_ThrowsNoSuchElementException() {
+        // given
+        Member member = Member.createMember("testUser123", "홍길동", "hong@test.com",
+                "길동이", LocalDate.of(1990, 5, 15), Gender.MAN, "hashedPassword123");
+        Member saveMember = memberRepository.save(member);
+
+        Product product = createProduct("test1");
+        Product saveProduct = productRepository.save(product);
+        // when & then
+        assertThatThrownBy(() -> productService.deleteFavoriteProduct(member.getId(), saveProduct.getId()))
+                .isInstanceOf(NoSuchElementException.class)
+                .hasMessageContaining("해당하는 관심 상품이 없습니다.");
+    }
+
     @DisplayName("관심 상품 삭제 시 상품의 좋아요 수가 감소한다")
     @Test
     void deleteFavoriteProduct_DecreaseFavoriteCount() {
@@ -221,7 +238,6 @@ public class ProductServiceTest extends IntegrationTestSupport {
 
         assertThat(saveUpdateProduct.getFavoriteProductCount()).isEqualTo(deleteUpdateProduct.getFavoriteProductCount() + 1);
     }
-
 
     @DisplayName("회원의 관심 상품 목록 조회 성공")
     @Test

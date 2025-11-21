@@ -23,7 +23,7 @@ public class AsyncConfig implements AsyncConfigurer {
     public Executor mainNotificationExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         int corePoolSize = Runtime.getRuntime().availableProcessors();
-        executor.setCorePoolSize(corePoolSize / 1);
+        executor.setCorePoolSize(corePoolSize / 2);
         executor.setMaxPoolSize(corePoolSize);
         executor.setQueueCapacity(50);
         executor.setKeepAliveSeconds(60);
@@ -84,7 +84,7 @@ public class AsyncConfig implements AsyncConfigurer {
     public Executor mainWebPushExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         int corePoolSize = Runtime.getRuntime().availableProcessors();
-        executor.setCorePoolSize(corePoolSize / 1);
+        executor.setCorePoolSize(corePoolSize / 2);
         executor.setMaxPoolSize(corePoolSize);
         executor.setQueueCapacity(50);
         executor.setKeepAliveSeconds(10);

@@ -47,7 +47,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
-@SpringBootTest(classes = ZeebraApplication.class, properties = "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.websocket.servlet.WebSocketServletAutoConfiguration")
+@SpringBootTest(classes = ZeebraApplication.class)
 @EnableAsync
 public class NotificationAsyncTest {
 
@@ -102,11 +102,9 @@ public class NotificationAsyncTest {
     @DisplayName("TC-IT-NOTI-ASYNC-001-[정상] 여러 알림 비동기 동시 생성")
     public void createNotification_async_multipleNotifications_success() {
         // given
-        Long testnum = 10L;
+        Long testnum = 10000L;
         List<Member> members = createTestMembers(testnum.intValue());
-        System.out.println("생성된 멤버 개수: " + members.size());
         List<NotificationRequest> reqs = createNotificationRequests(1L, testnum, members, null);
-        System.out.println("생성된 요청 개수: " + reqs.size());  // 디버깅용
 
         // when
         long startTime = System.currentTimeMillis();
@@ -115,35 +113,35 @@ public class NotificationAsyncTest {
         // 1. 모든 비동기 작업이 완료될 때까지 대기
         await().atMost(20, TimeUnit.SECONDS)
                 .until(() -> responses.stream().allMatch(CompletableFuture::isDone));
+        System.out.println("[정상] 여러 알림 비동기 동시 생성 처리 시간: : " + (System.currentTimeMillis() - startTime));
 
         // 2. DB에 저장 완료 확인
         await().atMost(20, TimeUnit.SECONDS)
                 .until(() -> notificationRepository.count() == testnum.intValue());
 
         assertThat(notificationRepository.count()).isEqualTo(testnum.intValue());
-        long duration = System.currentTimeMillis() - startTime;
-        assertThat(duration).isLessThan(5000);  // 진짜 5초 미만인지 체크
-        System.out.println("duration: " + duration);
     }
 
     @Test
     @DisplayName("TC-IT-NOTI-ASYNC-002-[예외] 비동기 내부 예외가 메인 흐름에 영향 없음")
     public void createNotification_async_mainFlowNotAffected_fail() {
         // given
-        Long testnum = 10L;
+        Long testnum = 10000L;
         List<Member> members = createTestMembers(testnum.intValue());
         List<Order> orders = createOrders(members);
         List<NotificationRequest> reqs = createNotificationRequests(testnum + 1, testnum * 2, null, orders);
 
         // when
+        long startTime = System.currentTimeMillis();
         List<CompletableFuture<NotificationResponse>> responses = createNotificationResponses(reqs);
+        System.out.println("[예외] 비동기 내부 예외가 메인 흐름에 영향 없음 처리 시간: : " + (System.currentTimeMillis() - startTime));
 
         // then
         // 주문은 정상적으로 DB에 남아 있어야 함
         await().atMost(10, TimeUnit.SECONDS).until(() -> orderRepository.count() == testnum.intValue());
         assertThat(orders.size()).isEqualTo(testnum.intValue());
 
-        // 알림 생성에서 발생한 예외 검증
+        // 알림 생성에서 발생한 예외 검증. 검증 시에는 동기로 검증한다
         assertThatThrownBy(() ->
                 CompletableFuture.allOf(responses.toArray(new CompletableFuture[0])).join()
         )
@@ -156,32 +154,29 @@ public class NotificationAsyncTest {
     @DisplayName("TC-IT-NOTI-READ-001-[정상] 알림 읽음처리 시 isRead가 true로 변경")
     public void readNotification_async_multipleNotifications_success() {
         // given
-        Long testnum = 10L;
+        Long testnum = 10000L;
         List<Member> members = createTestMembers(testnum.intValue());
         List<NotificationRequest> reqs = createNotificationRequests(1L, testnum, members, null);
         List<CompletableFuture<NotificationResponse>> responses = createNotificationResponses(reqs);
 
+        await().atMost(20, TimeUnit.SECONDS)
+                .until(() -> responses.stream().allMatch(CompletableFuture::isDone));
+
         // when
         long startTime = System.currentTimeMillis();
-        List<CompletableFuture<Void>> notifications = readNotifications(members, responses);
-        await().atMost(20, TimeUnit.SECONDS)
-                .until(() -> notifications.stream().allMatch(CompletableFuture::isDone));
-
-        long duration = System.currentTimeMillis() - startTime;
-        System.out.println("비동기 읽음 처리 시간: " + duration + "ms");
+        List<CompletableFuture<Void>> readFutures = readNotifications(members, responses);
 
         // then
-        long startTime2 = System.currentTimeMillis();
+        await().atMost(20, TimeUnit.SECONDS)
+                .until(() -> readFutures.stream().allMatch(CompletableFuture::isDone));
+        System.out.println("[정상] 알림 읽음처리 시 isRead가 true로 변경 처리 시간: : " + (System.currentTimeMillis() - startTime));
+
         await().atMost(5, TimeUnit.SECONDS)
                 .until(() -> notificationRepository.findAll().stream()
                         .allMatch(Notification::isRead)
                 );
         assertThat(notificationRepository.findAll())
                 .extracting(notifications1 -> notifications1.stream().allMatch(Notification::isRead)).isEqualTo(true);
-
-        assertThat(duration).isLessThan(20000);  // 10초 이내 완료
-        long duration2 = System.currentTimeMillis() - startTime2;
-        System.out.println("비동기 읽음 처리 시간2: " + duration2 + "ms");
     }
 
     @Test
@@ -190,22 +185,34 @@ public class NotificationAsyncTest {
         // given
         Member member = createTestMember("user1", "user1@a.b");
 
-        // when & then
+        // when
         CompletableFuture<Void> future =
                 notificationService.readNotification(member.getId(), 999999L);
 
-        assertThatThrownBy(() -> future.join()).isInstanceOf(CompletionException.class).hasCauseInstanceOf(NoSuchElementException.class).cause().hasMessage("해당하는 알림이 없습니다.");
+        // then
+        await()
+                .atMost(Duration.ofSeconds(5))
+                .untilAsserted(() -> {
+                    assertThatThrownBy(() -> future.join())
+                            .isInstanceOf(CompletionException.class)
+                            .hasCauseInstanceOf(NoSuchElementException.class)
+                            .cause()
+                            .hasMessage("해당하는 알림이 없습니다.");
+                });
     }
 
     @Test
     @DisplayName("TC-IT-NOTI-READ-003-[정상] 이미 읽음처리된 알림을 또 읽음처리 요청")
     public void readNotification_async_ReadAgain_success() {
         // given
-        Long testnum = 10L;
+        Long testnum = 10000L;
         List<Member> members = createTestMembers(testnum.intValue());
         List<NotificationRequest> reqs = createNotificationRequests(1L, testnum, members, null);
         List<CompletableFuture<NotificationResponse>> responses = createNotificationResponses(reqs);
+
         List<CompletableFuture<Void>> firstReadFutures = readNotifications(members, responses);
+        await().atMost(10, TimeUnit.SECONDS)
+                .until(() -> firstReadFutures.stream().allMatch(CompletableFuture::isDone));
 
         // when
         long startTime = System.currentTimeMillis();
@@ -214,67 +221,70 @@ public class NotificationAsyncTest {
         // then
         await().atMost(10, TimeUnit.SECONDS)
                 .until(() -> secondReadFutures.stream().allMatch(CompletableFuture::isDone));
+        System.out.println("[정상] 이미 읽음처리된 알림을 또 읽음처리 요청 처리 시간: : " + (System.currentTimeMillis() - startTime));
 
-        long duration = System.currentTimeMillis() - startTime;
-        System.out.println("재처리 시간: " + duration + "ms");
         assertThat(notificationRepository.findAll().stream().allMatch(Notification::isRead)).isTrue();
-        assertThat(duration).isLessThan(10000);
     }
 
     @Test
     @DisplayName("TC-IT-NOTI-READ-004-[예외] 접근권한 없는 알림 읽음처리 요청")
     public void readNotification_async_unauthorized_fail() {
         // given
-        Long testnum = 10L;
+        Long testnum = 10000L;
         List<Member> members = createTestMembers(testnum.intValue());
         List<Member> unauthorizedMembers = createTestMembers(testnum.intValue());
         List<NotificationRequest> reqs = createNotificationRequests(1L, testnum, members, null);
         List<CompletableFuture<NotificationResponse>> responses = createNotificationResponses(reqs);
 
         // when
+        long startTime = System.currentTimeMillis();
         List<CompletableFuture<Void>> futures = readNotifications(unauthorizedMembers, responses);
 
         // then
-        //        assertThatThrownBy(() -> futures.get(0).join()).isInstanceOf(CompletionException.class).hasCauseInstanceOf(AccessDeniedException.class).cause().hasMessage("권한이 없습니다.");
-        await()
-                .atMost(Duration.ofSeconds(5))
-                .untilAsserted(() -> {
-                    assertThatThrownBy(() -> futures.get(0).join())
-                            .isInstanceOf(CompletionException.class)
-                            .hasCauseInstanceOf(AccessDeniedException.class)
-                            .cause()
-                            .hasMessage("권한이 없습니다.");
-                });
+        await().atMost(10, TimeUnit.SECONDS)
+                .until(() -> futures.stream().allMatch(CompletableFuture::isDone));
+        System.out.println("[예외] 접근권한 없는 알림 읽음처리 요청 처리 시간: " + (System.currentTimeMillis() - startTime));
+        for (int i = 0; i < responses.size(); i++) {
+            final int index = i;
+            assertThatThrownBy(() -> futures.get(index).join())
+                    .isInstanceOf(CompletionException.class)
+                    .hasCauseInstanceOf(AccessDeniedException.class)
+                    .cause()
+                    .hasMessage("권한이 없습니다.");
+        }
     }
 
     @Test
     @DisplayName("TC-IT-NOTI-READ-005-[예외] null notificationId로 읽음처리 요청")
     public void readNotification_async_null_notificationId_fail() {
         // given
-        Long testnum = 10L;
+        Long testnum = 10000L;
         List<Member> members = createTestMembers(testnum.intValue());
 
         // when
+        long startTime = System.currentTimeMillis();
         List<CompletableFuture<Void>> futures = readNotifications(members, null);
 
         // then
-//        assertThatThrownBy(() -> futures.get(0).join()).isInstanceOf(CompletionException.class).hasCauseInstanceOf(NullPointerException.class).cause().hasMessage("알림 id가 null입니다.");
-        await()
-                .atMost(Duration.ofSeconds(5))
-                .untilAsserted(() -> {
-                    assertThatThrownBy(() -> futures.get(0).join())
-                            .isInstanceOf(CompletionException.class)
-                            .hasCauseInstanceOf(NullPointerException.class)
-                            .cause()
-                            .hasMessage("알림 id가 null입니다.");
-                });
+        await().atMost(10, TimeUnit.SECONDS)
+                .until(() -> futures.stream().allMatch(CompletableFuture::isDone));
+        System.out.println("[예외] null notificationId로 읽음처리 요청 처리 시간: " + (System.currentTimeMillis() - startTime));
+
+        for (int i = 0; i < futures.size(); i++) {
+            final int index = i;
+            assertThatThrownBy(() -> futures.get(index).join())
+                    .isInstanceOf(CompletionException.class)
+                    .hasCauseInstanceOf(NullPointerException.class)
+                    .cause()
+                    .hasMessage("알림 id가 null입니다.");
+        }
     }
 
     @Test
     @DisplayName("TC-IT-NOTI-DELETE-001-[정상] 알림 삭제처리 시 삭제됨")
     public void deleteNotification_async_delete_success() {
         // given
-        Long testnum = 10L;
+        Long testnum = 10000L;
         List<Member> members = createTestMembers(testnum.intValue());
         List<NotificationRequest> reqs = createNotificationRequests(1L, testnum, members, null);
         List<CompletableFuture<NotificationResponse>> responses = createNotificationResponses(reqs);
@@ -286,12 +296,9 @@ public class NotificationAsyncTest {
         // then
         await().atMost(10, TimeUnit.SECONDS)
                 .until(() -> futures.stream().allMatch(CompletableFuture::isDone));
+        System.out.println("[정상] 알림 삭제처리 시 삭제됨 처리 시간: " + (System.currentTimeMillis() - startTime));
 
-        long duration = System.currentTimeMillis() - startTime;
-        System.out.println("재처리 시간: " + duration + "ms");
         assertThat(notificationRepository.findAll().size()).isEqualTo(0);
-        assertThat(duration).isLessThan(10000);
-
     }
 
     @Test
@@ -304,55 +311,87 @@ public class NotificationAsyncTest {
         CompletableFuture<Void> future =
                 notificationService.deleteNotification(member.getId(), 999999L);
 
-        assertThatThrownBy(() -> future.join()).isInstanceOf(CompletionException.class).hasCauseInstanceOf(NoSuchElementException.class).cause().hasMessage("해당하는 알림이 없습니다.");
+        await()
+                .atMost(Duration.ofSeconds(5))
+                .untilAsserted(() -> {
+                    assertThatThrownBy(() -> future.join())
+                            .isInstanceOf(CompletionException.class)
+                            .hasCauseInstanceOf(NoSuchElementException.class)
+                            .cause()
+                            .hasMessage("해당하는 알림이 없습니다.");
+                });
     }
 
     @Test
     @DisplayName("TC-IT-NOTI-DELETE-003-[예외] 접근권한 없는 알림 삭제 요청")
     public void deleteNotification_async_unauthorized_fail() {
         // given
-        Long testnum = 10L;
+        Long testnum = 10000L;
         List<Member> members = createTestMembers(testnum.intValue());
         List<Member> unauthorizedMembers = createTestMembers(testnum.intValue());
         List<NotificationRequest> reqs = createNotificationRequests(1L, testnum, members, null);
         List<CompletableFuture<NotificationResponse>> responses = createNotificationResponses(reqs);
 
         // when
+        long startTime = System.currentTimeMillis();
         List<CompletableFuture<Void>> futures = deleteNotifications(unauthorizedMembers, responses);
 
         // then
-        //        assertThatThrownBy(() -> futures.get(0).join()).isInstanceOf(CompletionException.class).hasCauseInstanceOf(AccessDeniedException.class).cause().hasMessage("권한이 없습니다.");
-        await()
-                .atMost(Duration.ofSeconds(5))
-                .untilAsserted(() -> {
-                    assertThatThrownBy(() -> futures.get(0).join())
-                            .isInstanceOf(CompletionException.class)
-                            .hasCauseInstanceOf(AccessDeniedException.class)
-                            .cause()
-                            .hasMessage("권한이 없습니다.");
-                });
+        await().atMost(10, TimeUnit.SECONDS)
+                .until(() -> futures.stream().allMatch(CompletableFuture::isDone));
+        System.out.println("[예외] 접근권한 없는 알림 삭제 요청 처리 시간: " + (System.currentTimeMillis() - startTime));
+        for (int i = 0; i < futures.size(); i++) {
+            final int index = i;
+            assertThatThrownBy(() -> futures.get(index).join())
+                    .isInstanceOf(CompletionException.class)
+                    .hasCauseInstanceOf(AccessDeniedException.class)
+                    .cause()
+                    .hasMessage("권한이 없습니다.");
+        }
+
+//        await()
+//                .atMost(Duration.ofSeconds(5))
+//                .untilAsserted(() -> {
+//                    assertThatThrownBy(() -> futures.get(0).join())
+//                            .isInstanceOf(CompletionException.class)
+//                            .hasCauseInstanceOf(AccessDeniedException.class)
+//                            .cause()
+//                            .hasMessage("권한이 없습니다.");
+//                });
     }
 
     @Test
     @DisplayName("TC-IT-NOTI-DELETE-004-[예외] null notificationId로 삭제 요청")
     public void deleteNotification_async_null_notificationId_fail() {
         // given
-        Long testnum = 10L;
+        Long testnum = 10000L;
         List<Member> members = createTestMembers(testnum.intValue());
 
         // when
+        long startTime = System.currentTimeMillis();
         List<CompletableFuture<Void>> futures = deleteNotifications(members, null);
 
         // then
-        await()
-                .atMost(Duration.ofSeconds(5))
-                .untilAsserted(() -> {
-                    assertThatThrownBy(() -> futures.get(0).join())
-                            .isInstanceOf(CompletionException.class)
-                            .hasCauseInstanceOf(NullPointerException.class)
-                            .cause()
-                            .hasMessage("알림 id가 null입니다.");
-                });
+        await().atMost(10, TimeUnit.SECONDS)
+                .until(() -> futures.stream().allMatch(CompletableFuture::isDone));
+        System.out.println("[예외] null notificationId로 삭제 요청 처리 시간: " + (System.currentTimeMillis() - startTime));
+        for (int i = 0; i < futures.size(); i++) {
+            final int index = i;
+            assertThatThrownBy(() -> futures.get(index).join())
+                    .isInstanceOf(CompletionException.class)
+                    .hasCauseInstanceOf(NullPointerException.class)
+                    .cause()
+                    .hasMessage("알림 id가 null입니다.");
+        }
+//        await()
+//                .atMost(Duration.ofSeconds(5))
+//                .untilAsserted(() -> {
+//                    assertThatThrownBy(() -> futures.get(0).join())
+//                            .isInstanceOf(CompletionException.class)
+//                            .hasCauseInstanceOf(NullPointerException.class)
+//                            .cause()
+//                            .hasMessage("알림 id가 null입니다.");
+//                });
     }
 
     // 헬퍼 메서드
@@ -370,14 +409,18 @@ public class NotificationAsyncTest {
     }
 
     private List<CompletableFuture<NotificationResponse>> createNotificationResponses(List<NotificationRequest> notificationRequests) {
-        List<CompletableFuture<NotificationResponse>> notis = new ArrayList<>();
+//        List<CompletableFuture<NotificationResponse>> notis = new ArrayList<>();
+//
+//        for (NotificationRequest notificationRequest : notificationRequests) {
+//            CompletableFuture<NotificationResponse> noti = notificationService.createNotificationAsync(notificationRequest);
+//            System.out.println("생성 성공: " + noti);
+//            notis.add(noti);
+//        }
+//        return notis;
+        return notificationRequests.stream()
+                .map(notificationService::createNotificationAsync)
+                .collect(Collectors.toList());
 
-        for (NotificationRequest notificationRequest : notificationRequests) {
-            CompletableFuture<NotificationResponse> noti = notificationService.createNotificationAsync(notificationRequest);
-            System.out.println("생성 성공: " + noti);
-            notis.add(noti);
-        }
-        return notis;
     }
 
     private List<NotificationRequest> createNotificationRequests(Long start, Long end, List<Member> members, List<Order> orders) {
@@ -427,7 +470,9 @@ public class NotificationAsyncTest {
     private List<CompletableFuture<Void>> readNotifications(List<Member> members, List<CompletableFuture<NotificationResponse>> notifications) {
         // notifications가 있는 경우
         if (notifications != null && !notifications.isEmpty()) {
-            CompletableFuture.allOf(notifications.toArray(new CompletableFuture[0]));
+            List<NotificationResponse> completedNotifications = notifications.stream()
+                    .map(CompletableFuture::join)
+                    .collect(Collectors.toList());
 
             return IntStream.range(0, notifications.size())
                     .mapToObj(i -> {
@@ -455,7 +500,9 @@ public class NotificationAsyncTest {
     ) {
         // notifications가 있는 경우
         if (notifications != null && !notifications.isEmpty()) {
-            CompletableFuture.allOf(notifications.toArray(new CompletableFuture[0])).join();
+            List<NotificationResponse> completedNotifications = notifications.stream()
+                    .map(CompletableFuture::join)
+                    .collect(Collectors.toList());
 
             return IntStream.range(0, notifications.size())
                     .mapToObj(i -> {

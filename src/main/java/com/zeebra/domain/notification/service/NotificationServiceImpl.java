@@ -129,4 +129,42 @@ public class NotificationServiceImpl implements NotificationService {
         }
     }
 
+    // 테스트용
+
+    public NotificationResponse createNotificationSync(NotificationRequest request) {
+
+        validateNotificationType(request.getNotificationType());
+
+        String url = notificationUrlFactory.createUrl(request.getNotificationType(), request.getObject());
+        Member member = internalSupport.findByMemberId(request.getMemberId());
+        Notification notification = new Notification(member.getId(), request.getNotificationType(), url, request.getImgUrl());
+
+        return NotificationResponse.of(internalSupport.saveNotification(notification));
+    }
+
+    public void readNotificationSync(Long memberId, Long notificationId) {
+        Member member = internalSupport.findByMemberId(memberId);
+        Notification notification = internalSupport.findByNotificationId(notificationId);
+
+        if (!Objects.equals(member.getId(), notification.getMemberId())) {
+            throw new AccessDeniedException("권한이 없습니다.");
+        }
+
+        notification.read();
+        internalSupport.saveNotification(notification);
+
+    }
+
+    public void deleteNotificationSync(Long memberId, Long notificationId) {
+        Member member = internalSupport.findByMemberId(memberId);
+        Notification notification = internalSupport.findByNotificationId(notificationId);
+
+        if (!Objects.equals(member.getId(), notification.getMemberId())) {
+            throw new AccessDeniedException("권한이 없습니다.");
+        }
+
+        internalSupport.deleteNotification(notification);
+    }
+
+
 }

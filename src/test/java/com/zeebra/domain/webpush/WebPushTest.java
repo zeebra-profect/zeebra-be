@@ -88,8 +88,9 @@ public class WebPushTest {
         subscriptions(members);
 
         // when
+        long startTime = System.currentTimeMillis();
         List<Boolean> result = send(members);
-
+        System.out.println("처리 시간" + (System.currentTimeMillis() - startTime));
         // then
         await().atMost(5, SECONDS)
                 .until(() -> result.stream().allMatch(Boolean::booleanValue));

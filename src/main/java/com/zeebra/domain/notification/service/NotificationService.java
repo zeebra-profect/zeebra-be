@@ -21,4 +21,12 @@ public interface NotificationService {
 
     CompletableFuture<Void> deleteNotification(Long memberId, Long notificationId);
 
+    // 테스트용
+    NotificationResponse createNotificationSync(NotificationRequest notificationRequest);
+
+    void readNotificationSync(Long memberId, Long notificationId);
+
+    void deleteNotificationSync(Long memberId, Long notificationId);
+
+
 }

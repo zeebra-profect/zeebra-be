@@ -42,7 +42,7 @@ gradle-wrapper.jar
 application.properties
 application.yml
 application-local.yml
-src/test/resources/application-test.yml
+
 db-compose.yml
 .env
 *.env

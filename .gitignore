@@ -48,5 +48,4 @@ db-compose.yml
 *.env
 /src/main/generated/*
 
-src/test/java/com/zeebra/domain/chat/controlle/*
-#임시
+load-test/docker-compose.yml

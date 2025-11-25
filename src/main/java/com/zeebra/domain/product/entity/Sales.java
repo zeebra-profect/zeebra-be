@@ -50,7 +50,7 @@ public class Sales extends BaseEntity {
     }
 
 	public void validatePurchasable(int quantity) {
-		if (this.salesStatus.isOnSale()){
+		if (!this.salesStatus.isOnSale()){
 			throw new BusinessException(SalesErrorCode.SALES_NOT_AVAILABLE);
 		}
 		if (quantity <= 0) {

@@ -92,11 +92,9 @@ public class SalesQueryRepository {
 	public Sales findCheapestAndOldestSales(Long productOptionId){
 
 		Sales result = queryFactory
-			.select(sales)
-			.from(sales)
-			.join(productOption).on(sales.productOptionId.eq(productOption.id))
+			.selectFrom(sales)
 			.where(
-				productOption.id.eq(productOptionId),
+				sales.productOptionId.eq(productOptionId),
 				sales.salesStatus.eq(SalesStatus.ON_SALE)
 			)
 			.orderBy(
@@ -104,7 +102,8 @@ public class SalesQueryRepository {
 				sales.createdTime.asc()
 			)
 			.fetchFirst();
-		
+
+
 		if (result == null) {
 			log.warn("[최저가 판매 조회 실패] ON_SALE 상태의 Sales가 없습니다. productOptionId: {}", productOptionId);
 		}

@@ -1,8 +1,5 @@
 package com.zeebra.global.config;
 
-import com.zeebra.global.security.jwt.AuthProblemHandler;
-import com.zeebra.global.security.jwt.JwtFilter;
-import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -22,6 +19,11 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
+
+import com.zeebra.global.security.jwt.AuthProblemHandler;
+import com.zeebra.global.security.jwt.JwtFilter;
+
+import lombok.RequiredArgsConstructor;
 
 @Configuration
 @EnableWebSecurity

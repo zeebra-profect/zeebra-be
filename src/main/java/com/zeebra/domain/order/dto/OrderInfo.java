@@ -36,7 +36,7 @@ public record OrderInfo (
 	}
 
 	public void validatePaymentCreatable() {
-		if(orderStatus.isCreated()){
+		if(!orderStatus.isCreated()){
 			throw new BusinessException(PaymentErrorCode.INVALID_PAYMENT_REQUEST);
 		}
 	}

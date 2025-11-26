@@ -14,15 +14,15 @@ public class MemberIdSequenceSynchronizer {
 
 	@PostConstruct
 	public void syncMemberIdSequence() {
-		Long maxId = jdbcTemplate.queryForObject(
-			"SELECT COALESCE(MAX(member_id), 0) FROM members",
+		Long nextVal = jdbcTemplate.queryForObject(
+			"SELECT COALESCE(MAX(member_id) + 1, 1) FROM members",
 			Long.class
 		);
 
 		jdbcTemplate.queryForObject(
 			"SELECT setval('members_member_id_seq', ?)",
 			Long.class,
-			maxId
+			nextVal
 		);
 	}
 }

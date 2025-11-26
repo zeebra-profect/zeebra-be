@@ -15,10 +15,15 @@ concurrency:
 
 jobs:
   ci:
-    name: CI (Build)
+    name: CI (Test & Build)
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     environment: dev
+    permissions:
+      contents: read
+      checks: write       # 테스트 리포트 작성을 위해 필요
+      pull-requests: write # PR 코멘트 등을 위해 필요 (선택사항)
+
     steps:
       - uses: actions/checkout@v4
 
@@ -38,8 +43,30 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Build (Gradle)
-        run: ./gradlew build -x test
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      # (1) 단위/통합 테스트 실행 및 빌드
+      # 'check'는 test뿐만 아니라 lint(checkstyle, spotless) 설정이 있다면 함께 수행합니다.
+      # '-x test' 옵션을 제거하여 테스트를 수행하게 변경했습니다.
+      - name: Run Tests & Build
+        run: ./gradlew clean build --info
+
+      # (2) 테스트 결과 리포팅 (JUnit5)
+      # 테스트가 실패하더라도(failure) 리포트는 남겨야 하므로 if: success() || failure() 사용
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@v4
+        if: success() || failure()
+        with:
+          report_paths: '**/build/test-results/test/TEST-*.xml'
+          detailed_summary: true
+          include_passed: true
+
+#      # (3) [부가기능] 의존성 보안 취약점 검사 (Dependency Review)
+#      # PR 단계에서 취약점이 있는 라이브러리가 추가되면 경고/실패 처리
+#      - name: Dependency Review
+#        if: github.event_name == 'pull_request'
+#        uses: actions/dependency-review-action@v4
 
   cd:
     name: CD (Deploy to EC2 via SSM)
@@ -55,8 +82,10 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Build Spring Project
-        run: ./gradlew build -x test
+#      # CD 단계에서는 테스트를 다시 돌리기보다 빠른 배포를 위해 -x test 유지 (선택사항)
+#      # 만약 CD 직전에도 무조건 테스트를 통과해야 한다면 -x test 제거
+#      - name: Build Spring Project
+#        run: ./gradlew build -x test
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -86,17 +115,14 @@ jobs:
           AWS_REGION: ${{ secrets.AWS_REGION }}
           ECR_REPO: ${{ secrets.ECR_REPO_BE_DEV }}
           IMAGE_TAG: ${{ env.IMAGE_TAG }}
-          PARAM_PATH: ${{ secrets.SSM_PARAM_PATH }} # SSM 파라미터 경로 (trailing slash 유지)
+          PARAM_PATH: ${{ secrets.SSM_PARAM_PATH }}
           CONTAINER_NAME: "zeebra-be"
           HOST_PORT: "8080"
           CONTAINER_PORT: "8080"
         run: |
           IMAGE_URI="${ECR_REPO}:${IMAGE_TAG}"
-
-    
           TARGET_OPT="--instance-ids ${{ secrets.EC2_INSTANCE_ID }}"
-  
-
+          
           aws ssm send-command \
             --document-name "AWS-RunShellScript" \
             --comment "Deploy ${IMAGE_URI}" \
@@ -105,27 +131,17 @@ jobs:
               "set -eu",
               "sudo mkdir -p /opt/app && sudo mkdir -p /opt/env && sudo chown -R ubuntu:ubuntu /opt",
               "aws ecr get-login-password --region '"$AWS_REGION"' | docker login --username AWS --password-stdin '"$ECR_REPO"'",
-
-              "# (2) 최신 이미지 pull",
               "docker pull '"$IMAGE_URI"'",
-
-              "# (3) SSM 파라미터를 .env로 생성",
               "aws ssm get-parameters-by-path --path '"$PARAM_PATH"' --with-decryption --recursive --region '"$AWS_REGION"' --query \"Parameters[*].{Name:Name,Value:Value}\" --output text \
                 | awk '\''{sub(\"^'"$PARAM_PATH"'\",\"\",$1); print $1\"=\"$2}'\'' > /opt/env/dev.env",
-
-              "# (4) 고정 env 추가(프로필/로깅 등은 여기서 덮어씀)",
               "echo SPRING_PROFILES_ACTIVE=dev >> /opt/env/dev.env",
               "echo SERVER_PORT='"$CONTAINER_PORT"' >> /opt/env/dev.env",
-
-              "# (5) 컨테이너 재기동",
               "docker stop '"$CONTAINER_NAME"' || true",
               "docker rm '"$CONTAINER_NAME"' || true",
               "docker run -d --name '"$CONTAINER_NAME"' --restart unless-stopped \
                  --env-file /opt/env/dev.env \
                  -p 127.0.0.1:'"$HOST_PORT"':'"$CONTAINER_PORT"' \
                  '"$IMAGE_URI"'",
-
-              "# (6) 상태 확인",
               "sleep 2 && docker ps --filter name='"$CONTAINER_NAME"'",
               "curl -s -o /dev/null -w \"HTTP %{http_code}\\n\" http://127.0.0.1:'"$HOST_PORT"' || true"
             ]' \

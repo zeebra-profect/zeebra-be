@@ -71,10 +71,9 @@ dependencies {
     implementation 'org.bouncycastle:bcprov-jdk18on:1.78.1' // web push 관련 - VAPID Key 암호화
     implementation 'nl.martijndwars:web-push:5.1.1' // web push
 
-
-    implementation 'org.bouncycastle:bcpkix-jdk18on:1.78.1' // web push 관련 - VAPID Key 암호화
-    implementation 'org.bouncycastle:bcprov-jdk18on:1.78.1' // web push 관련 - VAPID Key 암호화
-    implementation 'nl.martijndwars:web-push:5.1.1' // web push
+    // 모니터링 설정
+    implementation 'io.micrometer:micrometer-registry-prometheus'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
     // 테스트 환경 설정
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
@@ -102,7 +101,7 @@ jacocoTestReport {
     }
 
     def Qdomains = []
-    for (qPattern in "**/QA".."**/QZ") {
+    for (qPattern in "/QA".."/QZ") {
         Qdomains.add(qPattern + "*")
     }
 

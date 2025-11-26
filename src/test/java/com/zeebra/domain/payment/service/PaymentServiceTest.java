@@ -23,6 +23,7 @@ import com.zeebra.domain.order.entity.OrderItemStatus;
 import com.zeebra.domain.order.entity.OrderStatus;
 import com.zeebra.domain.order.entity.OrderType;
 import com.zeebra.domain.order.entity.ReturnStatus;
+import com.zeebra.domain.order.repository.OrderHistoryRepository;
 import com.zeebra.domain.order.repository.OrderItemRepository;
 import com.zeebra.domain.order.repository.OrderRepository;
 import com.zeebra.domain.payment.dto.CreatePaymentRequest;
@@ -58,6 +59,8 @@ public class PaymentServiceTest {
 	@Autowired
 	private OrderItemRepository orderItemRepository;
 	@Autowired
+	private OrderHistoryRepository orderHistoryRepository;
+	@Autowired
 	private SalesRepository salesRepository;
 
 	@Autowired
@@ -72,6 +75,7 @@ public class PaymentServiceTest {
 		productOptionRepository.deleteAllInBatch();
 		orderRepository.deleteAllInBatch();
 		orderItemRepository.deleteAllInBatch();
+		orderHistoryRepository.deleteAllInBatch();
 		salesRepository.deleteAllInBatch();
 	}
 

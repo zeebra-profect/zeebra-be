@@ -78,8 +78,10 @@ public class PaymentServiceImpl implements PaymentService {
 
 		salesService.validatePurchasable(itemLines);
 
+		String orderStatusIdempotencyKey = OrderStatus.PAYMENT_PENDING.name() + ":" + request.clientRequestId();
+
 		Payment payment = savePaymentWithHistory(request, order);
-		orderService.updateOrderStatus(order.orderId(), OrderStatus.PAYMENT_PENDING, request.clientRequestId());
+		orderService.updateOrderStatus(order.orderId(), OrderStatus.PAYMENT_PENDING, orderStatusIdempotencyKey);
 
 		return CreatePaymentResponse.of(payment);
 	}

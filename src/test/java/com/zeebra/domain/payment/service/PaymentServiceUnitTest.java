@@ -62,6 +62,7 @@ public class PaymentServiceUnitTest {
 		Long memberId = 1L;
 		Long orderId = 1L;
 		String clientRequestId = "idem-key-001";
+		String idempotencyKey = OrderStatus.PAYMENT_PENDING + ":" + "idem-key-001";
 		BigDecimal price = BigDecimal.valueOf(50000);
 		BigDecimal amount = BigDecimal.valueOf(50000);
 		String orderName = "테스트 주문";
@@ -114,7 +115,7 @@ public class PaymentServiceUnitTest {
 		then(salesService).should().validatePurchasable(itemLines);
 
 		then(paymentRepository).should().save(any(Payment.class));
-		then(orderService).should().updateOrderStatus(orderId, OrderStatus.PAYMENT_PENDING, clientRequestId);
+		then(orderService).should().updateOrderStatus(orderId, OrderStatus.PAYMENT_PENDING, idempotencyKey);
 	}
 
 	@DisplayName("같은 멱등성 키로 재요청 시 기존 결제 정보를 반환합니다.")
@@ -287,8 +288,9 @@ public class PaymentServiceUnitTest {
 
 		OrderInfo orderInfo = mock(OrderInfo.class);
 		given(orderService.getOrder(memberId, orderId)).willReturn(orderInfo);
+		given(orderInfo.orderId()).willReturn(orderId);
 
-		willThrow(new BusinessException(OrderErrorCode.ORDER_HAS_NO_ITEMS)).given(orderService.getOrderItemLine(orderId));
+		willThrow(new BusinessException(OrderErrorCode.ORDER_HAS_NO_ITEMS)).given(orderService).getOrderItemLine(orderId);
 
 		//when //then
 		assertThatThrownBy(() -> paymentService.createPayment(request, memberId)).isInstanceOf(BusinessException.class).hasMessage(OrderErrorCode.ORDER_HAS_NO_ITEMS.getMessage());

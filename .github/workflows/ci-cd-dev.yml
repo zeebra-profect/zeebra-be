@@ -24,6 +24,20 @@ jobs:
       checks: write       # 테스트 리포트 작성을 위해 필요
       pull-requests: write # PR 코멘트 등을 위해 필요 (선택사항)
 
+    services:
+      image: postgres:14.19
+      env:
+        POSTGRES_USER: zeebra
+        POSTGRES_PASSWORD: 1234
+        POSTGRES_DB: zeebra_db
+      ports:
+        - 5432:5432
+      options: >-
+        --health-cmd pg_isready
+        --health-interval 10s
+        --health-timeout 5s
+        --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
 

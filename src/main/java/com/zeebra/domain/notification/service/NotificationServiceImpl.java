@@ -2,6 +2,7 @@ package com.zeebra.domain.notification.service;
 
 import com.zeebra.domain.common.InternalSupport;
 import com.zeebra.domain.member.entity.Member;
+import com.zeebra.domain.member.repository.MemberRepository;
 import com.zeebra.domain.notification.component.NotificationUrlFactory;
 import com.zeebra.domain.notification.dto.NotificationRequest;
 import com.zeebra.domain.notification.dto.NotificationResponse;
@@ -27,6 +28,7 @@ import java.util.concurrent.Executor;
 public class NotificationServiceImpl implements NotificationService {
     private final NotificationRepository notificationRepository;
     private final NotificationUrlFactory notificationUrlFactory;
+    private final MemberRepository memberRepository;
     private final InternalSupport internalSupport;
     private final ApplicationEventPublisher applicationEventPublisher;
     private final Executor notificationWorkerExecutor;
@@ -143,8 +145,8 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     public void readNotificationSync(Long memberId, Long notificationId) {
-        Member member = internalSupport.findByMemberId(memberId);
         Notification notification = internalSupport.findByNotificationId(notificationId);
+        Member member = internalSupport.findByMemberId(memberId);
 
         if (!Objects.equals(member.getId(), notification.getMemberId())) {
             throw new AccessDeniedException("권한이 없습니다.");
@@ -152,7 +154,6 @@ public class NotificationServiceImpl implements NotificationService {
 
         notification.read();
         internalSupport.saveNotification(notification);
-
     }
 
     public void deleteNotificationSync(Long memberId, Long notificationId) {
@@ -164,6 +165,29 @@ public class NotificationServiceImpl implements NotificationService {
         }
 
         internalSupport.deleteNotification(notification);
+    }
+
+    public void broadcast(NotificationRequest request) {
+
+        validateNotificationType(request.getNotificationType());
+
+        String url = notificationUrlFactory.createUrl(request.getNotificationType(), request.getObject());
+
+        List<Member> members = memberRepository.findAll();
+        for (Member member : members) {
+            Notification notification = new Notification(member.getId(), request.getNotificationType(), url, request.getImgUrl());
+            internalSupport.saveNotification(notification);
+        }
+    }
+
+    public Map<Long, Long> getAll() {
+        List<Notification> notifications = notificationRepository.findAll();
+        Map<Long, Long> responses = new HashMap<>();
+        for (Notification notification : notifications) {
+            responses.put(notification.getMemberId(), notification.getNotificationId());
+        }
+
+        return responses;
     }
 
 

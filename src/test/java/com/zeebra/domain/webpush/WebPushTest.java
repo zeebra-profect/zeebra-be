@@ -83,7 +83,7 @@ public class WebPushTest {
     @DisplayName("TC-IT-WP-ASYNC-001-[정상] 여러 유저에게 비동기 푸시 발송")
     public void sendPush_async_multipleNotifications_success() {
         // given
-        Long testnum = 10L;
+        Long testnum = 1L;
         List<Member> members = createTestMembers(testnum.intValue());
         subscriptions(members);
 

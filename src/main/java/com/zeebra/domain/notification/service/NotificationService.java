@@ -5,6 +5,7 @@ import com.zeebra.domain.notification.dto.NotificationResponse;
 import com.zeebra.domain.notification.dto.NotificationsResponse;
 import com.zeebra.domain.notification.event.NotificationEvent;
 
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 public interface NotificationService {
@@ -28,5 +29,7 @@ public interface NotificationService {
 
     void deleteNotificationSync(Long memberId, Long notificationId);
 
+    void broadcast(NotificationRequest notificationRequest);
 
+    Map<Long, Long> getAll();
 }

@@ -1,6 +1,8 @@
 package com.zeebra.domain.common;
 
+import com.zeebra.domain.member.entity.Gender;
 import com.zeebra.domain.member.entity.Member;
+import com.zeebra.domain.member.entity.Role;
 import com.zeebra.domain.member.repository.MemberRepository;
 import com.zeebra.domain.notification.entity.Notification;
 import com.zeebra.domain.notification.repository.NotificationRepository;
@@ -8,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.NoSuchElementException;
 
 @RequiredArgsConstructor
@@ -41,6 +44,22 @@ public class InternalSupport {
     @Transactional
     public Notification saveNotification(Notification notification) {
         return notificationRepository.save(notification);
+    }
+
+    @Transactional
+    public void createTestMembers(int num) {
+        for (int i = 1; i <= num; i++) {
+            Member member = memberRepository.save(Member.builder()
+                    .userLoginId("user" + i)
+                    .memberName("user" + i)
+                    .memberEmail("user" + i + "@a.b")
+                    .nickname("testMember" + i)
+                    .birth(LocalDate.now())
+                    .gender(Gender.WOMAN)
+                    .passwordHash("hashedPassword")
+                    .role(Role.USER)
+                    .build());
+        }
     }
 
 }

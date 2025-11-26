@@ -65,6 +65,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/push/**").authenticated()
                         .requestMatchers("/api/notification/**").authenticated()
 
+                        .requestMatchers("/actuator/**").permitAll() // 프로메테우스
+
                         .anyRequest().authenticated())
                 .csrf(csrf -> csrf
                         .ignoringRequestMatchers("/api/auth/**", "/api/products", "/api/products/**",

@@ -8,10 +8,11 @@ scrape_configs:
       - targets: ['localhost:9090']
 
   - job_name: 'spring-boot-app'
+    scheme: https
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['13.209.119.163:8080']
+      - targets: ['api.zeebra.shop']
 
   - job_name: 'postgresql'
     static_configs:
-      - targets: ['localhost:9187']
+      - targets: ['host.docker.internal:9187']

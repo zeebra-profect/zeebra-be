@@ -57,6 +57,7 @@ public class SecurityConfigLocal {
 
                         .requestMatchers("/ws/chat/**").permitAll()
                         .requestMatchers("/api/chat/group/**").permitAll()
+                        .requestMatchers("/actuator/**").permitAll() // 프로메테우스
 
                         .requestMatchers("/api/chat/dm/**").authenticated()
 

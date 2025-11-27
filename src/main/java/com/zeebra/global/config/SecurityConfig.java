@@ -1,8 +1,5 @@
 package com.zeebra.global.config;
 
-import com.zeebra.global.security.jwt.AuthProblemHandler;
-import com.zeebra.global.security.jwt.JwtFilter;
-import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -17,6 +14,16 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
+
+import com.zeebra.global.security.jwt.AuthProblemHandler;
+import com.zeebra.global.security.jwt.JwtFilter;
+
+import lombok.RequiredArgsConstructor;
 
 @Configuration
 @EnableWebSecurity
@@ -42,13 +49,14 @@ public class SecurityConfig {
                 .headers(headers -> headers
                         .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'self'; script-src 'self' "))
                         .frameOptions(frameOptions -> frameOptions.deny()))
-                .cors(AbstractHttpConfigurer::disable)
+//                .cors(cors -> cors.configurationSource(corsConfigurationSource())) CORS 스프링에서 설정 시
+                        .cors(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(SWAGGER_WHITELIST).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/ws/chat/**").permitAll()
                         .requestMatchers("/api/chat/group/**").permitAll()
+                        .requestMatchers("/ws/chat/**").permitAll()
 
                         .requestMatchers("/api/chat/dm/**").authenticated()
                         .requestMatchers("/api/chat/rooms/{roomId}/leave").authenticated()
@@ -56,6 +64,8 @@ public class SecurityConfig {
 
                         .requestMatchers("/api/push/**").authenticated()
                         .requestMatchers("/api/notification/**").authenticated()
+
+                        .requestMatchers("/actuator/**").permitAll() // 프로메테우스
 
                         .anyRequest().authenticated())
                 .csrf(csrf -> csrf

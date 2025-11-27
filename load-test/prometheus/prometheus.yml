@@ -1,0 +1,22 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'spring-boot-app'
+    scheme: https
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['api.zeebra.shop']
+
+  - job_name: 'postgresql'
+    static_configs:
+      - targets: ['host.docker.internal:9187']
+
+remote_write:
+  - url: http://influxdb:8086/api/v1/write?db=prometheus_db&rp=autogen  # InfluxDB의 Prometheus Remote Write 엔드포인트
+    remote_timeout: 30s

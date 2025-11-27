@@ -44,3 +44,14 @@ vapid:
   public.key: BN6WSz7suZPHtrPslZQLuwGf1ZG80OXvnInn1iJ-MLL3HQ_rrUPe0v8Wmo6zaqMaZI_qtrPKqQRjQopPcPORQkU
   private.key: t4LDNFeIXhuonUykBoJMSJBhKBGIe873T340l51FFIY
   subject: mailto:bbyubbu@naver.com
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    prometheus:
+      enabled: true
+  security:
+    enabled: false

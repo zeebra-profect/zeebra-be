@@ -6,6 +6,7 @@ import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -50,16 +51,22 @@ public class PaymentServiceImpl implements PaymentService {
 	private static final int MAX_RETRY_COUNT = 3;
 
 	private final PaymentRepository paymentRepository;
-	private final PaymentTransactionRepository paymentTransactionRepository;
-	private final PaymentHistoryRepository paymentHistoryRepository;
 	private final PaymentQueryRepository paymentQueryRepository;
+	private final PaymentHistoryRepository paymentHistoryRepository;
+	private final PaymentTransactionRepository paymentTransactionRepository;
 	private final OrderService orderService;
+	private final SalesService salesService;
 	private final TossPaymentService tossPaymentService;
 	private final ObjectMapper objectMapper;
-	private final SalesService salesService;
 
 	@Transactional
 	public CreatePaymentResponse createPayment(CreatePaymentRequest request, Long memberId) {
+		Optional<Payment> existing = paymentRepository
+			.findByIdempotencyKey(request.clientRequestId());
+
+		if (existing.isPresent()) {
+			return CreatePaymentResponse.of(existing.get());
+		}
 
 		request.validateInternalAmount();
 		OrderInfo order = orderService.getOrder(memberId, request.orderId());
@@ -67,12 +74,14 @@ public class PaymentServiceImpl implements PaymentService {
 		order.validatePaymentCreatable();
 		order.validatePaymentAmount(request.amount());
 
-		List<OrderItemLine>  itemLines = orderService.getOrderItemLine(order.orderId());
+		List<OrderItemLine> itemLines = orderService.getOrderItemLine(order.orderId());
 
 		salesService.validatePurchasable(itemLines);
 
+		String orderStatusIdempotencyKey = OrderStatus.PAYMENT_PENDING.name() + ":" + request.clientRequestId();
+
 		Payment payment = savePaymentWithHistory(request, order);
-		orderService.updateOrderStatus(order.orderId(), OrderStatus.PAYMENT_PENDING, request.clientRequestId());
+		orderService.updateOrderStatus(order.orderId(), OrderStatus.PAYMENT_PENDING, orderStatusIdempotencyKey);
 
 		return CreatePaymentResponse.of(payment);
 	}
@@ -197,8 +206,7 @@ public class PaymentServiceImpl implements PaymentService {
 			PaymentTransactionStatus.FAILED,
 			createApiErrorResponse(exception)
 		);
-
-		updateOrderStatusSafely(
+		orderService.updateOrderStatus(
 			reloadedPayment.getOrderId(),
 			OrderStatus.PAYMENT_FAILED,
 			idempotencyKey + "-order-api-failed"
@@ -232,12 +240,12 @@ public class PaymentServiceImpl implements PaymentService {
 			PaymentTransactionStatus.SUCCEEDED,
 			tossResponseMap
 		);
-
-		updateOrderStatus(
+		orderService.updateOrderStatus(
 			reloadedPayment.getOrderId(),
 			OrderStatus.PAID,
 			idempotencyKey + "-order-paid"
 		);
+		orderService.updateAllOrderItemsStatus(reloadedPayment.getOrderId(), OrderItemStatus.PAID);
 
 		// sales 재고랑 상태 변경해줘야 함..
 
@@ -269,7 +277,7 @@ public class PaymentServiceImpl implements PaymentService {
 			tossResponseMap
 		);
 
-		updateOrderStatusSafely(
+		orderService.updateOrderStatus(
 			reloadedPayment.getOrderId(),
 			OrderStatus.PAYMENT_FAILED,
 			idempotencyKey + "-order-failed"
@@ -411,37 +419,13 @@ public class PaymentServiceImpl implements PaymentService {
 		if (tossResponse.tossPayment() != null && tossResponse.tossPayment().method() != null) {
 			try {
 				String method = tossResponse.tossPayment().method();
-				PaymentMethod paymentMethod = convertToPaymentMethod(method);
+				PaymentMethod paymentMethod = PaymentMethod.valueOf(method);
 				payment.updatePaymentMethod(paymentMethod);
 				log.debug("[결제 수단 저장] paymentId: {}, method: {}", payment.getId(), paymentMethod);
 			} catch (IllegalArgumentException e) {
 				log.warn("[결제 수단 변환 실패] method: {}, error: {}", 
 					tossResponse.tossPayment().method(), e.getMessage());
 			}
-		}
-	}
-
-	private PaymentMethod convertToPaymentMethod(String tossMethod) {
-		if (tossMethod == null) {
-			throw new IllegalArgumentException("결제 수단이 null입니다.");
-		}
-
-		// 영문 -> Enum 직접 변환 시도
-		try {
-			return PaymentMethod.valueOf(tossMethod.toUpperCase());
-		} catch (IllegalArgumentException e) {
-			// 한글 -> 영문 매핑
-			return switch (tossMethod) {
-				case "카드" -> PaymentMethod.CARD;
-				case "간편결제" -> PaymentMethod.EASY_PAY;
-				case "가상계좌" -> PaymentMethod.VIRTUAL_ACCOUNT;
-				case "휴대폰" -> PaymentMethod.MOBILE_PHONE;
-				case "계좌이체" -> PaymentMethod.TRANSFER;
-				case "문화상품권" -> PaymentMethod.CULTURE_GIFT_CERTIFICATE;
-				case "도서문화상품권" -> PaymentMethod.BOOK_GIFT_CERTIFICATE;
-				case "게임문화상품권" -> PaymentMethod.GAME_GIFT_CERTIFICATE;
-				default -> throw new IllegalArgumentException("알 수 없는 결제 수단: " + tossMethod);
-			};
 		}
 	}
 
@@ -529,27 +513,5 @@ public class PaymentServiceImpl implements PaymentService {
 		errorResponse.put("message", exception.getMessage());
 		errorResponse.put("exceptionType", exception.getClass().getSimpleName());
 		return errorResponse;
-	}
-
-	// ========== Order Helper Methods ==========
-
-	private void updateOrderStatus(Long orderId, OrderStatus status, String idempotencyKey) {
-		try {
-			orderService.updateOrderStatus(orderId, status, idempotencyKey);
-			orderService.updateAllOrderItemsStatus(orderId, OrderItemStatus.PAID);
-			log.info("[Order 상태 업데이트 성공] orderId: {}, status: {}", orderId, status);
-		} catch (Exception e) {
-			log.error("[Order 상태 업데이트 실패] orderId: {}, error: {}", orderId, e.getMessage(), e);
-			throw new BusinessException(PaymentErrorCode.ORDER_UPDATE_FAILED);
-		}
-	}
-
-	private void updateOrderStatusSafely(Long orderId, OrderStatus status, String idempotencyKey) {
-		try {
-			orderService.updateOrderStatus(orderId, status, idempotencyKey);
-			log.info("[Order 상태 업데이트 성공] orderId: {}, status: {}", orderId, status);
-		} catch (Exception e) {
-			log.error("[Order 상태 업데이트 실패] orderId: {}, error: {}", orderId, e.getMessage(), e);
-		}
 	}
 }

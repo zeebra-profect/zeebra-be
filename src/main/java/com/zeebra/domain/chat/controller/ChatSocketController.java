@@ -4,22 +4,49 @@ import com.zeebra.domain.chat.dto.ChatMessageRequestDto;
 import com.zeebra.domain.chat.dto.ChatMessageResponseDto;
 import com.zeebra.domain.chat.service.ChatService;
 import com.zeebra.global.security.jwt.JwtProvider;
-import lombok.RequiredArgsConstructor;
+import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.stereotype.Controller;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+
 
 import java.security.Principal;
 
+
 @Slf4j
 @Controller
-@RequiredArgsConstructor
 public class ChatSocketController {
 
     private final ChatService chatService;
     private final SimpMessagingTemplate messagingTemplate;
+
+    private final MeterRegistry meterRegistry;
+
+    private final Counter messageCounter;
+    private final Timer messageTimer;
+
+    // MeterRegistry를 주입받아 생성자에서 메트릭을 한 번만 등록/초기화
+    public ChatSocketController(ChatService chatService, SimpMessagingTemplate messagingTemplate, MeterRegistry meterRegistry) {
+        this.chatService = chatService;
+        this.messagingTemplate = messagingTemplate;
+        this.meterRegistry = meterRegistry;
+
+        // Counter 한 번만 생성 및 등록
+        this.messageCounter = Counter.builder("ws_chat_message")
+                .tag("endpoint", "/chat/message")
+                .description("Total number of chat messages processed")
+                .register(meterRegistry);
+
+        // Timer 한 번만 생성 및 등록
+        this.messageTimer = Timer.builder("ws_chat_message_seconds")
+                .tag("endpoint", "/chat/message")
+                .description("Processing time for chat messages")
+                .register(meterRegistry);
+    }
 
     @MessageMapping("/chat/message")
     public void sendMessage(
@@ -27,6 +54,8 @@ public class ChatSocketController {
             Principal principal
 
     ) {
+        Timer.Sample sample = Timer.start(meterRegistry);
+
         try { //️ 2. try-catch 블록 추가
             if (principal == null) {
                 log.warn(" WebSocket - 인증되지 않은 사용자 메세지 전송 시도: (Room : {})", requestDto.getChatRoomId());
@@ -51,10 +80,15 @@ public class ChatSocketController {
             );
             log.info("[WebSocket] 메시지 전송 성공: (Room: {})", savedMessage.roomId());
 
+            messageCounter.increment(); // 메트릭 증가
+
         } catch (Exception e) {
             //  3. 에러 발생 시 서버 로그(터미널)에 에러 메시지 출력
             log.error("Failed to send WebSocket message: {}", e.getMessage());
             e.printStackTrace(); // (더 자세한 스택 트레이스)
+        } finally {
+
+            sample.stop(messageTimer); // 처리 시간 기록
         }
     }
 }

@@ -25,7 +25,7 @@ public record CreatePaymentRequest(
 	}
 
 	public void validateInternalAmount() {
-		if (!calculateExpectedAmount().equals(amount)) {
+		if (calculateExpectedAmount().compareTo(amount) != 0) {
 			throw new BusinessException(PaymentErrorCode.INVALID_AMOUNT);
 		}
 	}

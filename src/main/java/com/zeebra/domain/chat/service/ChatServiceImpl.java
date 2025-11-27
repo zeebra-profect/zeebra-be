@@ -68,7 +68,7 @@ public class ChatServiceImpl implements ChatService {
                 throw new IllegalArgumentException("Group 채팅방을 위해선 productId가 필요합니다.");
                 }
 
-                chatRoom = chatRoomRepository.findByProductId(productId).orElseGet(() -> {
+                chatRoom = chatRoomRepository.findTopByProductIdOrderByIdAsc(productId).orElseGet(() -> {
                     ChatRoom newRoom = ChatRoom.builder()
                             .productId(productId)
                             .chatRoomType(ChatRoomType.GROUP)

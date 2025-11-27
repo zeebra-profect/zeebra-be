@@ -52,6 +52,7 @@ public class SecurityConfigLocal {
                         .requestMatchers(SWAGGER_WHITELIST).permitAll()
                         .requestMatchers("/ws/**").permitAll()  // WebSocket 허용
                         .requestMatchers("/api/notification/**").permitAll()
+                        .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
 

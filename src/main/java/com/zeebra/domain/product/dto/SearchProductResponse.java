@@ -9,17 +9,17 @@ import java.util.List;
 
 public record SearchProductResponse(
         List<GetProductDetailResponse> productDetailResponses,
-        List<CategorySearchResponse> categoryResponses,
-        List<BrandResponse> brandResponses,
-        Pagination pagination
+//        List<CategorySearchResponse> categoryResponses,
+//        List<BrandResponse> brandResponses,
+        SearchProductPagination pagination
 ) {
     public static SearchProductResponse from(List<GetProductDetailResponse> productDetailResponseList,
-                                             List<BrandResponse> brandListResponse,
-                                             List<CategorySearchResponse> categorySearchResponseList,
-                                             Pagination pagination) {
+//                                             List<BrandResponse> brandListResponse,
+//                                             List<CategorySearchResponse> categorySearchResponseList,
+                                             SearchProductPagination pagination) {
         return new SearchProductResponse(productDetailResponseList,
-                categorySearchResponseList,
-                brandListResponse,
+//                categorySearchResponseList,
+//                brandListResponse,
                 pagination);
     }
 }

@@ -14,6 +14,7 @@ public class MemberIdSequenceSynchronizer {
 
 	@PostConstruct
 	public void syncMemberIdSequence() {
+
 		Long nextVal = jdbcTemplate.queryForObject(
 			"SELECT COALESCE(MAX(member_id) + 1, 1) FROM members",
 			Long.class

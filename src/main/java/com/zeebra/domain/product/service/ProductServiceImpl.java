@@ -1,5 +1,6 @@
 package com.zeebra.domain.product.service;
 
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
@@ -132,42 +133,49 @@ public class ProductServiceImpl implements ProductService {
         return ApiResponse.success(ProductResponse.from(product));
     }
 
+    @Transactional(readOnly = true)
     @Override
     public ApiResponse<SearchProductResponse> searchProduct(String keyWord,
                                                             List<Long> categoryIds,
                                                             List<Long> brandIds,
                                                             Pageable pageable,
                                                             String productSort) {
-
         String cleanKeyword = KeywordSanitizer.sanitize(keyWord);
 
         ProductSort parseProductSort = ProductSort.from(productSort);
 
+        Pageable pageableWithOne = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize() + 1,
+                pageable.getSort()
+        );
+
         List<Product> products = productQueryRepository.searchProduct(cleanKeyword, categoryIds, brandIds, pageable, parseProductSort);
 
-        List<Brand> brands = productQueryRepository.filteredBrand(cleanKeyword, categoryIds, brandIds);
+        boolean hasNext = products.size() > pageable.getPageSize();
+        if (hasNext) {
+            products = products.subList(0, pageable.getPageSize());
+        }
 
-        List<Category> categories = productQueryRepository.filteredCategory(cleanKeyword, categoryIds, brandIds);
+//        List<Brand> brands = productQueryRepository.filteredBrand(cleanKeyword, categoryIds, brandIds);
+//
+//        List<Category> categories = productQueryRepository.filteredCategory(cleanKeyword, categoryIds, brandIds);
 
         List<Long> productIds = products.stream()
                 .map(Product::getId)
                 .toList();
         Map<Long, BigDecimal> priceMap = productQueryRepository.lowPriceOfProductList(productIds);
         List<GetProductDetailResponse> productDetailResponseList = products.stream()
-                .map(product -> GetProductDetailResponse.of(product, priceMap.get(product.getId()) ))
+                .map(product -> GetProductDetailResponse.of(product, priceMap.get(product.getId())))
                 .toList();
 
-        List<BrandResponse> brandListResponse = BrandResponse.toListBrandResponse(brands);
-        List<CategorySearchResponse> categorySearchResponseList = CategorySearchResponse.toCategorySearchResponseList(categories);
-
-        long totalCount = productQueryRepository.countFiltered(cleanKeyword, categoryIds, brandIds);
-
-        int totalPage = (int) Math.ceil((double) totalCount / pageable.getPageSize());
-        Pagination pagination = new Pagination(pageable.getPageNumber(), pageable.getPageSize(), totalCount, totalPage);
+//        List<BrandResponse> brandListResponse = BrandResponse.toListBrandResponse(brands);
+//        List<CategorySearchResponse> categorySearchResponseList = CategorySearchResponse.toCategorySearchResponseList(categories);
+        SearchProductPagination pagination = new SearchProductPagination(pageable.getPageNumber(), pageable.getPageSize(), hasNext);
         SearchProductResponse searchProductResponse = SearchProductResponse.from(
                 productDetailResponseList,
-                brandListResponse,
-                categorySearchResponseList,
+//                brandListResponse,
+//                categorySearchResponseList,
                 pagination);
 
         return ApiResponse.success(searchProductResponse);
@@ -187,7 +195,7 @@ public class ProductServiceImpl implements ProductService {
         return ApiResponse.success(new FavoriteProductList(pagination, getFavoriteProductResponses));
     }
 
-	public void validateProductOptionId(Long productOptionId) {
-		productOptionRepository.findById(productOptionId).orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND, "존재하지 않는 상품입니다."));
-	}
+    public void validateProductOptionId(Long productOptionId) {
+        productOptionRepository.findById(productOptionId).orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND, "존재하지 않는 상품입니다."));
+    }
 }

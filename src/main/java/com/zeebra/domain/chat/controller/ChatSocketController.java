@@ -62,7 +62,7 @@ public class ChatSocketController {
             );
             log.info("[WebSocket] 메시지 전송 성공: (Room: {})", savedMessage.roomId());
 
-            Counter counter = meterRegistry.counter("chat-message-total", "endpoint", "/chat/message");
+            Counter counter = meterRegistry.counter("ws_chat_message_total", "endpoint", "/chat/message");
 
             counter.increment(); // 메트릭 증가
 

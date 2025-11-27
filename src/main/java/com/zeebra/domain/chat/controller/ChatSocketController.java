@@ -5,8 +5,6 @@ import com.zeebra.domain.chat.dto.ChatMessageResponseDto;
 import com.zeebra.domain.chat.service.ChatService;
 import com.zeebra.global.security.jwt.JwtProvider;
 import io.micrometer.core.instrument.Timer;
-import jakarta.annotation.PostConstruct;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -21,28 +19,32 @@ import java.security.Principal;
 
 @Slf4j
 @Controller
-@RequiredArgsConstructor
 public class ChatSocketController {
 
     private final ChatService chatService;
     private final SimpMessagingTemplate messagingTemplate;
+
     private final MeterRegistry meterRegistry;
 
-    private Counter messageCounter;
-    private Timer messageTimer;
+    private final Counter messageCounter;
+    private final Timer messageTimer;
 
-    @PostConstruct
-    void initMetrics() {
-        // 총 메시지 수
-        this.messageCounter = Counter.builder("ws_chat_messages_total")
-                .description("Total number of WebSocket chat messages processed")
-                .tag("endpoint", "/chat/message")  // 나중에 endpoint별로 볼 수 있게
+    // MeterRegistry를 주입받아 생성자에서 메트릭을 한 번만 등록/초기화
+    public ChatSocketController(ChatService chatService, SimpMessagingTemplate messagingTemplate, MeterRegistry meterRegistry) {
+        this.chatService = chatService;
+        this.messagingTemplate = messagingTemplate;
+        this.meterRegistry = meterRegistry;
+
+        // Counter 한 번만 생성 및 등록
+        this.messageCounter = Counter.builder("ws_chat_message")
+                .tag("endpoint", "/chat/message")
+                .description("Total number of chat messages processed")
                 .register(meterRegistry);
 
-        // 메시지 처리 시간
+        // Timer 한 번만 생성 및 등록
         this.messageTimer = Timer.builder("ws_chat_message_seconds")
-                .description("Time taken to process WebSocket chat messages")
                 .tag("endpoint", "/chat/message")
+                .description("Processing time for chat messages")
                 .register(meterRegistry);
     }
 
@@ -77,6 +79,7 @@ public class ChatSocketController {
                     savedMessage
             );
             log.info("[WebSocket] 메시지 전송 성공: (Room: {})", savedMessage.roomId());
+
             messageCounter.increment(); // 메트릭 증가
 
         } catch (Exception e) {
@@ -84,6 +87,7 @@ public class ChatSocketController {
             log.error("Failed to send WebSocket message: {}", e.getMessage());
             e.printStackTrace(); // (더 자세한 스택 트레이스)
         } finally {
+
             sample.stop(messageTimer); // 처리 시간 기록
         }
     }

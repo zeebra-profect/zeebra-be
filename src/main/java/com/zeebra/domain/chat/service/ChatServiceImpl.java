@@ -275,15 +275,15 @@ public class ChatServiceImpl implements ChatService {
         return new TradeResponseDto(savedTrade.getId(), savedTrade.getChatRoom().getId(), savedTrade.getPrice());
     }
 
-    private void ensureUserIsChatMember(ChatRoom chatRoom, Long currentMemberId) {
-        chatRoomMemberRepository.findByChatRoomIdAndMemberId(chatRoom.getId(), currentMemberId)
+    private ChatRoomMember ensureUserIsChatMember(ChatRoom chatRoom, Long currentMemberId) {
+        return chatRoomMemberRepository.findByChatRoomIdAndMemberId(chatRoom.getId(), currentMemberId)
                 .orElseGet(() -> {
                     // Member 서비스에서 닉네임 조회
                     // String memberName = memberService.Api.getMemberName(memberId);
                     Member member = memberRepository.findByIdAndDeletedAtIsNull(currentMemberId)
                             .orElseThrow(() -> new EntityNotFoundException("멤버 정보를 찾을 수 없습니다."));
 
-                    ChatRoomMember newMember   = ChatRoomMember.builder()
+                    ChatRoomMember newMember = ChatRoomMember.builder()
                             .chatRoom(chatRoom)
                             .memberId(currentMemberId)
                             .memberName(member.getNickname())

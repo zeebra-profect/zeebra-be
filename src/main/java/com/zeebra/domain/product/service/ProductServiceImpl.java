@@ -46,6 +46,7 @@ public class ProductServiceImpl implements ProductService {
     private final OptionNameRepository optionNameRepository;
     private final MemberService memberService;
     private final ProductOptionRepository productOptionRepository;
+    private final ProductJdbcRepository productJdbcRepository;
 
     @Override
     public ApiResponse<ProductDetailResponse> getProductDetail(Long productId, Long colorOptionNameId) {
@@ -150,7 +151,7 @@ public class ProductServiceImpl implements ProductService {
                 pageable.getSort()
         );
 
-        List<ProductSearchResult> productSearchResults = productQueryRepository.searchProduct(cleanKeyword, categoryIds, brandIds, pageableWithOne, parseProductSort);
+        List<ProductSearchResult> productSearchResults = searchProduct(cleanKeyword, categoryIds, brandIds, pageableWithOne, parseProductSort);
 
         boolean hasNext = productSearchResults.size() > pageable.getPageSize();
         if (hasNext) {
@@ -160,6 +161,7 @@ public class ProductServiceImpl implements ProductService {
         List<Long> productIds = productSearchResults.stream()
                 .map(ProductSearchResult::productId)
                 .toList();
+
         Map<Long, BigDecimal> priceMap = productQueryRepository.lowPriceOfProductList(productIds);
         List<GetProductDetailResponse> productDetailResponseList = productSearchResults.stream()
                 .map(productSearchResult -> GetProductDetailResponse.of(productSearchResult, priceMap.get(productSearchResult.productId())))
@@ -172,6 +174,18 @@ public class ProductServiceImpl implements ProductService {
                 pagination);
 
         return ApiResponse.success(searchProductResponse);
+    }
+
+    public List<ProductSearchResult> searchProduct(String keyword,
+                                                   List<Long> categoryIds,
+                                                   List<Long> brandIds,
+                                                   Pageable pageable,
+                                                   ProductSort productSort) {
+        if (keyword == null || keyword.isBlank()) {
+            return productQueryRepository.searchWithoutKeyword(categoryIds, brandIds, pageable, productSort);
+        }
+
+        return productJdbcRepository.searchWithKeyword(keyword, categoryIds, brandIds, pageable, productSort);
     }
 
     @Override

@@ -43,8 +43,6 @@ public class ProductQueryRepository {
     private final QFavoriteProduct favoriteProduct = QFavoriteProduct.favoriteProduct;
     private final QBrand brand = QBrand.brand;
     private final QCategory category = QCategory.category;
-    private final JdbcTemplate jdbcTemplate;
-    private final NamedParameterJdbcTemplate namedJdbcTemplate;
     private final JPAQueryFactory queryFactory;
     private final EntityManager em;
 
@@ -69,19 +67,7 @@ public class ProductQueryRepository {
         return query.toString();
     }
 
-    public List<ProductSearchResult> searchProduct(String keyword,
-                                                   List<Long> categoryIds,
-                                                   List<Long> brandIds,
-                                                   Pageable pageable,
-                                                   ProductSort productSort) {
-        if (keyword == null || keyword.isBlank()) {
-            return searchWithoutKeyword(categoryIds, brandIds, pageable, productSort);
-        }
-
-        return searchWithKeyword(keyword, categoryIds, brandIds, pageable, productSort);
-    }
-
-    private List<ProductSearchResult> searchWithoutKeyword(List<Long> categoryIds,
+    public List<ProductSearchResult> searchWithoutKeyword(List<Long> categoryIds,
                                                List<Long> brandIds,
                                                Pageable pageable,
                                                ProductSort productSort) {
@@ -107,135 +93,6 @@ public class ProductQueryRepository {
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
                 .fetch();
-    }
-
-    private List<ProductSearchResult> searchWithKeyword(
-            String keyword,
-            List<Long> categoryIds,
-            List<Long> brandIds,
-            Pageable pageable,
-            ProductSort productSort) {
-
-        String processedQuery = preprocessKeyword(keyword);
-        String secondaryOrder = buildSecondaryOrder(productSort);
-
-        StringBuilder sql = new StringBuilder("""
-        SELECT
-            p.id,
-            p.brand_id,
-            p.category_id,
-            p.name,
-            p.description,
-            p.model_number,
-            p.thumbnail,
-            p.images,
-            p.review_count,
-            p.favorite_product_count,
-            p.created_time
-        FROM product_search_document psd
-        JOIN product p ON p.id = psd.product_id
-        WHERE psd.search_vector @@ to_tsquery('simple', :query)
-        """);
-
-        MapSqlParameterSource params = new MapSqlParameterSource()
-                .addValue("query", processedQuery)
-                .addValue("offset", pageable.getOffset())
-                .addValue("limit", pageable.getPageSize());
-
-        // 동적 조건 추가
-        if (categoryIds != null && !categoryIds.isEmpty()) {
-            sql.append("AND psd.category_id = ANY(:categoryIds) ");
-            params.addValue("categoryIds", categoryIds.toArray(Long[]::new));
-        }
-
-        if (brandIds != null && !brandIds.isEmpty()) {
-            sql.append("AND psd.brand_id = ANY(:brandIds) ");
-            params.addValue("brandIds", brandIds.toArray(Long[]::new));
-        }
-
-        sql.append("ORDER BY ").append(secondaryOrder).append(" p.id DESC ");
-        sql.append("OFFSET :offset LIMIT :limit");
-
-        return namedJdbcTemplate.query(sql.toString(), params, (rs, rowNum) ->
-                new ProductSearchResult(
-                        rs.getLong("id"),
-                        rs.getLong("brand_id"),
-                        rs.getLong("category_id"),
-                        rs.getString("name"),
-                        rs.getString("description"),
-                        rs.getString("model_number"),
-                        rs.getString("thumbnail"),
-                        convertToList(rs.getArray("images")),
-                        rs.getInt("review_count"),
-                        rs.getInt("favorite_product_count"),
-                        getLocalDateTime(rs, "created_time")
-                )
-        );
-    }
-
-    private List<String> convertToList(Array sqlArray) throws SQLException {
-        if (sqlArray == null) return List.of();
-        String[] array = (String[]) sqlArray.getArray();
-        return array != null ? Arrays.asList(array) : List.of();
-    }
-
-    private LocalDateTime getLocalDateTime(ResultSet rs, String columnName) throws SQLException {
-        Timestamp timestamp = rs.getTimestamp(columnName);
-        return timestamp != null ? timestamp.toLocalDateTime() : null;
-    }
-
-
-//    private List<Product> searchWithKeyword(String keyword, List<Long> categoryIds, List<Long> brandIds, Pageable pageable, ProductSort productSort) {
-//        String processedQuery = preprocessKeyword(keyword);
-//        String secondaryOrder = buildSecondaryOrder(productSort);
-//        String sql = """
-//                SELECT
-//                p.id,
-//                p.brand_id,
-//                p.category_id,
-//                p.name,
-//                p.description,
-//                p.model_number,
-//                p.thumbnail,
-//                p.images,
-//                p.review_count,
-//                p.favorite_product_count,
-//                p.created_time
-//                FROM product_search_document psd
-//                JOIN product p ON p.id = psd.product_id
-//                WHERE psd.search_vector @@ to_tsquery('simple', :query)
-//                %s
-//                %s
-//                ORDER BY %s p.id DESC
-//                OFFSET :offset
-//                LIMIT :limit
-//                """
-//                .formatted(categoryIds != null && !categoryIds.isEmpty() ? "AND psd.category_id = ANY(:categoryIds)" : "",
-//                        brandIds != null && !brandIds.isEmpty() ? "AND psd.brand_id = ANY(:brandIds)" : "", secondaryOrder);
-//        Query query = em.createNativeQuery(sql, "ProductSearchResultMapping");
-//        query.setParameter("query", processedQuery);
-//        query.setParameter("offset", pageable.getOffset());
-//        query.setParameter("limit", pageable.getPageSize());
-//        if (categoryIds != null && !categoryIds.isEmpty()) {
-//            query.setParameter("categoryIds", categoryIds);
-//        }
-//        if (brandIds != null && !brandIds.isEmpty()) {
-//            query.setParameter("brandIds", brandIds);
-//        }
-//        List resultList = query.getResultList();
-//        return resultList;
-//    }
-
-
-    private String buildSecondaryOrder(ProductSort productSort) {
-        if (productSort == null) {
-            return "p.review_count DESC, ";  // 기본값: 리뷰 많은 순
-        }
-
-        return switch (productSort) {
-            case REVIEW_COUNT_MOST -> "p.review_count DESC, ";
-            case REVIEW_COUNT_LEAST -> "p.review_count ASC, ";
-        };
     }
 
     public List<Brand> filteredBrandWithoutKeyword(List<Long> categoryIds,

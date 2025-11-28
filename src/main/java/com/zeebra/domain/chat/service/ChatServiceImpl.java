@@ -12,6 +12,7 @@ import com.zeebra.domain.member.repository.MemberRepository;
 import com.zeebra.domain.product.entity.Sales;
 import com.zeebra.domain.product.repository.SalesRepository;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -68,15 +69,24 @@ public class ChatServiceImpl implements ChatService {
                 throw new IllegalArgumentException("Group 채팅방을 위해선 productId가 필요합니다.");
                 }
 
-                chatRoom = chatRoomRepository.findTopByProductIdOrderByIdAsc(productId).orElseGet(() -> {
-                    ChatRoom newRoom = ChatRoom.builder()
-                            .productId(productId)
-                            .chatRoomType(ChatRoomType.GROUP)
-                            .build();
+                Optional<ChatRoom> existingRoom = chatRoomRepository.findTopByProductIdOrderByIdAsc(productId);
 
-                    ChatRoom savedRoom = chatRoomRepository.save(newRoom);
-                    return savedRoom;
-                });
+                if (existingRoom.isPresent()) {
+                    chatRoom = existingRoom.get();
+                }else{
+                    try {
+                        ChatRoom newRoom = ChatRoom.builder()
+                                .productId(productId)
+                                .chatRoomType(ChatRoomType.GROUP)
+                                .build();
+
+                        chatRoom = chatRoomRepository.save(newRoom);
+
+                    } catch (DataIntegrityViolationException e){ // 동시성 이슈 (다른 스레드가 먼저 방 만들었을경우 생성 실패 -> 다시 조회해서 가져오기)
+                                    chatRoom = chatRoomRepository.findTopByProductIdOrderByIdAsc(productId)
+                                            .orElseThrow(() -> new EntityNotFoundException("채팅방 생성 중 동시성 오류 발생했으나 방을 찾을 수 없습니다."));
+                    }
+                }
 
                 if (currentMemberId != null) {
                     ensureUserIsChatMember(chatRoom, currentMemberId);
@@ -106,21 +116,7 @@ public class ChatServiceImpl implements ChatService {
                                     .dmPairKey(dmPairKey).build();
                             ChatRoom savedRoom = chatRoomRepository.save(newRoom);
 
-                            Member memberUser1 = memberRepository.findByIdAndDeletedAtIsNull(user1)
-                                    .orElseThrow(() -> new EntityNotFoundException("유저를 찾을 수 없습니다."));
-                            Member memberUser2 = memberRepository.findByIdAndDeletedAtIsNull(user2)
-                                    .orElseThrow(() -> new EntityNotFoundException("유저를 찾을 수 없습니다."));
-
-                            ChatRoomMember dmUser1 = ChatRoomMember.builder()
-                                    .chatRoom(savedRoom)
-                                    .memberId(user1)
-                                    .memberName(memberUser1.getNickname()).build();
-
-                            ChatRoomMember dmUser2 = ChatRoomMember.builder()
-                                    .chatRoom(savedRoom)
-                                    .memberId(user2)
-                                    .memberName(memberUser2.getNickname()).build();
-                            chatRoomMemberRepository.saveAll(List.of(dmUser1, dmUser2));
+                            addDmMembers(savedRoom, user1, user2);
 
                             return savedRoom;
                         });
@@ -283,6 +279,16 @@ public class ChatServiceImpl implements ChatService {
                             .build();
                     return chatRoomMemberRepository.save(newMember);
                 });
+    }
+
+    private void addDmMembers(ChatRoom room, Long user1Id, Long user2Id) {
+        Member m1 = memberRepository.findByIdAndDeletedAtIsNull(user1Id).orElseThrow();
+        Member m2 = memberRepository.findByIdAndDeletedAtIsNull(user2Id).orElseThrow();
+
+        ChatRoomMember member1 = ChatRoomMember.builder().chatRoom(room).memberId(user1Id).memberName(m1.getNickname()).build();
+        ChatRoomMember member2 = ChatRoomMember.builder().chatRoom(room).memberId(user2Id).memberName(m2.getNickname()).build();
+
+        chatRoomMemberRepository.saveAll(List.of(member1, member2));
     }
 
     private String createDmPairKey(Long saleId, Long dmUser1, Long dmUser2) {

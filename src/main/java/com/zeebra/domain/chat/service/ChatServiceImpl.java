@@ -83,6 +83,7 @@ public class ChatServiceImpl implements ChatService {
                         chatRoom = chatRoomRepository.save(newRoom);
 
                     } catch (DataIntegrityViolationException e){ // 동시성 이슈 (다른 스레드가 먼저 방 만들었을경우 생성 실패 -> 다시 조회해서 가져오기)
+                        log.info("기존 방 조회. ProductId={}", productId);
                                     chatRoom = chatRoomRepository.findTopByProductIdOrderByIdAsc(productId)
                                             .orElseThrow(() -> new EntityNotFoundException("채팅방 생성 중 동시성 오류 발생했으나 방을 찾을 수 없습니다."));
                     }
@@ -132,19 +133,29 @@ public class ChatServiceImpl implements ChatService {
     @Override
     @Transactional
     public ChatMessageResponseDto saveMessage(ChatMessageRequestDto chatMessageRequestDto, Long currentMemberId) {
+        Long roomId = chatMessageRequestDto.getChatRoomId();
 
-        ChatRoomMember sender = chatRoomMemberRepository.findByChatRoomIdAndMemberId(
-                chatMessageRequestDto.getChatRoomId(), currentMemberId)
-                .orElseThrow(() -> new SecurityException("해당 채팅방의 멤버가 아닙니다"));
+        ChatRoom chatRoom = chatRoomRepository.findById(roomId)
+                .orElseThrow(() -> new EntityNotFoundException("채팅방을 찾을 수 없습니다."));
 
+        ChatRoomMember sender;
+
+        if (chatRoom.getChatRoomType() == GROUP) {
+            sender = ensureUserIsChatMember(chatRoom, currentMemberId);
+        }else {
+            sender = chatRoomMemberRepository.findByChatRoomIdAndMemberId(roomId, currentMemberId)
+                    .orElseThrow(() -> new SecurityException("해당 채팅방의 멤버가 아닙니다"));
+        }
         ChatMessage chatMessage = ChatMessage.builder()
                 .chatRoomMember(sender)
                 .messageType(chatMessageRequestDto.getMessageType())
                 .messageContent(chatMessageRequestDto.getContent())
                 .imageUrl(chatMessageRequestDto.getImageUrl())
                 .build();
+
         ChatMessage savedMessage = chatMessageRepository.save(chatMessage);
-        sender.getChatRoom().updateLastMessageId(savedMessage.getId());
+
+        chatRoom.updateLastMessageId(savedMessage.getId());
 
         Member member = memberRepository.findByIdAndDeletedAtIsNull(currentMemberId)
                 .orElse(null);
@@ -277,7 +288,7 @@ public class ChatServiceImpl implements ChatService {
                             .memberId(currentMemberId)
                             .memberName(member.getNickname())
                             .build();
-                    return chatRoomMemberRepository.save(newMember);
+                    return chatRoomMemberRepository.saveAndFlush(newMember);
                 });
     }
 

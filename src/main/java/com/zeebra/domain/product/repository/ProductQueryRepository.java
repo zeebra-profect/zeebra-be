@@ -2,21 +2,31 @@ package com.zeebra.domain.product.repository;
 
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.zeebra.domain.brand.entity.Brand;
 import com.zeebra.domain.brand.entity.QBrand;
 import com.zeebra.domain.category.entity.Category;
 import com.zeebra.domain.category.entity.QCategory;
+import com.zeebra.domain.product.dto.ProductSearchResult;
 import com.zeebra.domain.product.entity.*;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.sql.Array;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -33,7 +43,6 @@ public class ProductQueryRepository {
     private final QFavoriteProduct favoriteProduct = QFavoriteProduct.favoriteProduct;
     private final QBrand brand = QBrand.brand;
     private final QCategory category = QCategory.category;
-
     private final JPAQueryFactory queryFactory;
     private final EntityManager em;
 
@@ -58,24 +67,24 @@ public class ProductQueryRepository {
         return query.toString();
     }
 
-    public List<Product> searchProduct(String keyword,
-                                       List<Long> categoryIds,
-                                       List<Long> brandIds,
-                                       Pageable pageable,
-                                       ProductSort productSort) {
-        if (keyword == null || keyword.isBlank()) {
-            return searchWithoutKeyword(categoryIds, brandIds, pageable, productSort);
-        }
-
-        return searchWithKeyword(keyword, categoryIds, brandIds, pageable, productSort);
-    }
-
-    private List<Product> searchWithoutKeyword(List<Long> categoryIds,
+    public List<ProductSearchResult> searchWithoutKeyword(List<Long> categoryIds,
                                                List<Long> brandIds,
                                                Pageable pageable,
                                                ProductSort productSort) {
         return queryFactory
-                .selectFrom(product)
+                .select(Projections.constructor(ProductSearchResult.class,
+                        product.id,
+                        product.brandId,
+                        product.categoryId,
+                        product.name,
+                        product.description,
+                        product.modelNumber,
+                        product.thumbnail,
+                        product.images,
+                        product.reviewCount,
+                        product.favoriteProductCount,
+                        product.createdTime))
+                .from(product)
                 .where(
                         findByBrandId(brandIds),
                         findByCategoryId(categoryIds)
@@ -84,77 +93,6 @@ public class ProductQueryRepository {
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
                 .fetch();
-    }
-
-    private List<Product> searchWithKeyword(String keyword,
-                                            List<Long> categoryIds,
-                                            List<Long> brandIds,
-                                            Pageable pageable,
-                                            ProductSort productSort) {
-        String processedQuery = preprocessKeyword(keyword);
-        String secondaryOrder = buildSecondaryOrder(productSort);
-
-        String sql = """
-                WITH filtered AS (
-                    SELECT 
-                        psd.product_id,
-                        psd.review_count,
-                        ts_rank(psd.search_vector, to_tsquery('simple', :query)) AS rank_score
-                    FROM product_search_document psd
-                    WHERE psd.search_vector @@ to_tsquery('simple', :query)
-                      AND ts_rank(psd.search_vector, to_tsquery('simple', :query)) >= 0.3
-                      %s  
-                      %s
-                ),
-                top_1000 AS (
-                    SELECT product_id, review_count, rank_score
-                    FROM filtered
-                    ORDER BY 
-                        rank_score DESC,
-                        %s
-                        product_id DESC
-                    LIMIT 1000
-                )
-                SELECT p.*
-                FROM top_1000 tm
-                INNER JOIN product p ON p.id = tm.product_id
-                ORDER BY 
-                    tm.rank_score DESC,
-                    %s
-                    tm.product_id DESC
-                OFFSET :offset LIMIT :limit
-                """.formatted(
-                categoryIds != null && !categoryIds.isEmpty() ? "AND psd.category_id = ANY(:categoryIds)" : "",
-                brandIds != null && !brandIds.isEmpty() ? "AND psd.brand_id = ANY(:brandIds)" : "",
-                secondaryOrder,
-                secondaryOrder
-        );
-
-        Query query = em.createNativeQuery(sql, Product.class);
-        query.setParameter("query", processedQuery);
-        query.setParameter("offset", pageable.getOffset());
-        query.setParameter("limit", pageable.getPageSize());
-
-        if (categoryIds != null && !categoryIds.isEmpty()) {
-            query.setParameter("categoryIds", categoryIds);
-        }
-        if (brandIds != null && !brandIds.isEmpty()) {
-            query.setParameter("brandIds", brandIds);
-        }
-
-        return query.getResultList();
-    }
-
-    private String buildSecondaryOrder(ProductSort productSort) {
-        if (productSort == null) {
-            return "review_count DESC, ";  // 기본값: 리뷰 많은 순
-        }
-
-        return switch (productSort) {
-            case REVIEW_COUNT_MOST -> "review_count DESC, ";
-            case REVIEW_COUNT_LEAST -> "review_count ASC, ";
-            default -> "review_count DESC, ";  // 안전하게 기본값
-        };
     }
 
     public List<Brand> filteredBrandWithoutKeyword(List<Long> categoryIds,
@@ -187,23 +125,23 @@ public class ProductQueryRepository {
         String processedQuery = preprocessKeyword(keyword);
 
         String sql = """
-        WITH filtered AS (
-            SELECT DISTINCT psd.brand_id
-            FROM product_search_document psd
-            WHERE psd.search_vector @@ to_tsquery('simple', :query || ':*')
-              AND ts_rank(psd.search_vector, to_tsquery('simple', :query || ':*')) >= 0.3
-              %s
-              %s
-            ORDER BY 
-                ts_rank(psd.search_vector, to_tsquery('simple', :query || ':*')) DESC,
-                psd.product_id DESC
-            LIMIT 1000
-        )
-        SELECT b.*
-        FROM filtered f
-        INNER JOIN brand b ON b.id = f.brand_id
-        ORDER BY b.id
-        """.formatted(
+                WITH filtered AS (
+                    SELECT DISTINCT psd.brand_id
+                    FROM product_search_document psd
+                    WHERE psd.search_vector @@ to_tsquery('simple', :query || ':*')
+                      AND ts_rank(psd.search_vector, to_tsquery('simple', :query || ':*')) >= 0.3
+                      %s
+                      %s
+                    ORDER BY 
+                        ts_rank(psd.search_vector, to_tsquery('simple', :query || ':*')) DESC,
+                        psd.product_id DESC
+                    LIMIT 1000
+                )
+                SELECT b.*
+                FROM filtered f
+                INNER JOIN brand b ON b.id = f.brand_id
+                ORDER BY b.id
+                """.formatted(
                 categoryIds != null && !categoryIds.isEmpty() ? "AND psd.category_id = ANY(:categoryIds)" : "",
                 brandIds != null && !brandIds.isEmpty() ? "AND psd.brand_id = ANY(:brandIds)" : ""
         );
@@ -249,23 +187,23 @@ public class ProductQueryRepository {
         String processedQuery = preprocessKeyword(keyword);
 
         String sql = """
-        WITH filtered AS (
-            SELECT DISTINCT psd.category_id
-            FROM product_search_document psd
-            WHERE psd.search_vector @@ to_tsquery('simple', :query || ':*')
-              AND ts_rank(psd.search_vector, to_tsquery('simple', :query || ':*')) >= 0.3
-              %s
-              %s
-            ORDER BY 
-                ts_rank(psd.search_vector, to_tsquery('simple', :query || ':*')) DESC,
-                psd.product_id DESC
-            LIMIT 1000
-        )
-        SELECT c.*
-        FROM filtered f
-        INNER JOIN category c ON c.id = f.category_id
-        ORDER BY c.id
-        """.formatted(
+                WITH filtered AS (
+                    SELECT DISTINCT psd.category_id
+                    FROM product_search_document psd
+                    WHERE psd.search_vector @@ to_tsquery('simple', :query || ':*')
+                      AND ts_rank(psd.search_vector, to_tsquery('simple', :query || ':*')) >= 0.3
+                      %s
+                      %s
+                    ORDER BY 
+                        ts_rank(psd.search_vector, to_tsquery('simple', :query || ':*')) DESC,
+                        psd.product_id DESC
+                    LIMIT 1000
+                )
+                SELECT c.*
+                FROM filtered f
+                INNER JOIN category c ON c.id = f.category_id
+                ORDER BY c.id
+                """.formatted(
                 categoryIds != null && !categoryIds.isEmpty() ? "AND psd.category_id = ANY(:categoryIds)" : "",
                 brandIds != null && !brandIds.isEmpty() ? "AND psd.brand_id = ANY(:brandIds)" : ""
         );

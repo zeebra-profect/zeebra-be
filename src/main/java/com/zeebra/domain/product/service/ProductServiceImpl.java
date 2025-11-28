@@ -46,6 +46,7 @@ public class ProductServiceImpl implements ProductService {
     private final OptionNameRepository optionNameRepository;
     private final MemberService memberService;
     private final ProductOptionRepository productOptionRepository;
+    private final ProductJdbcRepository productJdbcRepository;
 
     @Override
     public ApiResponse<ProductDetailResponse> getProductDetail(Long productId, Long colorOptionNameId) {
@@ -150,35 +151,41 @@ public class ProductServiceImpl implements ProductService {
                 pageable.getSort()
         );
 
-        List<Product> products = productQueryRepository.searchProduct(cleanKeyword, categoryIds, brandIds, pageable, parseProductSort);
+        List<ProductSearchResult> productSearchResults = searchProduct(cleanKeyword, categoryIds, brandIds, pageableWithOne, parseProductSort);
 
-        boolean hasNext = products.size() > pageable.getPageSize();
+        boolean hasNext = productSearchResults.size() > pageable.getPageSize();
         if (hasNext) {
-            products = products.subList(0, pageable.getPageSize());
+            productSearchResults = productSearchResults.subList(0, pageable.getPageSize());
         }
 
-//        List<Brand> brands = productQueryRepository.filteredBrand(cleanKeyword, categoryIds, brandIds);
-//
-//        List<Category> categories = productQueryRepository.filteredCategory(cleanKeyword, categoryIds, brandIds);
-
-        List<Long> productIds = products.stream()
-                .map(Product::getId)
+        List<Long> productIds = productSearchResults.stream()
+                .map(ProductSearchResult::productId)
                 .toList();
+
         Map<Long, BigDecimal> priceMap = productQueryRepository.lowPriceOfProductList(productIds);
-        List<GetProductDetailResponse> productDetailResponseList = products.stream()
-                .map(product -> GetProductDetailResponse.of(product, priceMap.get(product.getId())))
+        List<GetProductDetailResponse> productDetailResponseList = productSearchResults.stream()
+                .map(productSearchResult -> GetProductDetailResponse.of(productSearchResult, priceMap.get(productSearchResult.productId())))
                 .toList();
 
-//        List<BrandResponse> brandListResponse = BrandResponse.toListBrandResponse(brands);
-//        List<CategorySearchResponse> categorySearchResponseList = CategorySearchResponse.toCategorySearchResponseList(categories);
         SearchProductPagination pagination = new SearchProductPagination(pageable.getPageNumber(), pageable.getPageSize(), hasNext);
         SearchProductResponse searchProductResponse = SearchProductResponse.from(
                 productDetailResponseList,
-//                brandListResponse,
-//                categorySearchResponseList,
+
                 pagination);
 
         return ApiResponse.success(searchProductResponse);
+    }
+
+    public List<ProductSearchResult> searchProduct(String keyword,
+                                                   List<Long> categoryIds,
+                                                   List<Long> brandIds,
+                                                   Pageable pageable,
+                                                   ProductSort productSort) {
+        if (keyword == null || keyword.isBlank()) {
+            return productQueryRepository.searchWithoutKeyword(categoryIds, brandIds, pageable, productSort);
+        }
+
+        return productJdbcRepository.searchWithKeyword(keyword, categoryIds, brandIds, pageable, productSort);
     }
 
     @Override

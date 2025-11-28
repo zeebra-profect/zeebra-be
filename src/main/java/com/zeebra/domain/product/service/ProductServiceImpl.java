@@ -150,19 +150,19 @@ public class ProductServiceImpl implements ProductService {
                 pageable.getSort()
         );
 
-        List<Product> products = productQueryRepository.searchProduct(cleanKeyword, categoryIds, brandIds, pageableWithOne, parseProductSort);
+        List<ProductSearchResult> productSearchResults = productQueryRepository.searchProduct(cleanKeyword, categoryIds, brandIds, pageableWithOne, parseProductSort);
 
-        boolean hasNext = products.size() > pageable.getPageSize();
+        boolean hasNext = productSearchResults.size() > pageable.getPageSize();
         if (hasNext) {
-            products = products.subList(0, pageable.getPageSize());
+            productSearchResults = productSearchResults.subList(0, pageable.getPageSize());
         }
 
-        List<Long> productIds = products.stream()
-                .map(Product::getId)
+        List<Long> productIds = productSearchResults.stream()
+                .map(ProductSearchResult::productId)
                 .toList();
         Map<Long, BigDecimal> priceMap = productQueryRepository.lowPriceOfProductList(productIds);
-        List<GetProductDetailResponse> productDetailResponseList = products.stream()
-                .map(product -> GetProductDetailResponse.of(product, priceMap.get(product.getId())))
+        List<GetProductDetailResponse> productDetailResponseList = productSearchResults.stream()
+                .map(productSearchResult -> GetProductDetailResponse.of(productSearchResult, priceMap.get(productSearchResult.productId())))
                 .toList();
 
         SearchProductPagination pagination = new SearchProductPagination(pageable.getPageNumber(), pageable.getPageSize(), hasNext);

@@ -20,19 +20,19 @@ public record GetProductDetailResponse(
         int favoriteProductCount,
         LocalDateTime createdAt
 ) {
-    public static GetProductDetailResponse of(Product product, BigDecimal lowPrice) {
+    public static GetProductDetailResponse of(ProductSearchResult productSearchResult, BigDecimal lowPrice) {
         return new GetProductDetailResponse(
-                product.getId(),
-                product.getBrandId(),
-                product.getCategoryId(),
-                product.getName(),
-                product.getDescription(),
-                product.getModelNumber(),
-                product.getThumbnail(),
-                product.getImages(),
+                productSearchResult.productId(),
+                productSearchResult.brandId(),
+                productSearchResult.categoryId(),
+                productSearchResult.productName(),
+                productSearchResult.productDescription(),
+                productSearchResult.modelNumber(),
+                productSearchResult.ProductThumbnail(),
+                productSearchResult.images(),
                 lowPrice,
-                product.getReviewCount(),
-                product.getFavoriteProductCount(),
-                product.getCreatedTime());
+                productSearchResult.reviewCount(),
+                productSearchResult.favoriteProductCount(),
+                productSearchResult.createdAt());
     }
 }

@@ -28,6 +28,7 @@ public class ChatSocketController {
 
     private final Counter messageCounter;
     private final Timer messageTimer;
+    private final Counter errorCounter;
 
     // MeterRegistry를 주입받아 생성자에서 메트릭을 한 번만 등록/초기화
     public ChatSocketController(ChatService chatService, SimpMessagingTemplate messagingTemplate, MeterRegistry meterRegistry) {
@@ -46,6 +47,10 @@ public class ChatSocketController {
                 .tag("endpoint", "/chat/message")
                 .description("Processing time for chat messages")
                 .register(meterRegistry);
+
+        this.errorCounter = Counter.builder("ws_chat_message_error")
+                .tag("endpoint", "/chat/message")
+                .register(meterRegistry);
     }
 
     @MessageMapping("/chat/message")
@@ -55,6 +60,7 @@ public class ChatSocketController {
 
     ) {
         Timer.Sample sample = Timer.start(meterRegistry);
+        boolean isSuccess = false;
 
         try { //️ 2. try-catch 블록 추가
             if (principal == null) {
@@ -76,18 +82,18 @@ public class ChatSocketController {
 
             messagingTemplate.convertAndSend(
                     "/sub/chat/room/" + savedMessage.roomId(),
-                    savedMessage
-            );
+                    savedMessage);
+
+            isSuccess = true;
             log.info("[WebSocket] 메시지 전송 성공: (Room: {})", savedMessage.roomId());
-
-            messageCounter.increment(); // 메트릭 증가
-
         } catch (Exception e) {
             //  3. 에러 발생 시 서버 로그(터미널)에 에러 메시지 출력
             log.error("Failed to send WebSocket message: {}", e.getMessage());
             e.printStackTrace(); // (더 자세한 스택 트레이스)
-        } finally {
+            errorCounter.increment();
 
+        } finally {
+            if (isSuccess) {messageCounter.increment();}
             sample.stop(messageTimer); // 처리 시간 기록
         }
     }

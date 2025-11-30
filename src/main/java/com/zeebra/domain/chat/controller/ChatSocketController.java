@@ -15,6 +15,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 
 
 import java.security.Principal;
+import java.time.Duration;
 
 
 @Slf4j
@@ -46,7 +47,10 @@ public class ChatSocketController {
         this.messageTimer = Timer.builder("ws_chat_message_seconds")
                 .tag("endpoint", "/chat/message")
                 .description("Processing time for chat messages")
+                .publishPercentileHistogram()
+                .sla(Duration.ofMillis(100))
                 .register(meterRegistry);
+
 
         this.errorCounter = Counter.builder("ws_chat_message_error")
                 .tag("endpoint", "/chat/message")

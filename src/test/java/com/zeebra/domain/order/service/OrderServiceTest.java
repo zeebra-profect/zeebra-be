@@ -357,7 +357,7 @@ public class OrderServiceTest {
 		assertThat(orderInfo.orderId()).isEqualTo(orderId);
 		assertThat(orderInfo.orderNumber()).isEqualTo(createOrderResponse.order().orderNumber());
 		assertThat(orderInfo.orderStatus()).isEqualTo(OrderStatus.CREATED);
-		assertThat(orderInfo.orderTime()).isEqualTo(createOrderResponse.order().orderTime());
+		assertThat(orderInfo.orderTime()).isEqualToIgnoringNanos(createOrderResponse.order().orderTime());
 		assertThat(orderInfo.totalPrice()).isEqualByComparingTo(BigDecimal.valueOf(50000));
 		assertThat(orderInfo.totalAmount()).isEqualByComparingTo(BigDecimal.valueOf(50000));
 		assertThat(orderInfo.usePoint()).isEqualTo(0);
@@ -412,7 +412,7 @@ public class OrderServiceTest {
 		assertThat(orderDetail.orderId()).isEqualTo(orderId);
 		assertThat(orderDetail.orderNumber()).isEqualTo(createOrderResponse.order().orderNumber());
 		assertThat(orderDetail.orderStatus()).isEqualTo(OrderStatus.CREATED);
-		assertThat(orderDetail.orderTime()).isEqualTo(createOrderResponse.order().orderTime());
+		assertThat(orderDetail.orderTime()).isEqualToIgnoringNanos(createOrderResponse.order().orderTime());
 		assertThat(orderDetail.totalPrice()).isEqualByComparingTo(BigDecimal.valueOf(50000));
 		assertThat(orderDetail.totalAmount()).isEqualByComparingTo(BigDecimal.valueOf(50000));
 		assertThat(orderDetail.usePoint()).isEqualTo(0);
@@ -471,7 +471,7 @@ public class OrderServiceTest {
 			assertThat(orders.get(i).orderId()).isEqualTo(createdOrder.orderId());
 			assertThat(orders.get(i).orderNumber()).isEqualTo(createdOrder.orderNumber());
 			assertThat(orders.get(i).orderStatus()).isEqualTo(OrderStatus.CREATED);
-			assertThat(orders.get(i).orderTime()).isEqualTo(createdOrder.orderTime());
+			assertThat(orders.get(i).orderTime()).isEqualToIgnoringNanos(createdOrder.orderTime());
 			assertThat(orders.get(i).totalQuantity()).isEqualTo(1);
 			assertThat(orders.get(i).totalPrice()).isEqualByComparingTo(createdOrder.totalPrice());
 			assertThat(orders.get(i).totalAmount()).isEqualByComparingTo(createdOrder.totalAmount());

@@ -30,6 +30,7 @@ public enum PaymentStatus {
 		),
 		PaymentStatus.WAITING_FOR_DEPOSIT, List.of(
 			PaymentStatus.APPROVED,
+			PaymentStatus.FAILED,
 			PaymentStatus.EXPIRED
 		),
 		PaymentStatus.APPROVED, List.of(

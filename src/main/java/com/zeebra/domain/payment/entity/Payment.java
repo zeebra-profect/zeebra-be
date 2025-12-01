@@ -8,6 +8,8 @@ import java.util.Map;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import com.zeebra.global.ErrorCode.PaymentErrorCode;
+import com.zeebra.global.exception.BusinessException;
 import com.zeebra.global.jpa.BaseEntity;
 
 import jakarta.persistence.Column;
@@ -69,6 +71,7 @@ public class Payment extends BaseEntity {
 
 	@Builder
     public Payment(
+		Long id,
 		Long orderId,
 		String paymentKey,
 		String tossOrderId,
@@ -81,16 +84,17 @@ public class Payment extends BaseEntity {
 		Map<String, Object> tossResponse,
 		String idempotencyKey
 	) {
+		this.id = id;
         this.orderId = orderId;
         this.paymentKey = paymentKey;
         this.tossOrderId = tossOrderId;
 		this.orderNameSnapshot = orderNameSnapshot;
         this.paymentAmount = paymentAmount;
         this.paymentMethod = paymentMethod;
-        this.paymentStatus = paymentStatus != null ? paymentStatus : PaymentStatus.PENDING;
+        this.paymentStatus = paymentStatus ;
         this.approvedAt = approvedAt;
         this.failureReason = failureReason;
-        this.tossResponse = tossResponse != null ? tossResponse : new HashMap<>();
+        this.tossResponse = tossResponse;
 		this.idempotencyKey = idempotencyKey;
     }
 
@@ -129,5 +133,26 @@ public class Payment extends BaseEntity {
 
 	public void updateFailureReason(String failureReason) {
 		this.failureReason = failureReason;
+	}
+
+	public void validateApprovable() {
+		if (this.paymentStatus == PaymentStatus.APPROVED) {
+			throw new BusinessException(PaymentErrorCode.PAYMENT_ALREADY_APPROVED);
+		}
+
+		if (this.paymentStatus == PaymentStatus.APPROVING) {
+			throw new BusinessException(PaymentErrorCode.PAYMENT_ALREADY_PROCESSED);
+		}
+
+		if (this.paymentStatus != PaymentStatus.PENDING
+			&& this.paymentStatus != PaymentStatus.FAILED) {
+			throw new BusinessException(PaymentErrorCode.INVALID_STATUS_TRANSITION);
+		}
+	}
+
+	public void validateAmount(BigDecimal requestAmount) {
+		if (this.paymentAmount.compareTo(requestAmount) != 0) {
+			throw new BusinessException(PaymentErrorCode.INVALID_AMOUNT);
+		}
 	}
 }

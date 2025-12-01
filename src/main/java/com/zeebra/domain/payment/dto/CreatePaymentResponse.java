@@ -25,9 +25,5 @@ public record CreatePaymentResponse(
 		public static Amount of(BigDecimal value) {
 			return new Amount(value, DEFAULT_CURRENCY);
 		}
-		
-		public static Amount of(BigDecimal value, String currency) {
-			return new Amount(value, currency);
-		}
 	}
 }

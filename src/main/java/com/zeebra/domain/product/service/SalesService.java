@@ -7,6 +7,7 @@ import java.util.Map;
 import org.springframework.data.domain.Pageable;
 
 import com.zeebra.domain.order.dto.OrderItemLine;
+import com.zeebra.domain.order.dto.OrderItemResponse;
 import com.zeebra.domain.product.dto.OrderSalesItem;
 import com.zeebra.domain.product.dto.SalesDetailResponse;
 import com.zeebra.domain.product.dto.SalesListResponse;
@@ -35,4 +36,10 @@ public interface SalesService {
 	void validateSales(Long salesId, int quantity	);
 
 	void validatePurchasable(List<OrderItemLine> itemLines);
+
+	void reserveSales(List<OrderItemResponse> orderItems);
+
+	void cancelSales(List<OrderItemResponse> orderItems);
+
+	void confirmSales(List<OrderItemResponse> orderItems);
 }

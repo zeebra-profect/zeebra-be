@@ -1,0 +1,47 @@
+{
+  "analysis": {
+    "tokenizer": {
+      "nori_tokenizer_custom": {
+        "type": "nori_tokenizer",
+        "decompound_mode": "mixed"
+      }
+    },
+    "filter": {
+      "nori_pos_filter": {
+        "type": "nori_part_of_speech"
+      },
+      "edge_ngram_filter": {
+        "type": "edge_ngram",
+        "min_gram": 2,
+        "max_gram": 10
+      }
+    },
+    "normalizer": {
+      "lowercase_normalizer": {
+        "type": "custom",
+        "filter": ["lowercase"]
+      }
+    },
+    "analyzer": {
+      "nori_analyzer": {
+        "type": "custom",
+        "tokenizer": "nori_tokenizer_custom",
+        "filter": [
+          "nori_pos_filter",
+          "nori_readingform",
+          "lowercase"
+        ]
+      },
+      "ngram_analyzer": {
+        "type": "custom",
+        "tokenizer": "nori_tokenizer_custom",
+        "filter": [
+          "nori_pos_filter",
+          "nori_readingform",
+          "lowercase",
+          "edge_ngram_filter"
+        ]
+      }
+    }
+  }
+}

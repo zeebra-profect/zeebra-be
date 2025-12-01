@@ -4,6 +4,10 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 50  # 기존 10 -> 50~100으로 증가 (DB 서버 사양에 따라 조절)
+      minimum-idle: 20       # 최소 유휴 연결 수
+      connection-timeout: 30000 # 연결을 못 얻으면 30초 후 에러
 
   data:
     redis:

@@ -108,7 +108,7 @@ public class TossPaymentServiceImpl implements TossPaymentService {
 			log.error("[토스 API 에러 파싱 완료] code: {}, message: {}",
 				tossError.code(), tossError.message());
 
-			return TossApprovalResponse.ofFail( tossError);
+			return TossApprovalResponse.ofFail(tossError);
 		} catch (Exception parseException) {
 			log.error("[토스 API 에러 파싱 실패] error: {}", parseException.getMessage(), parseException);
 			

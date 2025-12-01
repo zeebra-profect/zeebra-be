@@ -2,8 +2,6 @@ package com.zeebra.domain.order.entity;
 
 import static org.assertj.core.api.AssertionsForClassTypes.*;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.params.ParameterizedTest;
@@ -119,21 +117,6 @@ public class OrderStatusTransitionTest {
 			Arguments.of(OrderStatus.CREATED, OrderStatus.PAID),
 			Arguments.of(OrderStatus.CREATED, OrderStatus.CREATED)
 		);
-	}
-
-	private Order newOrderWithStatus(OrderStatus status){
-		return Order.builder()
-			.memberId(1L)
-			.orderNumber("ORD_20251114-1445238969")
-			.orderType(OrderType.CART)
-			.orderTime(LocalDateTime.of(2025,11,14,14,45,30, 00))
-			.totalQuantity(1)
-			.totalPrice(BigDecimal.valueOf(5000))
-			.totalAmount(BigDecimal.valueOf(5000))
-			.usePoint(0)
-			.idempotencyKey("idem-key-001")
-			.orderStatus(status)
-			.build();
 	}
 
 	@ParameterizedTest(name = "올바른 상태 전이는 허용한다: {0} -> {1}")

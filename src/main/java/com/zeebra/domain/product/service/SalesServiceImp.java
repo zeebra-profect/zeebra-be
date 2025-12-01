@@ -9,9 +9,6 @@ import java.util.NoSuchElementException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-
-import com.zeebra.domain.product.dto.*;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -20,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.zeebra.domain.member.entity.Member;
 import com.zeebra.domain.member.repository.MemberRepository;
 import com.zeebra.domain.order.dto.OrderItemLine;
+import com.zeebra.domain.order.dto.OrderItemResponse;
 import com.zeebra.domain.product.dto.OrderSalesItem;
 import com.zeebra.domain.product.dto.SalesDetailResponse;
 import com.zeebra.domain.product.dto.SalesListResponse;
@@ -212,6 +210,32 @@ public class SalesServiceImp implements SalesService {
 			 }
 			 sales.validatePurchasable(itemLine.quantity());
 		 }
+	}
+
+	@Transactional
+	public void reserveSales(List<OrderItemResponse> orderItems) {
+		orderItems.forEach(item -> {
+				Sales sales = salesRepository.findById(item.saleId()).orElseThrow();
+				sales.updateSalesStatus(SalesStatus.PENDING);
+			});
+	}
+
+	@Transactional
+	public void cancelSales(List<OrderItemResponse> orderItems) {
+		orderItems.forEach(item -> {
+				Sales sales = salesRepository.findById(item.saleId()).orElseThrow();
+				sales.updateSalesStatus(SalesStatus.ON_SALE);
+			});
+	}
+
+	@Transactional
+	public void confirmSales(List<OrderItemResponse> orderItems) {
+		orderItems.forEach(item -> {
+				Sales sales = salesRepository.findById(item.saleId()).orElseThrow();
+				sales.updateSalesStatus(SalesStatus.CONFIRMED);
+				sales.updateStock(sales.getStock() - item.orderItemQuantity());
+				sales.updateSoldPrice(item.orderItemPrice());
+			});
 	}
 
 	private void validateSalesAvailability(Map<Long, Integer> productOptionQuantityMap, List<OrderSalesItem> cheapestSales) {

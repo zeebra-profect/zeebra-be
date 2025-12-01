@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zeebra.domain.order.dto.OrderInfo;
 import com.zeebra.domain.order.dto.OrderItemLine;
+import com.zeebra.domain.order.dto.OrderItemResponse;
 import com.zeebra.domain.order.entity.OrderItemStatus;
 import com.zeebra.domain.order.entity.OrderStatus;
 import com.zeebra.domain.order.service.OrderService;
@@ -97,13 +98,19 @@ public class PaymentServiceImpl implements PaymentService {
 		);
 
 		// 2단계: 토스 API 호출 (트랜잭션 외부!)
-		TossApprovalResponse tossResponse = callTossApiSafely(payment, request);
+		TossApprovalResponse tossResponse;
+		try {
+			tossResponse = callTossApprovalApi(request.paymentKey(), request.tossOrderId(), request.amount());
+		} catch (Exception e) {
+			handleApiCallException(payment, e, request.clientRequestId(), memberId);
+			throw new BusinessException(PaymentErrorCode.TOSS_API_ERROR);
+		}
 
 		// 3단계: 토스 응답에 따라 처리
 		if (isApprovalSuccessful(tossResponse)) {
-			updatePaymentOnSuccess(payment, tossResponse, request.clientRequestId());
+			updatePaymentOnSuccess(payment, tossResponse, request.clientRequestId(), memberId);
 		} else {
-			updatePaymentOnFailure(payment, tossResponse, request.clientRequestId());
+			updatePaymentOnFailure(payment, tossResponse, request.clientRequestId(), memberId);
 		}
 
 		Payment reloadedPayment = reloadPayment(payment.getId());
@@ -140,7 +147,13 @@ public class PaymentServiceImpl implements PaymentService {
 		String idempotencyKey
 	) {
 		Payment payment = findPaymentByTossOrderId(tossOrderId);
-		validatePaymentForApproval(payment, memberId, amount);
+
+		if (!paymentQueryRepository.isPaymentOwnedByMember(payment.getId(), memberId)) {
+			throw new BusinessException(PaymentErrorCode.UNAUTHORIZED_PAYMENT_ACCESS);
+		}
+
+		payment.validateApprovable();
+		payment.validateAmount(amount);
 
 		payment.updatePaymentStatus(PaymentStatus.APPROVING);
 		payment.updatePaymentKey(paymentKey);
@@ -154,6 +167,9 @@ public class PaymentServiceImpl implements PaymentService {
 			0
 		);
 
+		List<OrderItemResponse> orderItems = orderService.getOrderDetail(memberId, payment.getOrderId()).orderItems();
+		salesService.reserveSales(orderItems);
+
 		log.info("[결제 승인 준비 완료] paymentId: {}, tossOrderId: {}, status: APPROVING",
 			payment.getId(), tossOrderId);
 
@@ -163,37 +179,19 @@ public class PaymentServiceImpl implements PaymentService {
 	/**
 	 * 2단계: 토스 API 호출 (트랜잭션 외부)
 	 */
-	private TossApprovalResponse callTossApiSafely(Payment payment, ApprovePaymentRequest request) {
-		try {
-			return callTossApprovalApi(payment, request.paymentKey(), request.tossOrderId(), request.amount());
-		} catch (Exception e) {
-			log.error("[토스 API 호출 실패] paymentId: {}, error: {}", payment.getId(), e.getMessage(), e);
-			handleApiCallException(payment, e, request.clientRequestId());
-			throw new BusinessException(PaymentErrorCode.TOSS_API_ERROR);
-		}
-	}
-
 	protected TossApprovalResponse callTossApprovalApi(
-		Payment payment,
 		String paymentKey,
 		String tossOrderId,
 		BigDecimal amount
 	) {
-		log.info("[토스 승인 API 호출 시작] paymentId: {}, tossOrderId: {}", payment.getId(), tossOrderId);
-
-		TossApprovalResponse response = tossPaymentService.approve(paymentKey, tossOrderId, amount);
-
-		log.info("[토스 승인 API 호출 완료] paymentId: {}, status: {}",
-			payment.getId(), response.tossPayment() != null ? response.tossPayment().status() : "null");
-
-		return response;
+		return tossPaymentService.approve(paymentKey, tossOrderId, amount);
 	}
 
 	/**
 	 * API 호출 자체가 실패한 경우 처리
 	 */
 	@Transactional
-	protected void handleApiCallException(Payment payment, Exception exception, String idempotencyKey) {
+	protected void handleApiCallException(Payment payment, Exception exception, String idempotencyKey, Long memberId) {
 		Payment reloadedPayment = reloadPayment(payment.getId());
 
 		reloadedPayment.updatePaymentStatus(PaymentStatus.FAILED);
@@ -212,6 +210,9 @@ public class PaymentServiceImpl implements PaymentService {
 			idempotencyKey + "-order-api-failed"
 		);
 
+		List<OrderItemResponse> orderItems = orderService.getOrderDetail(memberId, payment.getOrderId()).orderItems();
+		salesService.cancelSales(orderItems);
+
 		log.error("[API 호출 예외 처리 완료] paymentId: {}, status: FAILED", reloadedPayment.getId());
 	}
 
@@ -222,7 +223,8 @@ public class PaymentServiceImpl implements PaymentService {
 	protected void updatePaymentOnSuccess(
 		Payment payment,
 		TossApprovalResponse tossResponse,
-		String idempotencyKey
+		String idempotencyKey,
+		Long memberId
 	) {
 		Payment reloadedPayment = reloadPayment(payment.getId());
 
@@ -247,7 +249,8 @@ public class PaymentServiceImpl implements PaymentService {
 		);
 		orderService.updateAllOrderItemsStatus(reloadedPayment.getOrderId(), OrderItemStatus.PAID);
 
-		// sales 재고랑 상태 변경해줘야 함..
+		List<OrderItemResponse> orderItems = orderService.getOrderDetail(memberId, payment.getOrderId()).orderItems();
+		salesService.confirmSales(orderItems);
 
 		log.info("[Payment 승인 성공 + 이력 저장 완료] paymentId: {}, status: APPROVED", reloadedPayment.getId());
 	}
@@ -259,7 +262,8 @@ public class PaymentServiceImpl implements PaymentService {
 	protected void updatePaymentOnFailure(
 		Payment payment,
 		TossApprovalResponse tossResponse,
-		String idempotencyKey
+		String idempotencyKey,
+		Long memberId
 	) {
 		Payment reloadedPayment = reloadPayment(payment.getId());
 
@@ -283,6 +287,9 @@ public class PaymentServiceImpl implements PaymentService {
 			idempotencyKey + "-order-failed"
 		);
 
+		List<OrderItemResponse> orderItems = orderService.getOrderDetail(memberId, payment.getOrderId()).orderItems();
+		salesService.cancelSales(orderItems);
+
 		log.warn("[Payment 승인 실패 + 이력 저장 완료] paymentId: {}, status: FAILED, reason: {}",
 			reloadedPayment.getId(), reloadedPayment.getFailureReason());
 	}
@@ -292,32 +299,6 @@ public class PaymentServiceImpl implements PaymentService {
 	private Payment findPaymentByTossOrderId(String tossOrderId) {
 		return paymentRepository.findByTossOrderId(tossOrderId)
 			.orElseThrow(() -> new BusinessException(PaymentErrorCode.PAYMENT_NOT_FOUND));
-	}
-
-	private void validatePaymentForApproval(Payment payment, Long memberId, BigDecimal amount) {
-		if (!paymentQueryRepository.isPaymentOwnedByMember(payment.getId(), memberId)) {
-			throw new BusinessException(PaymentErrorCode.UNAUTHORIZED_PAYMENT_ACCESS);
-		}
-
-		validatePaymentStatus(payment);
-
-		if (payment.getPaymentAmount().compareTo(amount) != 0) {
-			throw new BusinessException(PaymentErrorCode.INVALID_AMOUNT);
-		}
-	}
-
-	private void validatePaymentStatus(Payment payment) {
-		if (payment.getPaymentStatus() == PaymentStatus.APPROVED) {
-			throw new BusinessException(PaymentErrorCode.PAYMENT_ALREADY_APPROVED);
-		}
-
-		if (payment.getPaymentStatus() == PaymentStatus.APPROVING) {
-			throw new BusinessException(PaymentErrorCode.PAYMENT_ALREADY_PROCESSED);
-		}
-
-		if (payment.getPaymentStatus() != PaymentStatus.PENDING && payment.getPaymentStatus() != PaymentStatus.FAILED) {
-			throw new BusinessException(PaymentErrorCode.INVALID_STATUS_TRANSITION);
-		}
 	}
 
 	// ========== Payment Helper Methods ==========
@@ -416,31 +397,34 @@ public class PaymentServiceImpl implements PaymentService {
 	}
 
 	private void updatePaymentMethodFromTossResponse(Payment payment, TossApprovalResponse tossResponse) {
-		if (tossResponse.tossPayment() != null && tossResponse.tossPayment().method() != null) {
-			try {
-				String method = tossResponse.tossPayment().method();
-				PaymentMethod paymentMethod = PaymentMethod.valueOf(method);
-				payment.updatePaymentMethod(paymentMethod);
-				log.debug("[결제 수단 저장] paymentId: {}, method: {}", payment.getId(), paymentMethod);
-			} catch (IllegalArgumentException e) {
-				log.warn("[결제 수단 변환 실패] method: {}, error: {}", 
-					tossResponse.tossPayment().method(), e.getMessage());
-			}
+		String method = tossResponse.tossPayment().method();
+
+		if (!PaymentMethod.isSupported(method)) {
+			log.warn("[결제 수단 변환 실패] 지원하지 않는 결제 수단입니다. method: {}, paymentId: {}",
+				method, payment.getId());
+			return;
 		}
+
+		PaymentMethod paymentMethod = PaymentMethod.of(method);
+		payment.updatePaymentMethod(paymentMethod);
+		log.debug("[결제 수단 저장] paymentId: {}, method: {}", payment.getId(), paymentMethod);
 	}
 
 	private void updateApprovedAtFromTossResponse(Payment payment, TossApprovalResponse tossResponse) {
-		if (tossResponse.tossPayment() != null && tossResponse.tossPayment().approvedAt() != null) {
-			try {
-				String approvedAtStr = tossResponse.tossPayment().approvedAt();
-				LocalDateTime approvedAt = parseApprovedAt(approvedAtStr);
-				payment.updateApprovedAt(approvedAt);
-				log.debug("[승인 날짜 저장] paymentId: {}, approvedAt: {}", payment.getId(), approvedAt);
-			} catch (Exception e) {
-				log.warn("[승인 날짜 파싱 실패] approvedAt: {}, error: {}", 
-					tossResponse.tossPayment().approvedAt(), e.getMessage());
-			}
+		String approvedAtStr = tossResponse.tossPayment().approvedAt();
+		if (approvedAtStr == null) {
+			return;
 		}
+
+		LocalDateTime approvedAt = parseApprovedAt(approvedAtStr);
+
+		if (approvedAt != null) {
+			log.debug("[승인 날짜 저장] paymentId: {}, approvedAt: {}", payment.getId(), approvedAt);
+			payment.updateApprovedAt(approvedAt);
+			return;
+		}
+
+		log.warn("[승인 날짜 파싱 실패] approvedAt: {}", approvedAtStr);
 	}
 
 	/**
@@ -450,12 +434,12 @@ public class PaymentServiceImpl implements PaymentService {
 	private LocalDateTime parseApprovedAt(String approvedAtStr) {
 		try {
 			if (approvedAtStr.contains("+") || approvedAtStr.endsWith("Z")) {
-				OffsetDateTime offsetDateTime = OffsetDateTime.parse(approvedAtStr);
-				return offsetDateTime.toLocalDateTime();
+				return OffsetDateTime.parse(approvedAtStr).toLocalDateTime();
 			}
 			return LocalDateTime.parse(approvedAtStr);
+
 		} catch (Exception e) {
-			throw new IllegalArgumentException("날짜 파싱 실패: " + approvedAtStr, e);
+			return null;
 		}
 	}
 

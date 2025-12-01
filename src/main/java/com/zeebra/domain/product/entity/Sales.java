@@ -60,4 +60,16 @@ public class Sales extends BaseEntity {
 			throw new BusinessException(SalesErrorCode.OUT_OF_STOCK);
 		}
 	}
+
+	public void updateSalesStatus(SalesStatus salesStatus) {
+		this.salesStatus = salesStatus;
+	}
+
+	public void updateStock(int stock) {
+		this.stock = stock;
+	}
+
+	public void updateSoldPrice(BigDecimal soldPrice) {
+		this.soldPrice = soldPrice;
+	}
 }

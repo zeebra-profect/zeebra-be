@@ -34,7 +34,7 @@ import com.zeebra.global.ErrorCode.SalesErrorCode;
 import com.zeebra.global.exception.BusinessException;
 
 @ExtendWith(MockitoExtension.class)
-public class PaymentServiceUnitTest {
+public class PaymentServiceCreatePaymentTest {
 	@Mock
 	private OrderService orderService;
 	@Mock

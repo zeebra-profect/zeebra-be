@@ -44,4 +44,10 @@ public enum PaymentMethod {
 
 		throw new IllegalArgumentException("알 수 없는 결제수단입니다: " + value);
 	}
+
+	public static boolean isSupported(String value) {
+		if (value == null) return false;
+		return englishMap.containsKey(value.toUpperCase()) || koreanMap.containsKey(value);
+	}
+
 }

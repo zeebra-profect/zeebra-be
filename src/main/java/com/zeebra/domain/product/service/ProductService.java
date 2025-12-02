@@ -36,4 +36,20 @@ public interface ProductService {
     void validateProductOptionId(Long productOptionId);
 
     public ApiResponse<SuggestionListResponse> getSuggestions(String searchWord);
+
+    public ApiResponse<SearchBrandListResponse> searchedBrands(
+            String keyWord,
+            List<Long> categoryIds,
+            List<Long> brandIds,
+            BigDecimal minPrice,
+            BigDecimal maxPrice
+    );
+
+    public ApiResponse<SearchCategoryListResponse> searchedCategories(
+            String keyWord,
+            List<Long> categoryIds,
+            List<Long> brandIds,
+            BigDecimal minPrice,
+            BigDecimal maxPrice
+    );
 }

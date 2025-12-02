@@ -81,4 +81,22 @@ public class ProductController {
     public ApiResponse<SuggestionListResponse> getSuggestions(@RequestParam String searchWord) {
         return productService.getSuggestions(searchWord);
     }
+
+    @GetMapping("/api/products/search/brands")
+    public ApiResponse<SearchBrandListResponse> getSearchBrands(@RequestParam(required = false) String keyWord,
+                                                                @RequestParam(required = false) List<Long> categoryIds,
+                                                                @RequestParam(required = false) List<Long> brandIds,
+                                                                @RequestParam(required = false) BigDecimal minPrice,
+                                                                @RequestParam(required = false) BigDecimal maxPrice) {
+        return productService.searchedBrands(keyWord, categoryIds, brandIds, minPrice, maxPrice);
+    }
+
+    @GetMapping("/api/products/search/categories")
+    public ApiResponse<SearchCategoryListResponse> searchedCategories(@RequestParam(required = false) String keyWord,
+                                                                      @RequestParam(required = false) List<Long> categoryIds,
+                                                                      @RequestParam(required = false) List<Long> brandIds,
+                                                                      @RequestParam(required = false) BigDecimal minPrice,
+                                                                      @RequestParam(required = false) BigDecimal maxPrice) {
+        return productService.searchedCategories(keyWord, categoryIds, brandIds, minPrice, maxPrice);
+    }
 }

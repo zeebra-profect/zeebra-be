@@ -1,14 +1,20 @@
 package com.zeebra.domain.product.service;
 
+import co.elastic.clients.elasticsearch._types.FieldValue;
+import co.elastic.clients.elasticsearch._types.aggregations.*;
 import co.elastic.clients.elasticsearch._types.query_dsl.*;
+import com.zeebra.domain.brand.dto.BrandResponse;
+import com.zeebra.domain.category.dto.CategoryResponse;
 import com.zeebra.domain.product.search.ProductSearchHelper;
 import com.zeebra.domain.product.search.ProductSearchQueryBuilder;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.elasticsearch.client.elc.ElasticsearchAggregations;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
+import org.springframework.data.elasticsearch.core.query.FetchSourceFilterBuilder;
 import org.springframework.data.elasticsearch.core.query.HighlightQuery;
 import org.springframework.stereotype.Service;
 import com.zeebra.domain.member.entity.Member;
@@ -26,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Transactional(readOnly = true)
 @Service
@@ -245,4 +252,87 @@ public class ProductServiceImpl implements ProductService {
     }
 
 
+    @Override
+    public ApiResponse<SearchBrandListResponse> searchedBrands(
+            String keyWord,
+            List<Long> categoryIds,
+            List<Long> brandIds,
+            BigDecimal minPrice,
+            BigDecimal maxPrice
+    ) {
+        Query boolQuery = queryBuilder.buildBoolQuery(
+                keyWord, categoryIds, brandIds, minPrice, maxPrice
+        );
+
+        // Composite Aggregation: brand_id + brand_name을 함께 그룹핑
+        Aggregation brandAggregation = Aggregation.of(a -> a
+                .composite(c -> c
+                        .size(1000)
+                        .sources(List.of(
+                                Map.of("brand_id", CompositeAggregationSource.of(s -> s
+                                        .terms(t -> t.field("brand_id"))
+                                )),
+                                Map.of("brand_name", CompositeAggregationSource.of(s -> s
+                                        .terms(t -> t.field("brand_name.keyword"))
+                                ))
+                        ))
+                )
+        );
+
+        NativeQuery nativeQuery = NativeQuery.builder()
+                .withQuery(boolQuery)
+                .withAggregation("brand_agg", brandAggregation)
+                .withMaxResults(0)  // 문서는 안 가져옴 (aggregation만 필요)
+                .withTrackTotalHits(false)
+                .build();
+
+        SearchHits<ProductDocument> searchHits =
+                elasticsearchOperations.search(nativeQuery, ProductDocument.class);
+
+        List<BrandResponse> brandResponses = searchHelper.extractBrandInfoFromComposite(searchHits);
+
+        return ApiResponse.success(new SearchBrandListResponse(brandResponses));
+    }
+
+    @Override
+    public ApiResponse<SearchCategoryListResponse> searchedCategories(
+            String keyWord,
+            List<Long> categoryIds,
+            List<Long> brandIds,
+            BigDecimal minPrice,
+            BigDecimal maxPrice
+    ) {
+        Query boolQuery = queryBuilder.buildBoolQuery(
+                keyWord, categoryIds, brandIds, minPrice, maxPrice
+        );
+
+        // Composite Aggregation: category_id + category_name을 함께 그룹핑
+        Aggregation categoryAggregation = Aggregation.of(a -> a
+                .composite(c -> c
+                        .size(1000)
+                        .sources(List.of(
+                                Map.of("category_id", CompositeAggregationSource.of(s -> s
+                                        .terms(t -> t.field("category_id"))
+                                )),
+                                Map.of("category_name", CompositeAggregationSource.of(s -> s
+                                        .terms(t -> t.field("category_name.keyword"))
+                                ))
+                        ))
+                )
+        );
+
+        NativeQuery nativeQuery = NativeQuery.builder()
+                .withQuery(boolQuery)
+                .withAggregation("category_agg", categoryAggregation)
+                .withMaxResults(0)
+                .withTrackTotalHits(false)
+                .build();
+
+        SearchHits<ProductDocument> searchHits =
+                elasticsearchOperations.search(nativeQuery, ProductDocument.class);
+
+        List<CategoryResponseDto> categoryResponses = searchHelper.extractCategoryInfoFromComposite(searchHits);
+
+        return ApiResponse.success(new SearchCategoryListResponse(categoryResponses));
+    }
 }

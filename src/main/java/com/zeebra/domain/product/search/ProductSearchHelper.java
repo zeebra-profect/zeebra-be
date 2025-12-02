@@ -1,11 +1,21 @@
 package com.zeebra.domain.product.search;
 
+import co.elastic.clients.elasticsearch._types.FieldValue;
+import co.elastic.clients.elasticsearch._types.aggregations.CompositeAggregate;
+import co.elastic.clients.elasticsearch._types.aggregations.LongTermsAggregate;
+import co.elastic.clients.elasticsearch._types.aggregations.MultiTermsAggregate;
+import co.elastic.clients.json.JsonData;
+import com.zeebra.domain.brand.dto.BrandResponse;
+import com.zeebra.domain.category.dto.CategoryResponse;
+import com.zeebra.domain.product.dto.CategoryResponseDto;
 import com.zeebra.domain.product.dto.ProductSearchItem;
 import com.zeebra.domain.product.entity.ProductDocument;
 import com.zeebra.domain.product.entity.ProductSort;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.elasticsearch.client.elc.ElasticsearchAggregations;
 import org.springframework.data.elasticsearch.core.SearchHit;
+import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.elasticsearch.core.query.HighlightQuery;
 import org.springframework.data.elasticsearch.core.query.highlight.Highlight;
 import org.springframework.data.elasticsearch.core.query.highlight.HighlightField;
@@ -13,8 +23,10 @@ import org.springframework.data.elasticsearch.core.query.highlight.HighlightFiel
 import org.springframework.data.elasticsearch.core.query.highlight.HighlightParameters;
 import org.springframework.stereotype.Component;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -107,5 +119,62 @@ public class ProductSearchHelper {
         }
         log.info("❌ Using original for {}: {}", field, original);
         return original != null ? original : "";
+    }
+
+    public List<BrandResponse> extractBrandInfoFromComposite(SearchHits<ProductDocument> searchHits) {
+        ElasticsearchAggregations aggregations =
+                (ElasticsearchAggregations) searchHits.getAggregations();
+
+        if (aggregations == null) {
+            return Collections.emptyList();
+        }
+
+        return aggregations.aggregations().stream()
+                .filter(agg -> "brand_agg".equals(agg.aggregation().getName()))
+                .findFirst()
+                .map(agg -> {
+                    CompositeAggregate compositeAgg = agg.aggregation().getAggregate().composite();
+
+                    return compositeAgg.buckets().array().stream()
+                            .map(bucket -> {
+                                Map<String, FieldValue> key = bucket.key();
+
+                                // FieldValue에서 직접 추출
+                                Long brandId = key.get("brand_id").longValue();
+                                String brandName = key.get("brand_name").stringValue();
+
+                                return new BrandResponse(brandId, brandName);
+                            })
+                            .collect(Collectors.toList());
+                })
+                .orElse(Collections.emptyList());
+    }
+
+    public List<CategoryResponseDto> extractCategoryInfoFromComposite(SearchHits<ProductDocument> searchHits) {
+        ElasticsearchAggregations aggregations =
+                (ElasticsearchAggregations) searchHits.getAggregations();
+
+        if (aggregations == null) {
+            return Collections.emptyList();
+        }
+
+        return aggregations.aggregations().stream()
+                .filter(agg -> "category_agg".equals(agg.aggregation().getName()))
+                .findFirst()
+                .map(agg -> {
+                    CompositeAggregate compositeAgg = agg.aggregation().getAggregate().composite();
+
+                    return compositeAgg.buckets().array().stream()
+                            .map(bucket -> {
+                                Map<String, FieldValue> key = bucket.key();
+
+                                Long categoryId = key.get("category_id").longValue();
+                                String categoryName = key.get("category_name").stringValue();
+
+                                return new CategoryResponseDto(categoryId, categoryName);
+                            })
+                            .collect(Collectors.toList());
+                })
+                .orElse(Collections.emptyList());
     }
 }

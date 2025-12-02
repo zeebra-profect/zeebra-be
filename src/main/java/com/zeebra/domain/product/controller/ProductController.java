@@ -73,4 +73,9 @@ public class ProductController {
         Long memberId = principal.getMemberId();
         return productService.getFavoriteProduct(memberId, pageable);
     }
+
+    @GetMapping("/api/products/suggestions")
+    public ApiResponse<SuggestionListResponse> getSuggestions(@RequestParam String searchWord) {
+        return productService.getSuggestions(searchWord);
+    }
 }

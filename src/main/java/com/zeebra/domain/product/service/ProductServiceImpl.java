@@ -1,7 +1,15 @@
 package com.zeebra.domain.product.service;
 
+import co.elastic.clients.elasticsearch._types.query_dsl.MultiMatchQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.Query;
+import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
+import org.hibernate.query.named.NameableQuery;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.elasticsearch.client.elc.NativeQuery;
+import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.data.elasticsearch.core.SearchHit;
+import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.stereotype.Service;
 
 import com.zeebra.domain.brand.dto.BrandResponse;
@@ -25,6 +33,7 @@ import org.springframework.stereotype.Service;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -47,6 +56,7 @@ public class ProductServiceImpl implements ProductService {
     private final MemberService memberService;
     private final ProductOptionRepository productOptionRepository;
     private final ProductJdbcRepository productJdbcRepository;
+    private final ElasticsearchOperations elasticsearchOperations;
 
     @Override
     public ApiResponse<ProductDetailResponse> getProductDetail(Long productId, Long colorOptionNameId) {
@@ -204,5 +214,37 @@ public class ProductServiceImpl implements ProductService {
 
     public void validateProductOptionId(Long productOptionId) {
         productOptionRepository.findById(productOptionId).orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND, "존재하지 않는 상품입니다."));
+    }
+
+    @Override
+    public ApiResponse<SuggestionListResponse> getSuggestions(String searchWord) {
+        Query multiMatchQuery = MultiMatchQuery.of(m -> m.query(searchWord)
+                        .type(TextQueryType.BoolPrefix)
+                        .fields(
+                                "product_name",
+                                "product_name.nori",
+                                "product_name.ngram",
+                                "brand_name",
+                                "category_name"
+                        ))
+                ._toQuery();
+
+        NativeQuery nativeQuery = NativeQuery.builder()
+                .withQuery(multiMatchQuery)
+                .withPageable(PageRequest.of(0, 5))
+                .build();
+
+        SearchHits<ProductDocument> searchHits = elasticsearchOperations.search(nativeQuery, ProductDocument.class);
+
+        List<String> suggestions = searchHits.getSearchHits().stream()
+                .map(hit -> {
+                    ProductDocument productDocument = hit.getContent();
+                    return productDocument.getProductName();
+                })
+                .toList();
+
+        SuggestionListResponse suggestionListResponse = new SuggestionListResponse(suggestions);
+
+        return ApiResponse.success(suggestionListResponse);
     }
 }

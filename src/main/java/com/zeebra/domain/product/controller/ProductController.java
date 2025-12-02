@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import org.springframework.data.domain.Pageable;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Slf4j
@@ -28,9 +29,11 @@ public class ProductController {
     public ApiResponse<SearchProductResponse> getProductList(@RequestParam(required = false) String keyWord,
                                                              @RequestParam(required = false) List<Long> categoryIds,
                                                              @RequestParam(required = false) List<Long> brandIds,
+                                                             @RequestParam(required = false) BigDecimal minPrice,
+                                                             @RequestParam(required = false) BigDecimal maxPrice,
                                                              @RequestParam(required = false) String productSort,
                                                              Pageable pageable) {
-        return productService.searchProduct(keyWord, categoryIds, brandIds, pageable, productSort);
+        return productService.searchProduct(keyWord, categoryIds, brandIds, minPrice, maxPrice, pageable, productSort);
     }
 
     @GetMapping({"/api/products/{productId}", "/api/products/{productId}/{colorOptionNameId}"})

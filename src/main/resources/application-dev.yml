@@ -15,14 +15,15 @@ spring:
       port: ${SPRING_DATA_REDIS_PORT:6379}
       password: ${SPRING_DATA_REDIS_PASSWORD:}
 
-server:
-  port: 8080
-  forward-headers-strategy: framework
-
   elasticsearch:
     uris: ${ELK_URI}
     connection-timeout: 3s
     socket-timeout: 5s
+
+server:
+  port: 8080
+  forward-headers-strategy: framework
+
 
 jwt:
   secret-key: ${JWT_SECRET}

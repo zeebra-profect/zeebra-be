@@ -1,5 +1,6 @@
 package com.zeebra.domain.chat.entity;
 
+import com.zeebra.domain.member.entity.Member;
 import com.zeebra.global.jpa.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -25,6 +26,10 @@ public class ChatRoomMember extends BaseEntity {
 
     @Column(name = "member_id", nullable = false)
     private Long memberId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "member_id", insertable = false, updatable = false)
+    private Member member;
 
     @Column(name = "member_name")
     private String memberName;

@@ -162,11 +162,14 @@ public class JwtProvider {
 	public static final class JwtUserPrincipal {
 		private final Long memberId;
 		private final String userLoginId;
+        private final String memberNickname;
 		public JwtUserPrincipal(Long memberId, String userLoginId) {
 			this.memberId = memberId;
 			this.userLoginId = userLoginId;
+            this.memberNickname = userLoginId;
 		}
 		public Long getMemberId() { return memberId; }
 		public String getUserLoginId() { return userLoginId; }
+        public String getMemberNickname() { return memberNickname; }
 	}
 }

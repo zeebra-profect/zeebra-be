@@ -112,4 +112,38 @@ public class AsyncConfig implements AsyncConfigurer {
         return executor;
     }
 
+    @Bean(name = "chatExecutor")
+    public Executor chatExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        int corePoolSize = Runtime.getRuntime().availableProcessors();
+
+        executor.setCorePoolSize(Math.max(10, corePoolSize * 2)); //Core Pool 최소 10개 이상 보장
+
+        executor.setMaxPoolSize(Math.max(20, corePoolSize * 4)); // 최대 스레드 수 : 트래픽 폭주 시 확장 * 4
+
+        executor.setQueueCapacity(1000); // 메세지 폭증 시 메세지 큐에서 버퍼링(1000rjsRKwl)
+        executor.setKeepAliveSeconds(60);
+        executor.setThreadNamePrefix("ChatSave-");
+
+        // 큐 꽉 찼을 때: CallerRunsPolicy -> 요청한 스레드(웹소켓)가 직접 db 저장 수행, 속도 느려지지만 데이터 유실 방지
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(60);
+
+        executor.setTaskDecorator(runnable -> {
+            SecurityContext context = SecurityContextHolder.getContext();
+            return () -> {
+                try {
+                    SecurityContextHolder.setContext(context);
+                    runnable.run();
+                } finally {
+                    SecurityContextHolder.clearContext();
+                }
+            };
+        });
+        executor.initialize();
+        return executor;
+    }
+
 }

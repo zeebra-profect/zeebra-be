@@ -2,11 +2,7 @@ package com.zeebra.domain.product.search;
 
 import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.aggregations.CompositeAggregate;
-import co.elastic.clients.elasticsearch._types.aggregations.LongTermsAggregate;
-import co.elastic.clients.elasticsearch._types.aggregations.MultiTermsAggregate;
-import co.elastic.clients.json.JsonData;
 import com.zeebra.domain.brand.dto.BrandResponse;
-import com.zeebra.domain.category.dto.CategoryResponse;
 import com.zeebra.domain.product.dto.CategoryResponseDto;
 import com.zeebra.domain.product.dto.ProductSearchItem;
 import com.zeebra.domain.product.entity.ProductDocument;

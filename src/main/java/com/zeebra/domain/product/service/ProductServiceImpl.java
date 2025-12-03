@@ -199,7 +199,7 @@ public class ProductServiceImpl implements ProductService {
             String productSort
     ) {
         // 1. Bool Query 생성
-        Query boolQuery = queryBuilder.buildBoolQuery(
+        Query functionScoreQuery = queryBuilder.buildFunctionScoreQuery(
                 keyWord, categoryIds, brandIds, minPrice, maxPrice
         );
 
@@ -211,7 +211,7 @@ public class ProductServiceImpl implements ProductService {
 
         // 3. Native Query 생성 (size + 1로 조회)
         NativeQuery nativeQuery = NativeQuery.builder()
-                .withQuery(boolQuery)
+                .withQuery(functionScoreQuery)
                 .withHighlightQuery(highlightQuery)
                 .withPageable(PageRequest.of(
                         pageable.getPageNumber(),
@@ -260,7 +260,7 @@ public class ProductServiceImpl implements ProductService {
             BigDecimal minPrice,
             BigDecimal maxPrice
     ) {
-        Query boolQuery = queryBuilder.buildBoolQuery(
+        Query functionScoreQuery = queryBuilder.buildFunctionScoreQuery(
                 keyWord, categoryIds, brandIds, minPrice, maxPrice
         );
 
@@ -280,7 +280,7 @@ public class ProductServiceImpl implements ProductService {
         );
 
         NativeQuery nativeQuery = NativeQuery.builder()
-                .withQuery(boolQuery)
+                .withQuery(functionScoreQuery)
                 .withAggregation("brand_agg", brandAggregation)
                 .withMaxResults(0)  // 문서는 안 가져옴 (aggregation만 필요)
                 .withTrackTotalHits(false)
@@ -302,7 +302,7 @@ public class ProductServiceImpl implements ProductService {
             BigDecimal minPrice,
             BigDecimal maxPrice
     ) {
-        Query boolQuery = queryBuilder.buildBoolQuery(
+        Query functionScoreQuery = queryBuilder.buildFunctionScoreQuery(
                 keyWord, categoryIds, brandIds, minPrice, maxPrice
         );
 
@@ -322,7 +322,7 @@ public class ProductServiceImpl implements ProductService {
         );
 
         NativeQuery nativeQuery = NativeQuery.builder()
-                .withQuery(boolQuery)
+                .withQuery(functionScoreQuery)
                 .withAggregation("category_agg", categoryAggregation)
                 .withMaxResults(0)
                 .withTrackTotalHits(false)

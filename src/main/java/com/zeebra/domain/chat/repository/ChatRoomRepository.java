@@ -1,6 +1,7 @@
 package com.zeebra.domain.chat.repository;
 
 import com.zeebra.domain.chat.entity.ChatRoom;
+import com.zeebra.domain.chat.entity.ChatRoomType;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -15,5 +16,9 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
     Optional<ChatRoom> findByProductId(Long productId);
 
     List<ChatRoom> findBySaleId(Long saleId);
+
+    Optional<ChatRoom> findByProductIdAndChatRoomType(Long productId, ChatRoomType chatRoomType);
+    Optional<ChatRoom> findFirstByProductIdAndChatRoomTypeOrderByIdAsc(Long productId, ChatRoomType chatRoomType);
+    Optional<ChatRoom> findBySaleIdAndDmPairKeyAndChatRoomType(Long saleId, String dmPairKey, ChatRoomType chatRoomType);
 
 }

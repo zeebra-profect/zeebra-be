@@ -88,4 +88,8 @@ public class Product extends BaseEntity {
         }
         favoriteProductCount--;
     }
+
+    public void updateMinPrice(BigDecimal minPrice) {
+        this.minPrice = minPrice;
+    }
 }

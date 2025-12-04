@@ -70,7 +70,7 @@ public class ChatServiceImpl implements ChatService {
                 throw new IllegalArgumentException("Group 채팅방을 위해선 productId가 필요합니다.");
                 }
 
-                Optional<ChatRoom> existingRoom = chatRoomRepository.findTopByProductIdOrderByIdAsc(productId);
+                Optional<ChatRoom> existingRoom = chatRoomRepository.findByProductIdAndChatRoomType(productId, ChatRoomType.GROUP);
 
                 if (existingRoom.isPresent()) {
                     chatRoom = existingRoom.get();
@@ -110,7 +110,7 @@ public class ChatServiceImpl implements ChatService {
 
                 String dmPairKey = createDmPairKey(saleId, user1, user2);
 
-                chatRoom = chatRoomRepository.findByDmPairKey(dmPairKey)
+                chatRoom = chatRoomRepository.findBySaleIdAndDmPairKeyAndChatRoomType(saleId, dmPairKey, ChatRoomType.DM)
                         .orElseGet(() -> {
                             ChatRoom newRoom = ChatRoom.builder()
                                     .saleId(saleId)

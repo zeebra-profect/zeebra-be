@@ -104,6 +104,7 @@ public class ChatSocketController {
                     "/sub/chat/room/" + savedMessage.roomId(), savedMessage);
 
             chatService.saveMessageAsync(requestDto, currentMemberId); // 저장 비동기 처리
+//            chatService.saveMessage(requestDto, currentMemberId); // 쿼리 dsl 테스트용 삭제하기
 
             isSuccess = true;
             log.info("[WebSocket] 메시지 전송 성공: (Room: {})", savedMessage.roomId());

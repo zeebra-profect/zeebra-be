@@ -203,6 +203,8 @@ public class ProductServiceImpl implements ProductService {
                 keyWord, categoryIds, brandIds, minPrice, maxPrice
         );
 
+        log.info("ES Query: {}", functionScoreQuery);
+
         // 정렬값 이넘으로 변경
         ProductSort sort = ProductSort.from(productSort);
 

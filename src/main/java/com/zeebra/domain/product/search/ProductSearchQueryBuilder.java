@@ -235,7 +235,7 @@ public class ProductSearchQueryBuilder {
             // Filter: 필터링
             buildFilterQueries(categoryIds, brandIds, minPrice, maxPrice).forEach(b::filter);
 
-            return b.minimumShouldMatch("1");
+            return b.minimumShouldMatch("2");
         })._toQuery();
 
         // Function Score로 감싸서 인기도 반영

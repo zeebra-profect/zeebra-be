@@ -19,7 +19,7 @@ import java.util.List;
 @Tag(name = "Chat API", description = "채팅방 생성 및 관리 API")
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/chat")
+@RequestMapping("/api/chat")
 public class ChatController {
 
     private final ChatService chatService;

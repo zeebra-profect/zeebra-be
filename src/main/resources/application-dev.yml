@@ -19,6 +19,8 @@ spring:
     uris: ${ELK_URI}
     connection-timeout: 3s
     socket-timeout: 5s
+    username: ${OPEN_SEARCH_USERNAME}
+    password: ${OPEN_SEARCH_PASSWORD}
 
 server:
   port: 8080
@@ -65,4 +67,3 @@ management:
       enabled: true
   security:
     enabled: false
-    

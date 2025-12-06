@@ -110,10 +110,8 @@ public class ProductSearchHelper {
     ) {
         if (highlights != null && highlights.containsKey(field) && !highlights.get(field).isEmpty()) {
             String highlighted = highlights.get(field).get(0);
-            log.info("✅ Using highlight for {}: {}", field, highlighted);
             return highlighted;
         }
-        log.info("❌ Using original for {}: {}", field, original);
         return original != null ? original : "";
     }
 

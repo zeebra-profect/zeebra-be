@@ -3,6 +3,7 @@ package com.zeebra.domain.product.service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -118,7 +119,7 @@ public class SalesServiceImp implements SalesService {
 			throw new BusinessException(OrderErrorCode.PRODUCT_NOT_FOUND, "판매 중인 상품을 찾을 수 없습니다.");
 		}
 
-		return OrderSalesItem.of(sales);
+		return OrderSalesItem.of(sales,1);
 	}
 
 	public SalesDetailResponse getSalesDetail(Long memberId, Long salesId) {
@@ -175,9 +176,26 @@ public class SalesServiceImp implements SalesService {
 	public void updateSalesSoldAt(Long salesId, LocalDateTime soldAt) {}
 
 	public List<OrderSalesItem> selectCheapestValidSales(Map<Long, Integer> productOptionQuantityMap) {
-		List<OrderSalesItem> orderSalesItems = OrderSalesItem.of(
-			salesQueryRepository.findCheapestAndOldestSales(productOptionQuantityMap));
+		List<Sales> salesList = salesQueryRepository.findCheapestAndOldestSales(productOptionQuantityMap);
+		Map<Sales, Integer> salesQuantityMap = new HashMap<>();
+		for (Map.Entry<Long, Integer> entry : productOptionQuantityMap.entrySet()) {
+			Long productOptionId = entry.getKey();
+			int quantity = entry.getValue();
 
+			List<Sales> salesForOption = salesList.stream()
+				.filter(sales -> sales.getProductOptionId().equals(productOptionId))
+				.collect(Collectors.toList());
+
+			for (Sales sales : salesForOption) {
+				if(quantity <= 0) break;
+
+				int quantityForOption = Math.min(quantity, sales.getStock());
+
+				salesQuantityMap.put(sales, quantityForOption);
+				quantity -= quantityForOption;
+			}
+		}
+		List<OrderSalesItem> orderSalesItems = OrderSalesItem.of(salesQuantityMap);
 		validateSalesAvailability(productOptionQuantityMap, orderSalesItems);
 		return orderSalesItems;
 	}

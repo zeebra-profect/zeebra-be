@@ -36,7 +36,7 @@ public class Sales extends BaseEntity {
 
     private int stock;
 
-	@Enumerated(EnumType.ORDINAL)
+	@Enumerated(EnumType.STRING)
     private SalesStatus salesStatus;
 
     private LocalDateTime soldAt;

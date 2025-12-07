@@ -9,6 +9,7 @@ services:
     environment:
       - INFLUXDB_DB=k6
       - INFLUXDB_HTTP_AUTH_ENABLED=false
+      - TZ=Asia/Seoul
     volumes:
       - influxdb-data:/var/lib/influxdb
     networks:
@@ -44,6 +45,19 @@ services:
     depends_on:
       - influxdb
       - prometheus
+    networks:
+      - k6-network
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: postgres-exporter
+    ports:
+      - "9187:9187"
+    environment:
+      DATA_SOURCE_NAME: "postgresql://zeebra:1234@host.docker.internal:5432/zeebra_db?sslmode=disable"
+      PG_EXPORTER_EXTEND_QUERY_PATH: /etc/postgres_exporter/queries.yml
+    volumes:
+      - ./monitoring/postgres/queries.yml:/etc/postgres_exporter/queries.yml:ro
     networks:
       - k6-network
 

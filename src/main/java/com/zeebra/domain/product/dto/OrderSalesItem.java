@@ -2,6 +2,7 @@ package com.zeebra.domain.product.dto;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 import com.zeebra.domain.product.entity.Sales;
 import com.zeebra.global.ErrorCode.OrderErrorCode;
@@ -25,18 +26,21 @@ public record OrderSalesItem(
 		this.price = price;
 	}
 
-	public static OrderSalesItem of(Sales sales) {
+	public static OrderSalesItem of(Sales sales, int quantity) {
 		return OrderSalesItem.builder()
 			.salesId(sales.getId())
 			.productOptionId(sales.getProductOptionId())
-			.quantity(sales.getStock())
+			.quantity(quantity)
 			.price(sales.getPrice())
 			.build();
 	}
 
-	public static List<OrderSalesItem> of(List<Sales> salesList) {
-		return salesList.stream()
-			.map(OrderSalesItem::of)
+	public static List<OrderSalesItem> of(Map<Sales, Integer> salesQuantityMap) {
+		if (salesQuantityMap == null || salesQuantityMap.isEmpty()) {
+			return List.of();
+		}
+		return salesQuantityMap.entrySet().stream()
+			.map(entry -> of(entry.getKey(), entry.getValue()))
 			.toList();
 	}
 

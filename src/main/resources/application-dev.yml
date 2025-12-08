@@ -20,6 +20,12 @@ spring:
     username: ${OPEN_SEARCH_USERNAME}
     password: ${OPEN_SEARCH_PASSWORD}
 
+  rabbitmq:
+    host: ${RABBITMQ_HOST}
+    port: ${RABBITMQ_PORT}
+    username: ${RABBITMQ_USERNAME}
+    password: ${RABBITMQ_PASSWORD}
+
 server:
   port: 8080
   forward-headers-strategy: framework
@@ -65,3 +71,13 @@ management:
       enabled: true
   security:
     enabled: false
+
+chat:
+  stomp:
+    relay-host: ${RABBITMQ_HOSTNAME}
+    relay-port: ${RELAY_PORT}   # STOMP 포트
+    system-username: ${STOMP_SYSTEM_USERNAME}
+    system-password: ${STOMP_SYSTEM_PASSWORD}
+    client-username: ${STOMP_CLIENT_USERNAME}
+    client-password: ${STOMP_CLIENT_PASSWORD}
+

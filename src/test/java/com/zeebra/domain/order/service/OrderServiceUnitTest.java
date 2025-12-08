@@ -36,6 +36,7 @@ import com.zeebra.domain.order.entity.OrderItem;
 import com.zeebra.domain.order.entity.OrderItemStatus;
 import com.zeebra.domain.order.entity.OrderStatus;
 import com.zeebra.domain.order.entity.OrderType;
+import com.zeebra.domain.order.generator.OrderNumberGenerator;
 import com.zeebra.domain.order.repository.OrderHistoryRepository;
 import com.zeebra.domain.order.repository.OrderItemQueryRepository;
 import com.zeebra.domain.order.repository.OrderItemRepository;
@@ -44,6 +45,7 @@ import com.zeebra.domain.order.repository.OrderRepository;
 import com.zeebra.domain.product.dto.OrderSalesItem;
 import com.zeebra.domain.product.entity.Sales;
 import com.zeebra.domain.product.entity.SalesStatus;
+import com.zeebra.domain.product.service.ProductInfoService;
 import com.zeebra.domain.product.service.ProductService;
 import com.zeebra.domain.product.service.SalesService;
 import com.zeebra.global.ErrorCode.CommonErrorCode;
@@ -63,11 +65,15 @@ public class OrderServiceUnitTest {
 	@Mock
 	private OrderHistoryRepository orderHistoryRepository;
 	@Mock
+	private ProductService productService;
+	@Mock
 	private SalesService salesService;
 	@Mock
 	private CartService cartService;
 	@Mock
-	private ProductService productService;
+	private OrderNumberGenerator orderNumberGenerator;
+	@Mock
+	private ProductInfoService productInfoService;
 	@InjectMocks
 	private OrderServiceImpl orderService;
 
@@ -130,14 +136,14 @@ public class OrderServiceUnitTest {
 		CartItemInfo cartItem = new CartItemInfo(1L, 1L, BigDecimal.valueOf(50000), 1);
 		given(cartService.getCartItemsByCartId(cartId, memberId)).willReturn(List.of(cartItem));
 
-		OrderSalesItem salesItem = OrderSalesItem.of(new Sales(1L, cartItem.productOptionId(), BigDecimal.valueOf(50000), 1, SalesStatus.ON_SALE));
+		OrderSalesItem salesItem = OrderSalesItem.of(new Sales(1L, cartItem.productOptionId(), BigDecimal.valueOf(50000), 1, SalesStatus.ON_SALE), 1);
 		given(salesService.selectCheapestValidSales(anyMap())).willReturn(List.of(salesItem));
 
 		given(orderRepository.save(any(Order.class)))
 			.willAnswer(invocation -> invocation.getArgument(0));
 
 		ProductInfo productInfo = ProductInfo.of(1L, salesItem.productOptionId(), "상품 이름", "thumbnail.jpeg", List.of());
-		given(orderItemQueryRepository.findProductInfoBySaleId(salesItem.salesId())).willReturn(productInfo);
+		given(productInfoService.getProductInfoBySalesId(salesItem.salesId())).willReturn(productInfo);
 		given(orderItemRepository.save(any())).willAnswer(invocation -> invocation.getArgument(0));
 
 		//when
@@ -164,14 +170,14 @@ public class OrderServiceUnitTest {
 		String clientRequestId = "idem-key-001";
 		CreateOrderRequest request = CreateOrderRequest.fromDirect(clientRequestId, productOptionId);
 		given(orderRepository.findByIdempotencyKey(clientRequestId)).willReturn(Optional.empty());
-		OrderSalesItem salesItem = OrderSalesItem.of(new Sales(1L, productOptionId, BigDecimal.valueOf(50000),1, SalesStatus.ON_SALE));
+		OrderSalesItem salesItem = OrderSalesItem.of(new Sales(1L, productOptionId, BigDecimal.valueOf(50000),1, SalesStatus.ON_SALE), 1);
 		given(salesService.findCheapestSalesByProductOptionId(productOptionId)).willReturn(salesItem);
 
 		given(orderRepository.save(any(Order.class)))
 			.willAnswer(invocation -> invocation.getArgument(0));
 
 		ProductInfo productInfo = ProductInfo.of(1L, salesItem.productOptionId(), "상품 이름", "thumbnail.jpeg", List.of());
-		given(orderItemQueryRepository.findProductInfoBySaleId(salesItem.salesId())).willReturn(productInfo);
+		given(productInfoService.getProductInfoBySalesId(salesItem.salesId())).willReturn(productInfo);
 		given(orderItemRepository.save(any())).willAnswer(invocation -> invocation.getArgument(0));
 
 		//when
@@ -197,15 +203,18 @@ public class OrderServiceUnitTest {
 		String clientRequestId = "idem-key-001";
 		Long tradeId = 1L;
 		Long salesId = 1L;
+		String orderNumber = "20210901-000001";
 		SalesItem salesItem = SalesItem.of(tradeId, salesId, 1, BigDecimal.valueOf(50000));
 		CreateOrderRequest request = CreateOrderRequest.fromSalesItem(clientRequestId, salesItem);
 		given(orderRepository.findByIdempotencyKey(clientRequestId)).willReturn(Optional.empty());
+
+		given(orderNumberGenerator.generate(any(LocalDateTime.class))).willReturn(orderNumber);
 
 		given(orderRepository.save(any(Order.class)))
 			.willAnswer(invocation -> invocation.getArgument(0));
 
 		ProductInfo productInfo = ProductInfo.of(1L, 1L, "상품 이름", "thumbnail.jpeg", List.of());
-		given(orderItemQueryRepository.findProductInfoBySaleId(salesItem.salesId())).willReturn(productInfo);
+		given(productInfoService.getProductInfoBySalesId(salesItem.salesId())).willReturn(productInfo);
 		given(orderItemRepository.save(any())).willAnswer(invocation -> invocation.getArgument(0));
 
 		//when
@@ -338,6 +347,7 @@ public class OrderServiceUnitTest {
 
 		CreateOrderRequest request = CreateOrderRequest.fromDirect(clientRequestId, productOptionId);
 		given(orderRepository.findByIdempotencyKey(clientRequestId)).willReturn(Optional.empty());
+		doNothing().when(productService).validateProductOptionId(productOptionId);
 		given(salesService.findCheapestSalesByProductOptionId(productOptionId))
 			.willThrow(new BusinessException(OrderErrorCode.PRODUCT_NOT_FOUND));
 

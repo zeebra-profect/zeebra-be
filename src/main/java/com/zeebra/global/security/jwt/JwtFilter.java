@@ -48,8 +48,8 @@ public class JwtFilter extends OncePerRequestFilter {
 		String path = request.getRequestURI();
 		String accessTokens = CookieUtil.getCookieValue(request, ACCESS_TOKEN_COOKIE_NAME);
 
-		System.out.println("[JwtFilter] " + method + " " + path
-			+ " / hasAccessToken=" + (accessTokens != null));
+		// System.out.println("[JwtFilter] " + method + " " + path
+		// 	+ " / hasAccessToken=" + (accessTokens != null));
 
 
         if (isPublicPath(requestPath)) {

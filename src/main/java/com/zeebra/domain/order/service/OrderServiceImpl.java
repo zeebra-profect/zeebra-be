@@ -3,7 +3,6 @@ package com.zeebra.domain.order.service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -31,12 +30,14 @@ import com.zeebra.domain.order.entity.OrderItem;
 import com.zeebra.domain.order.entity.OrderItemStatus;
 import com.zeebra.domain.order.entity.OrderStatus;
 import com.zeebra.domain.order.entity.OrderType;
+import com.zeebra.domain.order.generator.OrderNumberGenerator;
 import com.zeebra.domain.order.repository.OrderHistoryRepository;
 import com.zeebra.domain.order.repository.OrderItemQueryRepository;
 import com.zeebra.domain.order.repository.OrderItemRepository;
 import com.zeebra.domain.order.repository.OrderQueryRepository;
 import com.zeebra.domain.order.repository.OrderRepository;
 import com.zeebra.domain.product.dto.OrderSalesItem;
+import com.zeebra.domain.product.service.ProductInfoService;
 import com.zeebra.domain.product.service.ProductService;
 import com.zeebra.domain.product.service.SalesService;
 import com.zeebra.global.ErrorCode.CommonErrorCode;
@@ -52,10 +53,6 @@ import lombok.extern.slf4j.Slf4j;
 public class OrderServiceImpl implements OrderService {
 
 	private static final int NO_POINTS_USED = 0;
-	private static final int RANDOM_NUMBER_BOUND = 100000;
-	private static final String ORDER_NUMBER_FORMAT = "%05d";
-	private static final String ORDER_NUMBER_DATE_FORMAT = "yyyyMMdd";
-	private static final String ORDER_NUMBER_TIME_FORMAT = "HHmm";
 	private static final int MAX_IDEMPOTENCY_KEY_LENGTH = 255;
 
 	private final OrderRepository orderRepository;
@@ -64,7 +61,9 @@ public class OrderServiceImpl implements OrderService {
 	private final OrderItemQueryRepository orderItemQueryRepository;
 	private final OrderHistoryRepository orderHistoryRepository;
 	private final CartService cartService;
+	private final OrderNumberGenerator orderNumberGenerator;
 	private final SalesService salesService;
+	private final ProductInfoService productInfoService;
 	private final ProductService productService;
 
 	@Transactional
@@ -223,7 +222,7 @@ public class OrderServiceImpl implements OrderService {
 		List<OrderSalesItem> cheapestSales = salesService.selectCheapestValidSales(productOptionQuantityMap);
 
 		LocalDateTime now = LocalDateTime.now();
-		String orderNumber = generateUniqueOrderNumber(now);
+		String orderNumber = orderNumberGenerator.generate(now);
 
 		int totalQuantity = calculateTotalQuantity(cartItems);
 		BigDecimal totalAmount = calculateTotalAmount(cheapestSales);
@@ -243,12 +242,23 @@ public class OrderServiceImpl implements OrderService {
 	private CreateOrderResponse createOrderFromProductOptionId(Long productOptionId, Long memberId, OrderType orderType, String idempotencyKey) {
 		productService.validateProductOptionId(productOptionId);
 
-		OrderSalesItem salesItem = salesService.findCheapestSalesByProductOptionId(productOptionId);
+		// try (Scope scope = span.makeCurrent()) {
+		// 	Span salesSpan = tracer.spanBuilder("db.selectCheapestSales")
+		// 		.startSpan();
 
-		salesItem.validateSalesItem();
-		LocalDateTime now = LocalDateTime.now();
-		String orderNumber = generateUniqueOrderNumber(now);
-		BigDecimal totalAmount = salesItem.lineAmount();
+  			// T1: 최저가 판매 조회
+			OrderSalesItem salesItem;
+			// try (Scope s = salesSpan.makeCurrent()) {
+				salesItem = salesService.findCheapestSalesByProductOptionId(productOptionId); //SELECT
+			// } finally {
+			// 	salesSpan.end();
+			// }
+
+			// T2: 검증 + 주문번호 생성
+			salesItem.validateSalesItem();
+			LocalDateTime now = LocalDateTime.now();
+			String orderNumber = orderNumberGenerator.generate(now); //SELECT
+			BigDecimal totalAmount = salesItem.lineAmount();
 
 		Order savedOrder = createAndSaveOrder(memberId, orderNumber, orderType, now, salesItem.quantity(), totalAmount, null,
 			idempotencyKey);
@@ -262,7 +272,7 @@ public class OrderServiceImpl implements OrderService {
 		salesItem.validateSalesItem();
 
 		LocalDateTime now = LocalDateTime.now();
-		String orderNumber = generateUniqueOrderNumber(now);
+		String orderNumber = orderNumberGenerator.generate(now);
 		BigDecimal totalAmount = salesItem.price().multiply(BigDecimal.valueOf(salesItem.quantity()));
 
 		//todo: trade status 검증해야 함
@@ -313,56 +323,21 @@ public class OrderServiceImpl implements OrderService {
 	}
 
 	private OrderItemResponse createAndSaveOrderItem(Long orderId, Long saleId, BigDecimal price, int quantity) {
-		ProductInfo productInfo = findProductInfo(saleId);
+		ProductInfo productInfo = productInfoService.getProductInfoBySalesId(saleId);
 
-		OrderItem orderItem = OrderItem.createOrderItem(
-			orderId,
-			saleId,
-			productInfo.productName(),
-			price,
-			productInfo.productThumbnail(),
-			quantity,
-			price.multiply(BigDecimal.valueOf(quantity))
-		);
+			if (productInfo == null) {
+				throw new BusinessException(OrderErrorCode.PRODUCT_NOT_FOUND);
+			}
+
+			// T7: OrderItem 엔티티 생성
+			OrderItem orderItem = OrderItem.createOrderItem(
+					orderId, saleId, productInfo.productName(), price,
+					productInfo.productThumbnail(), quantity,
+					price.multiply(BigDecimal.valueOf(quantity))
+				);
 
 		OrderItem savedOrderItem = orderItemRepository.save(orderItem);
 
-		return OrderItemResponse.of(savedOrderItem, productInfo.productOptionId(), productInfo.orderItemOptions());
-	}
-
-	private ProductInfo findProductInfo(Long saleId) {
-		ProductInfo productInfo = orderItemQueryRepository.findProductInfoBySaleId(saleId);
-
-		if (productInfo == null) {
-			throw new BusinessException(OrderErrorCode.PRODUCT_NOT_FOUND);
-		}
-
-		return productInfo;
-	}
-
-
-	/*
-	주문 번호 생성
-	 */
-	private String generateUniqueOrderNumber(LocalDateTime now) {
-		String orderNumber;
-		do {
-			orderNumber = generateOrderNumber(now);
-		} while (orderRepository.existsByOrderNumber(orderNumber));
-
-		return orderNumber;
-	}
-
-	private String generateOrderNumber(LocalDateTime now) {
-		String datePart = now.format(DateTimeFormatter.ofPattern(ORDER_NUMBER_DATE_FORMAT));
-		String timePart = now.format(DateTimeFormatter.ofPattern(ORDER_NUMBER_TIME_FORMAT));
-		String randomPart = generateRandomPart();
-
-		return String.format("%s-%s%s", datePart, timePart, randomPart);
-	}
-
-	private String generateRandomPart() {
-		int randomNumber = (int) (Math.random() * RANDOM_NUMBER_BOUND);
-		return String.format(ORDER_NUMBER_FORMAT, randomNumber);
+			return OrderItemResponse.of(savedOrderItem, productInfo.productOptionId(), productInfo.orderItemOptions());
 	}
 }

@@ -1,0 +1,33 @@
+pg_stat_statements:
+  query: |
+    SELECT
+      pg_get_userbyid(userid) AS user,
+      d.datname                AS db,
+      queryid,
+      query,
+      calls,
+      total_exec_time / 1000     AS total_time_seconds,
+      min_exec_time / 1000       AS min_time_seconds,
+      max_exec_time / 1000       AS max_time_seconds,
+      mean_exec_time / 1000      AS mean_time_seconds
+    FROM pg_stat_statements s
+    JOIN pg_database d ON d.oid = s.dbid;
+  metrics:
+    - user:
+        usage: "LABEL"
+    - db:
+        usage: "LABEL"
+    - queryid:
+        usage: "LABEL"
+    - query:
+        usage: "LABEL"
+    - calls:
+        usage: "COUNTER"
+    - total_time_seconds:
+        usage: "COUNTER"
+    - min_time_seconds:
+        usage: "GAUGE"
+    - max_time_seconds:
+        usage: "GAUGE"
+    - mean_time_seconds:
+        usage: "GAUGE"

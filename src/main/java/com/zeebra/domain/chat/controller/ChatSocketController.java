@@ -99,9 +99,10 @@ public class ChatSocketController {
                     LocalDateTime.now()
             );
 
+            String destination = "/topic/chat.room." + savedMessage.roomId();
+
             //TODO: send 보내는게 락이 걸려서? 느릴수도있나?
-            messagingTemplate.convertAndSend(
-                    "/sub/chat/room/" + savedMessage.roomId(), savedMessage);
+            messagingTemplate.convertAndSend(destination, savedMessage);
 
             chatService.saveMessageAsync(requestDto, currentMemberId); // 저장 비동기 처리
 //            chatService.saveMessage(requestDto, currentMemberId); // 쿼리 dsl 테스트용 삭제하기

@@ -97,6 +97,8 @@ dependencies {
     implementation 'org.opensearch.client:opensearch-java:3.0.0'
     implementation 'org.opensearch.client:opensearch-rest-client:3.0.0'
 
+    //RabbitMQ AMQP
+    implementation 'org.springframework.boot:spring-boot-starter-amqp'
 }
 
 tasks.named('test') {

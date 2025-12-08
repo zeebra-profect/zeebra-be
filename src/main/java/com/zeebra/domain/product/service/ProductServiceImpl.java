@@ -36,7 +36,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.*;
 
-@Transactional(readOnly = true)
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -55,6 +55,7 @@ public class ProductServiceImpl implements ProductService {
     private final OpenSearchClient openSearchClient;
 
     @Override
+    @Transactional(readOnly = true)
     public ApiResponse<ProductDetailResponse> getProductDetail(Long productId, Long colorOptionNameId) {
         Product product = productRepository.findById(productId).orElseThrow(
                 () -> new NoSuchElementException("해당하는 상품이 존재하지 않습니다."));
@@ -82,6 +83,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ApiResponse<SizeOptionResponseList> getProductOptionSize(Long productId, Long colorOptionNameId) {
         OptionName optionName = optionNameRepository.findById(colorOptionNameId).orElseThrow(
                 () -> new NoSuchElementException("해당하는 옵션값이 없습니다."));
@@ -141,6 +143,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ApiResponse<FavoriteProductList> getFavoriteProduct(Long memberId, Pageable pageable) {
         Member member = memberRepository.findById(memberId).orElseThrow(
                 () -> new NoSuchElementException("해당하는 사용자가 없습니다."));

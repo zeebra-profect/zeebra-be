@@ -1,5 +1,6 @@
 package com.zeebra.domain.product.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import lombok.*;
@@ -15,6 +16,7 @@ import java.util.List;
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class ProductDocument {
 
+    @JsonProperty("id")
     private Long productId;
     private String productName;
     private String modelNumber;

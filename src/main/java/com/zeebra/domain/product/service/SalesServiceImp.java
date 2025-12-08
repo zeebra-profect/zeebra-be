@@ -3,6 +3,7 @@ package com.zeebra.domain.product.service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -120,8 +121,8 @@ public class SalesServiceImp implements SalesService {
             throw new BusinessException(OrderErrorCode.PRODUCT_NOT_FOUND, "판매 중인 상품을 찾을 수 없습니다.");
         }
 
-        return OrderSalesItem.of(sales);
-    }
+		return OrderSalesItem.of(sales,1);
+	}
 
     public SalesDetailResponse getSalesDetail(Long memberId, Long salesId) {
         SalesDetailResponse salesDetailResponse = salesQueryRepository.findSalesDetailById(salesId, memberId);
@@ -166,100 +167,112 @@ public class SalesServiceImp implements SalesService {
                 .collect(Collectors.toList());
     }
 
-    public void updateSalesStock(Long salesId, Integer quantity) {
-    }
+	public void updateSalesStock(Long salesId, Integer quantity) {}
 
-    public void updateSalesPrice(Long salesId, BigDecimal price) {
-    }
+	public void updateSalesPrice(Long salesId, BigDecimal price) {}
 
-    public void updateSalesStatus(Long salesId, SalesStatus salesStatus) {
-    }
+	public void updateSalesStatus(Long salesId, SalesStatus salesStatus) {}
 
-    public void updateSalesSoldPrice(Long salesId, BigDecimal soldPrice) {
-    }
+	public void updateSalesSoldPrice(Long salesId, BigDecimal soldPrice) {}
 
-    public void updateSalesSoldAt(Long salesId, LocalDateTime soldAt) {
-    }
+	public void updateSalesSoldAt(Long salesId, LocalDateTime soldAt) {}
 
-    public List<OrderSalesItem> selectCheapestValidSales(Map<Long, Integer> productOptionQuantityMap) {
-        List<OrderSalesItem> orderSalesItems = OrderSalesItem.of(
-                salesQueryRepository.findCheapestAndOldestSales(productOptionQuantityMap));
+	public List<OrderSalesItem> selectCheapestValidSales(Map<Long, Integer> productOptionQuantityMap) {
+		List<Sales> salesList = salesQueryRepository.findCheapestAndOldestSales(productOptionQuantityMap);
+		Map<Sales, Integer> salesQuantityMap = new HashMap<>();
+		for (Map.Entry<Long, Integer> entry : productOptionQuantityMap.entrySet()) {
+			Long productOptionId = entry.getKey();
+			int quantity = entry.getValue();
 
-        validateSalesAvailability(productOptionQuantityMap, orderSalesItems);
-        return orderSalesItems;
-    }
+			List<Sales> salesForOption = salesList.stream()
+				.filter(sales -> sales.getProductOptionId().equals(productOptionId))
+				.collect(Collectors.toList());
 
-    public void validateSales(Long salesId, int quantity) {
-        Sales sales = salesRepository.findById(salesId).orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND, "해당 판매 상품을 찾을 수 없습니다."));
-        if (sales.getStock() < quantity) {
-            throw new BusinessException(CommonErrorCode.INVALID_REQUEST, "남은 재고가 없습니다.");
-        }
-        if (sales.getSalesStatus() != SalesStatus.ON_SALE) {
-            throw new BusinessException(CommonErrorCode.INVALID_REQUEST, "판매 중인 상품이 없습니다.");
-        }
-    }
+			for (Sales sales : salesForOption) {
+				if(quantity <= 0) break;
 
-    public void validatePurchasable(List<OrderItemLine> itemLines) {
-        List<Long> salesIds = itemLines.stream()
-                .map(OrderItemLine::salesId)
-                .distinct()
-                .collect(Collectors.toList());
+				int quantityForOption = Math.min(quantity, sales.getStock());
 
-        List<Sales> salesList = salesRepository.findAllById(salesIds);
+				salesQuantityMap.put(sales, quantityForOption);
+				quantity -= quantityForOption;
+			}
+		}
+		List<OrderSalesItem> orderSalesItems = OrderSalesItem.of(salesQuantityMap);
+		validateSalesAvailability(productOptionQuantityMap, orderSalesItems);
+		return orderSalesItems;
+	}
 
-        Map<Long, Sales> salesMap = salesList.stream()
-                .collect(Collectors.toMap(Sales::getId, Function.identity()));
+	public void validateSales(Long salesId, int quantity) {
+		Sales sales = salesRepository.findById(salesId).orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND, "해당 판매 상품을 찾을 수 없습니다."));
+		if (sales.getStock() < quantity) {
+			throw new BusinessException(CommonErrorCode.INVALID_REQUEST, "남은 재고가 없습니다.");
+		}
+		if (sales.getSalesStatus() != SalesStatus.ON_SALE){
+			throw new BusinessException(CommonErrorCode.INVALID_REQUEST, "판매 중인 상품이 없습니다.");
+		}
+	}
 
-        for (OrderItemLine itemLine : itemLines) {
-            Sales sales = salesMap.get(itemLine.salesId());
-            if (sales == null) {
-                throw new BusinessException(OrderErrorCode.PRODUCT_NOT_FOUND);
-            }
-            sales.validatePurchasable(itemLine.quantity());
-        }
-    }
+	public void validatePurchasable(List<OrderItemLine> itemLines) {
+		 List<Long> salesIds = itemLines.stream()
+			 .map(OrderItemLine::salesId)
+			 .distinct()
+			 .collect(Collectors.toList());
 
-    @Transactional
-    public void reserveSales(List<OrderItemResponse> orderItems) {
-        orderItems.forEach(item -> {
-            Sales sales = salesRepository.findById(item.saleId()).orElseThrow();
-            sales.updateSalesStatus(SalesStatus.PENDING);
-        });
-    }
+		 List<Sales> salesList = salesRepository.findAllById(salesIds);
 
-    @Transactional
-    public void cancelSales(List<OrderItemResponse> orderItems) {
-        orderItems.forEach(item -> {
-            Sales sales = salesRepository.findById(item.saleId()).orElseThrow();
-            sales.updateSalesStatus(SalesStatus.ON_SALE);
-        });
-    }
+		 Map<Long, Sales> salesMap = salesList.stream()
+			 .collect(Collectors.toMap(Sales::getId, Function.identity()));
 
-    @Transactional
-    public void confirmSales(List<OrderItemResponse> orderItems) {
-        orderItems.forEach(item -> {
-            Sales sales = salesRepository.findById(item.saleId()).orElseThrow();
-            sales.updateSalesStatus(SalesStatus.CONFIRMED);
-            sales.updateStock(sales.getStock() - item.orderItemQuantity());
-            sales.updateSoldPrice(item.orderItemPrice());
-        });
-    }
+		 for (OrderItemLine itemLine : itemLines) {
+			 Sales sales = salesMap.get(itemLine.salesId());
+			 if (sales == null) {
+				 throw new BusinessException(OrderErrorCode.PRODUCT_NOT_FOUND);
+			 }
+			 sales.validatePurchasable(itemLine.quantity());
+		 }
+	}
 
-    private void validateSalesAvailability(Map<Long, Integer> productOptionQuantityMap, List<OrderSalesItem> cheapestSales) {
+	@Transactional
+	public void reserveSales(List<OrderItemResponse> orderItems) {
+		orderItems.forEach(item -> {
+				Sales sales = salesRepository.findById(item.saleId()).orElseThrow();
+				sales.updateSalesStatus(SalesStatus.PENDING);
+			});
+	}
 
-        Map<Long, Integer> salesQuantityByOption = cheapestSales.stream()
-                .collect(Collectors.toMap(
-                        OrderSalesItem::productOptionId,
-                        OrderSalesItem::quantity,
-                        Integer::sum)
-                );
+	@Transactional
+	public void cancelSales(List<OrderItemResponse> orderItems) {
+		orderItems.forEach(item -> {
+				Sales sales = salesRepository.findById(item.saleId()).orElseThrow();
+				sales.updateSalesStatus(SalesStatus.ON_SALE);
+			});
+	}
 
-        productOptionQuantityMap.forEach((optionId, requiredQuantity) -> {
-            int allocatedQuantity = salesQuantityByOption.getOrDefault(optionId, 0);
+	@Transactional
+	public void confirmSales(List<OrderItemResponse> orderItems) {
+		orderItems.forEach(item -> {
+				Sales sales = salesRepository.findById(item.saleId()).orElseThrow();
+				sales.updateSalesStatus(SalesStatus.CONFIRMED);
+				sales.updateStock(sales.getStock() - item.orderItemQuantity());
+				sales.updateSoldPrice(item.orderItemPrice());
+			});
+	}
 
-            if (allocatedQuantity < requiredQuantity) {
-                throw new BusinessException(OrderErrorCode.PRODUCT_OUT_OF_STOCK, "상품 재고가 부족합니다.");
-            }
-        });
-    }
+	private void validateSalesAvailability(Map<Long, Integer> productOptionQuantityMap, List<OrderSalesItem> cheapestSales) {
+
+		Map<Long, Integer> salesQuantityByOption = cheapestSales.stream()
+			.collect(Collectors.toMap(
+				OrderSalesItem::productOptionId,
+				OrderSalesItem::quantity,
+				Integer::sum)
+			);
+
+		productOptionQuantityMap.forEach((optionId, requiredQuantity) -> {
+			int allocatedQuantity = salesQuantityByOption.getOrDefault(optionId, 0);
+
+			if (allocatedQuantity < requiredQuantity) {
+				throw new BusinessException(OrderErrorCode.PRODUCT_OUT_OF_STOCK, "상품 재고가 부족합니다.");
+			}
+		});
+	}
 }

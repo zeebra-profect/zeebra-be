@@ -14,6 +14,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.SequenceGenerator;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -25,8 +26,9 @@ import lombok.NoArgsConstructor;
 public class OrderItem extends BaseEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "order_item_id")
+	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "order_item_seq")
+	@SequenceGenerator(name = "order_item_seq", sequenceName = "order_item_order_item_id_seq", allocationSize = 1000 )
+	@Column(name = "order_item_id")
     private Long id;
 
     @Column(name = "order_id", nullable = false)

@@ -23,7 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 @Hidden
 public class GlobalExceptionHandler {
 
-	@Value("${spring.profiles.active:prod}")
+	@Value("${spring.profiles.active.on-profile:prod}")
 	private String activeProfile;
 
 	@ExceptionHandler({MethodArgumentNotValidException.class, BindException.class})

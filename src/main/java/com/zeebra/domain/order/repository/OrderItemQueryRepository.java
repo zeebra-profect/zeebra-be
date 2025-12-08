@@ -40,50 +40,50 @@ public class OrderItemQueryRepository {
 			return null;
 		}
 
-		List<Tuple> results;
-		try {
-			results = queryFactory
-				.select(
-					sales.id,
-					productOption.id,
-					product.name,
-					product.thumbnail,
-					optionName.name,
-					optionName.value
-				)
-				.from(sales)
-				.join(productOption).on(productOption.id.eq(sales.productOptionId))
-				.join(product).on(product.id.eq(productOption.productId))
-				.leftJoin(optionCombination).on(optionCombination.productOptionId.eq(productOption.id))
-				.leftJoin(optionName).on(optionName.id.eq(optionCombination.optionNameId))
-				.where(sales.id.eq(saleId))
-				.fetch();
-		} catch (Exception e) {
+		Tuple base = queryFactory
+			.select(
+				sales.id,
+				productOption.id,
+				product.name,
+				product.thumbnail
+			)
+			.from(sales)
+			.join(productOption).on(productOption.id.eq(sales.productOptionId))
+			.join(product).on(product.id.eq(productOption.productId))
+			.where(sales.id.eq(saleId))
+			.fetchOne();
+
+		if (base == null) {
 			return null;
 		}
 
-		if (results.isEmpty()) {
-			return null;
-		}
+		Long productOptionId = base.get(productOption.id);
 
-		Tuple first = results.get(0);
-
-		List<OrderOption> options = results.stream()
-				.filter(tuple -> tuple.get(optionName.name) != null)
-				.map(tuple -> OrderOption.of(
-					tuple.get(optionName.name),
-					tuple.get(optionName.value)
-				))
-				.distinct()
-				.collect(Collectors.toList());
+		List<OrderOption> options = queryFactory
+			.select(
+				optionName.name,
+				optionName.value
+			)
+			.from(optionCombination)
+			.join(optionName).on(optionName.id.eq(optionCombination.optionNameId))
+			.where(optionCombination.productOptionId.eq(productOptionId))
+			.fetch()
+			.stream()
+			.filter(tuple -> tuple.get(optionName.name) != null)
+			.map(tuple -> OrderOption.of(
+				tuple.get(optionName.name),
+				tuple.get(optionName.value)
+			))
+			.distinct()
+			.collect(Collectors.toList());
 
 		return new ProductInfo(
-				first.get(sales.id),
-				first.get(productOption.id),
-				first.get(product.name),
-				first.get(product.thumbnail),
-				options
-			);
+			base.get(sales.id),
+			base.get(productOption.id),
+			base.get(product.name),
+			base.get(product.thumbnail),
+			options
+		);
 	}
 
 	public List<OrderItemResponse> findOrderItemsByOrderId(Long orderId) {

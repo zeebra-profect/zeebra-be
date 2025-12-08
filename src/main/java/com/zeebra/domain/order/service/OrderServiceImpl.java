@@ -313,7 +313,7 @@ public class OrderServiceImpl implements OrderService {
 	}
 
 	private OrderItemResponse createAndSaveOrderItem(Long orderId, Long saleId, BigDecimal price, int quantity) {
-		ProductInfo productInfo = findProductInfo(saleId);
+		ProductInfo productInfo = productInfoService.getProductInfoBySalesId(saleId);
 
 		OrderItem orderItem = OrderItem.createOrderItem(
 			orderId,

@@ -16,17 +16,9 @@ import jakarta.persistence.Query;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
-import java.sql.Array;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -65,160 +57,6 @@ public class ProductQueryRepository {
         }
 
         return query.toString();
-    }
-
-    public List<ProductSearchResult> searchWithoutKeyword(List<Long> categoryIds,
-                                               List<Long> brandIds,
-                                               Pageable pageable,
-                                               ProductSort productSort) {
-        return queryFactory
-                .select(Projections.constructor(ProductSearchResult.class,
-                        product.id,
-                        product.brandId,
-                        product.categoryId,
-                        product.name,
-                        product.description,
-                        product.modelNumber,
-                        product.thumbnail,
-                        product.images,
-                        product.reviewCount,
-                        product.favoriteProductCount,
-                        product.createdTime))
-                .from(product)
-                .where(
-                        findByBrandId(brandIds),
-                        findByCategoryId(categoryIds)
-                )
-                .orderBy(buildOrderSpecifier(productSort))
-                .offset(pageable.getOffset())
-                .limit(pageable.getPageSize())
-                .fetch();
-    }
-
-    public List<Brand> filteredBrandWithoutKeyword(List<Long> categoryIds,
-                                                   List<Long> brandIds) {
-
-        if (categoryIds != null && !categoryIds.isEmpty()) {
-            return queryFactory
-                    .selectDistinct(brand)
-                    .from(product)
-                    .join(brand).on(brand.id.eq(product.brandId))
-                    .where(
-                            product.categoryId.in(categoryIds),
-                            brandIds != null && !brandIds.isEmpty() ?
-                                    brand.id.in(brandIds) : null
-                    )
-                    .fetch();
-        }
-
-        return queryFactory
-                .selectDistinct(brand)
-                .from(brand)
-                .where(brandIds != null && !brandIds.isEmpty() ?
-                        brand.id.in(brandIds) : null)
-                .fetch();
-    }
-
-    public List<Brand> filteredBrand(String keyword,
-                                     List<Long> categoryIds,
-                                     List<Long> brandIds) {
-        String processedQuery = preprocessKeyword(keyword);
-
-        String sql = """
-                WITH filtered AS (
-                    SELECT DISTINCT psd.brand_id
-                    FROM product_search_document psd
-                    WHERE psd.search_vector @@ to_tsquery('simple', :query || ':*')
-                      AND ts_rank(psd.search_vector, to_tsquery('simple', :query || ':*')) >= 0.3
-                      %s
-                      %s
-                    ORDER BY 
-                        ts_rank(psd.search_vector, to_tsquery('simple', :query || ':*')) DESC,
-                        psd.product_id DESC
-                    LIMIT 1000
-                )
-                SELECT b.*
-                FROM filtered f
-                INNER JOIN brand b ON b.id = f.brand_id
-                ORDER BY b.id
-                """.formatted(
-                categoryIds != null && !categoryIds.isEmpty() ? "AND psd.category_id = ANY(:categoryIds)" : "",
-                brandIds != null && !brandIds.isEmpty() ? "AND psd.brand_id = ANY(:brandIds)" : ""
-        );
-
-        Query query = em.createNativeQuery(sql, Brand.class);
-        query.setParameter("query", processedQuery);
-
-        if (categoryIds != null && !categoryIds.isEmpty()) {
-            query.setParameter("categoryIds", categoryIds);
-        }
-        if (brandIds != null && !brandIds.isEmpty()) {
-            query.setParameter("brandIds", brandIds);
-        }
-
-        return query.getResultList();
-    }
-
-    public List<Category> filteredCategoryWithoutKeyword(List<Long> categoryIds,
-                                                         List<Long> brandIds) {
-        if (brandIds != null && !brandIds.isEmpty()) {
-            return queryFactory
-                    .selectDistinct(category)
-                    .from(product)
-                    .join(category).on(category.id.eq(product.categoryId))
-                    .where(
-                            product.brandId.in(brandIds),
-                            categoryIds != null && !categoryIds.isEmpty() ?
-                                    category.id.in(categoryIds) : null
-                    )
-                    .fetch();
-        }
-        return queryFactory
-                .selectDistinct(category)
-                .from(category)
-                .where(categoryIds != null && !categoryIds.isEmpty() ?
-                        category.id.in(categoryIds) : null)
-                .fetch();
-    }
-
-    public List<Category> filteredCategory(String keyword,
-                                           List<Long> categoryIds,
-                                           List<Long> brandIds) {
-        String processedQuery = preprocessKeyword(keyword);
-
-        String sql = """
-                WITH filtered AS (
-                    SELECT DISTINCT psd.category_id
-                    FROM product_search_document psd
-                    WHERE psd.search_vector @@ to_tsquery('simple', :query || ':*')
-                      AND ts_rank(psd.search_vector, to_tsquery('simple', :query || ':*')) >= 0.3
-                      %s
-                      %s
-                    ORDER BY 
-                        ts_rank(psd.search_vector, to_tsquery('simple', :query || ':*')) DESC,
-                        psd.product_id DESC
-                    LIMIT 1000
-                )
-                SELECT c.*
-                FROM filtered f
-                INNER JOIN category c ON c.id = f.category_id
-                ORDER BY c.id
-                """.formatted(
-                categoryIds != null && !categoryIds.isEmpty() ? "AND psd.category_id = ANY(:categoryIds)" : "",
-                brandIds != null && !brandIds.isEmpty() ? "AND psd.brand_id = ANY(:brandIds)" : ""
-        );
-
-        Query query = em.createNativeQuery(sql.toString(), Category.class);
-        query.setParameter("query", processedQuery);
-
-        if (categoryIds != null && !categoryIds.isEmpty()) {
-            query.setParameter("categoryIds", categoryIds);
-        }
-        if (brandIds != null && !brandIds.isEmpty()) {
-            query.setParameter("brandIds", brandIds);
-        }
-
-        return query.getResultList();
     }
 
     public Map<Long, BigDecimal> lowPriceOfProductList(List<Long> productIds) {
@@ -281,35 +119,5 @@ public class ProductQueryRepository {
                 .where(favoriteProduct.memberId.eq(memberId))
                 .fetchOne();
         return count != null ? count : 0L;
-    }
-
-
-    private BooleanExpression findByCategoryId(List<Long> categoryIds) {
-        if (categoryIds == null || categoryIds.isEmpty()) return null;
-        return product.categoryId.in(categoryIds);
-    }
-
-    private BooleanExpression findByBrandId(List<Long> brandIds) {
-        if (brandIds == null || brandIds.isEmpty()) return null;
-        return product.brandId.in(brandIds);
-    }
-
-    private OrderSpecifier<?>[] buildOrderSpecifier(ProductSort productSort) {
-        List<OrderSpecifier<?>> orderSpecifiers = new ArrayList<>();
-
-        if (productSort != null) {
-            switch (productSort) {
-                case REVIEW_COUNT_LEAST:
-                    orderSpecifiers.add(product.reviewCount.asc());
-                    break;
-                case REVIEW_COUNT_MOST:
-                    orderSpecifiers.add(product.reviewCount.desc());
-                    break;
-            }
-        }
-
-        orderSpecifiers.add(product.id.desc());
-
-        return orderSpecifiers.toArray(OrderSpecifier[]::new);
     }
 }

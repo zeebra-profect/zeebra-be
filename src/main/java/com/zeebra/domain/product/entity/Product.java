@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -32,6 +33,8 @@ public class Product extends BaseEntity {
     private String description;
 
     private String modelNumber;
+
+    private BigDecimal minPrice;
 
     private String thumbnail;
 
@@ -84,5 +87,9 @@ public class Product extends BaseEntity {
             );
         }
         favoriteProductCount--;
+    }
+
+    public void updateMinPrice(BigDecimal minPrice) {
+        this.minPrice = minPrice;
     }
 }

@@ -11,7 +11,23 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "ChatRoom")
+@Table(
+        name = "ChatRoom",
+        uniqueConstraints = {
+                //Group: productId + chatRoomType
+            @UniqueConstraint(
+                    name = "uk_chat_room_group_product",
+                    columnNames = {"product_id", "chat_room_type"}
+                ),
+                // DM: saleId + dmPairKey + DM
+            @UniqueConstraint(
+                    name = "uk_chat_room_dm_sale_pair_key",
+                    columnNames = {"sale_id", "dm_pair_key", "chat_room_type"}
+            )
+
+        }
+
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ChatRoom extends BaseEntity {
@@ -34,7 +50,7 @@ public class ChatRoom extends BaseEntity {
     @Column(name = "chat_room_type", nullable = false)
     private ChatRoomType chatRoomType;
 
-    @Column(name = "dm_pair_key", unique = true)
+    @Column(name = "dm_pair_key")
     private String dmPairKey;
 
     @Column(name = "last_message_id")

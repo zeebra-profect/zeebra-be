@@ -6,6 +6,7 @@ import com.zeebra.domain.chat.service.ChatService;
 import com.zeebra.global.security.jwt.JwtProvider;
 import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cglib.core.Local;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -16,6 +17,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 
 import java.security.Principal;
 import java.time.Duration;
+import java.time.LocalDateTime;
 
 
 @Slf4j
@@ -79,14 +81,31 @@ public class ChatSocketController {
                     (JwtProvider.JwtUserPrincipal) auth.getPrincipal();
 
             Long currentMemberId = userPrincipal.getMemberId();
-            System.out.println("currentMemId : " + currentMemberId);
-            log.info(" [WebSocket] 메시지 수신: (Room: {}, User: {})",
-                    requestDto.getChatRoomId(), currentMemberId);
-            ChatMessageResponseDto savedMessage = chatService.saveMessage(requestDto, currentMemberId);
 
-            messagingTemplate.convertAndSend(
-                    "/sub/chat/room/" + savedMessage.roomId(),
-                    savedMessage);
+            String currentMemberNickname = userPrincipal.getMemberNickname();
+
+            System.out.println("currentMemId : " + currentMemberId);
+            log.info(" [WebSocket] 메시지 수신: (Room: {}, User: {})", requestDto.getChatRoomId(), currentMemberId);
+
+            ChatMessageResponseDto savedMessage = new ChatMessageResponseDto(
+                    null,
+                    requestDto.getChatRoomId(),
+                    currentMemberId,
+                    currentMemberNickname,
+                    null,
+                    requestDto.getMessageType(),
+                    requestDto.getContent(),
+                    requestDto.getImageUrl(),
+                    LocalDateTime.now()
+            );
+
+            String destination = "/topic/chat.room." + savedMessage.roomId();
+
+            //TODO: send 보내는게 락이 걸려서? 느릴수도있나?
+            messagingTemplate.convertAndSend(destination, savedMessage);
+
+            chatService.saveMessageAsync(requestDto, currentMemberId); // 저장 비동기 처리
+//            chatService.saveMessage(requestDto, currentMemberId); // 쿼리 dsl 테스트용 삭제하기
 
             isSuccess = true;
             log.info("[WebSocket] 메시지 전송 성공: (Room: {})", savedMessage.roomId());
@@ -97,7 +116,8 @@ public class ChatSocketController {
             errorCounter.increment();
 
         } finally {
-            if (isSuccess) {messageCounter.increment();}
+            if (isSuccess) {messageCounter.increment();
+            }
             sample.stop(messageTimer); // 처리 시간 기록
         }
     }

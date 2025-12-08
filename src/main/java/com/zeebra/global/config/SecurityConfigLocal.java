@@ -53,7 +53,7 @@ public class SecurityConfigLocal {
                         .requestMatchers("/ws/**").permitAll()  // WebSocket 허용
                         .requestMatchers("/api/notification/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**", "/api/products/suggestions/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
 
                         .requestMatchers("/ws/chat/**").permitAll()
@@ -61,7 +61,6 @@ public class SecurityConfigLocal {
                         .requestMatchers("/actuator/**").permitAll() // 프로메테우스
 
                         .requestMatchers("/api/chat/dm/**").authenticated()
-
                         .anyRequest().authenticated()
                 )
                 // ⭐ CSRF 완전 비활성화 (로컬 개발 환경)

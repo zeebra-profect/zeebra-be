@@ -1,19 +1,15 @@
 package com.zeebra.domain.product.dto;
 
-import com.zeebra.domain.brand.dto.BrandResponse;
-import com.zeebra.domain.brand.entity.Brand;
-import com.zeebra.domain.category.dto.CategoryResponse;
-import com.zeebra.domain.category.dto.CategorySearchResponse;
-
 import java.util.List;
 
 public record SearchProductResponse(
-        List<GetProductDetailResponse> productDetailResponses,
+        List<ProductSearchItem> products,
         SearchProductPagination pagination
 ) {
-    public static SearchProductResponse from(List<GetProductDetailResponse> productDetailResponseList,
-                                             SearchProductPagination pagination) {
-        return new SearchProductResponse(productDetailResponseList,
-                pagination);
+    public static SearchProductResponse of(
+            List<ProductSearchItem> products,
+            SearchProductPagination pagination
+    ) {
+        return new SearchProductResponse(products, pagination);
     }
 }

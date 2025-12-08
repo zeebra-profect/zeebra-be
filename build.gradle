@@ -102,6 +102,29 @@ dependencies {
     //kafka
 //    implementation 'org.springframework.kafka:spring-kafka'
 //    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    // ElasticSearch
+// ✅ OpenSearch 3.x용 최신 클라이언트
+    implementation 'org.opensearch.client:opensearch-java:3.0.0'
+    implementation 'org.opensearch.client:opensearch-rest-client:3.0.0'
+
+    //RabbitMQ AMQP
+    implementation 'org.springframework.boot:spring-boot-starter-amqp'
+    // STOMP Broker Relay에 필요한 Reactor Netty HTTP 클라이언트
+    implementation 'org.springframework.boot:spring-boot-starter-reactor-netty'
+
+    // (선택) Mac DNS warning 없애고 싶으면 – 버전은 Netty에 맞춰 조정
+    // runtimeOnly 'io.netty:netty-resolver-dns-native-macos:4.1.72.Final:osx-aarch_64'
+
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.19.2'
+
+// Jackson core (대부분 이미 있지만 명확히 추가)
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.19.2'
+
+// Spring Data Elasticsearch (클래스 레벨 @Document/@Field 어노테이션 인식용)
+    implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
+
+// (옵션) 만약 Spring Data OpenSearch를 선호하면 위 라인 대신 아래를 사용 (버전 호환 주의)
+// implementation 'org.opensearch.project:spring-data-opensearch:4.4.0'
 }
 
 tasks.named('test') {

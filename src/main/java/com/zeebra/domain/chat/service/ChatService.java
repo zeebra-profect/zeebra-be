@@ -43,6 +43,13 @@ public interface ChatService {
      */
     void leaveChatRoom(Long chatRoomId, Long currentMemberId);
 
+    /**
+     *
+     * @param chatMessageRequestDto
+     * @param currentMemberId
+     */
+    @Transactional
+    void saveMessageAsync(ChatMessageRequestDto chatMessageRequestDto, Long currentMemberId);
 
     /**
      * 거래 제안

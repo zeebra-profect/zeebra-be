@@ -66,6 +66,7 @@ public class OrderServiceImpl implements OrderService {
 	private final OrderItemQueryRepository orderItemQueryRepository;
 	private final OrderHistoryRepository orderHistoryRepository;
 	private final CartService cartService;
+	private final OrderNumberGenerator orderNumberGenerator;
 	private final SalesService salesService;
 	private final ProductInfoService productInfoService;
 	private final ProductService productService;

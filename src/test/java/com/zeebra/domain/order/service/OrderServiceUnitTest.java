@@ -133,7 +133,7 @@ public class OrderServiceUnitTest {
 		CartItemInfo cartItem = new CartItemInfo(1L, 1L, BigDecimal.valueOf(50000), 1);
 		given(cartService.getCartItemsByCartId(cartId, memberId)).willReturn(List.of(cartItem));
 
-		OrderSalesItem salesItem = OrderSalesItem.of(new Sales(1L, cartItem.productOptionId(), BigDecimal.valueOf(50000), 1, SalesStatus.ON_SALE));
+		OrderSalesItem salesItem = OrderSalesItem.of(new Sales(1L, cartItem.productOptionId(), BigDecimal.valueOf(50000), 1, SalesStatus.ON_SALE), 1);
 		given(salesService.selectCheapestValidSales(anyMap())).willReturn(List.of(salesItem));
 
 		given(orderRepository.save(any(Order.class)))
@@ -167,7 +167,7 @@ public class OrderServiceUnitTest {
 		String clientRequestId = "idem-key-001";
 		CreateOrderRequest request = CreateOrderRequest.fromDirect(clientRequestId, productOptionId);
 		given(orderRepository.findByIdempotencyKey(clientRequestId)).willReturn(Optional.empty());
-		OrderSalesItem salesItem = OrderSalesItem.of(new Sales(1L, productOptionId, BigDecimal.valueOf(50000),1, SalesStatus.ON_SALE));
+		OrderSalesItem salesItem = OrderSalesItem.of(new Sales(1L, productOptionId, BigDecimal.valueOf(50000),1, SalesStatus.ON_SALE), 1);
 		given(salesService.findCheapestSalesByProductOptionId(productOptionId)).willReturn(salesItem);
 
 		given(orderRepository.save(any(Order.class)))

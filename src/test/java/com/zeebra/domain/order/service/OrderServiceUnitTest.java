@@ -36,6 +36,7 @@ import com.zeebra.domain.order.entity.OrderItem;
 import com.zeebra.domain.order.entity.OrderItemStatus;
 import com.zeebra.domain.order.entity.OrderStatus;
 import com.zeebra.domain.order.entity.OrderType;
+import com.zeebra.domain.order.generator.OrderNumberGenerator;
 import com.zeebra.domain.order.repository.OrderHistoryRepository;
 import com.zeebra.domain.order.repository.OrderItemQueryRepository;
 import com.zeebra.domain.order.repository.OrderItemRepository;
@@ -64,11 +65,13 @@ public class OrderServiceUnitTest {
 	@Mock
 	private OrderHistoryRepository orderHistoryRepository;
 	@Mock
+	private ProductService productService;
+	@Mock
 	private SalesService salesService;
 	@Mock
 	private CartService cartService;
 	@Mock
-	private ProductService productService;
+	private OrderNumberGenerator orderNumberGenerator;
 	@Mock
 	private ProductInfoService productInfoService;
 	@InjectMocks
@@ -200,9 +203,12 @@ public class OrderServiceUnitTest {
 		String clientRequestId = "idem-key-001";
 		Long tradeId = 1L;
 		Long salesId = 1L;
+		String orderNumber = "20210901-000001";
 		SalesItem salesItem = SalesItem.of(tradeId, salesId, 1, BigDecimal.valueOf(50000));
 		CreateOrderRequest request = CreateOrderRequest.fromSalesItem(clientRequestId, salesItem);
 		given(orderRepository.findByIdempotencyKey(clientRequestId)).willReturn(Optional.empty());
+
+		given(orderNumberGenerator.generate(any(LocalDateTime.class))).willReturn(orderNumber);
 
 		given(orderRepository.save(any(Order.class)))
 			.willAnswer(invocation -> invocation.getArgument(0));
@@ -341,6 +347,7 @@ public class OrderServiceUnitTest {
 
 		CreateOrderRequest request = CreateOrderRequest.fromDirect(clientRequestId, productOptionId);
 		given(orderRepository.findByIdempotencyKey(clientRequestId)).willReturn(Optional.empty());
+		doNothing().when(productService).validateProductOptionId(productOptionId);
 		given(salesService.findCheapestSalesByProductOptionId(productOptionId))
 			.willThrow(new BusinessException(OrderErrorCode.PRODUCT_NOT_FOUND));
 

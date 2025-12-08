@@ -21,6 +21,11 @@ spring:
       port: 6379
       password: 1234
 
+  opensearch:
+    uris: http://localhost:9200
+    username: admin
+    password: admin
+
   jpa:
     hibernate:
       ddl-auto: create-drop  # 테스트마다 스키마 재생성
@@ -73,3 +78,11 @@ vapid:
   private.key: t4LDNFeIXhuonUykBoJMSJBhKBGIe873T340l51FFIY
   subject: mailto:bbyubbu@naver.com
 
+chat:
+  stomp:
+    relay-host: localhost
+    relay-port: 61613
+    system-username: guest
+    system-password: guest
+    client-username: guest
+    client-password: guest

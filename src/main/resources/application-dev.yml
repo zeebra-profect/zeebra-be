@@ -75,7 +75,7 @@ management:
 chat:
   stomp:
     relay-host: ${RABBITMQ_HOSTNAME}
-    relay-port: ${RELAY_POORT}   # STOMP 포트
+    relay-port: ${RELAY_PORT}   # STOMP 포트
     system-username: ${STOMP_SYSTEM_USERNAME}
     system-password: ${STOMP_SYSTEM_PASSWORD}
     client-username: ${STOMP_CLIENT_USERNAME}

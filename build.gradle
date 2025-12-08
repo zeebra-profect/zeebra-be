@@ -97,6 +97,13 @@ dependencies {
     implementation 'org.opensearch.client:opensearch-java:3.0.0'
     implementation 'org.opensearch.client:opensearch-rest-client:3.0.0'
 
+    //RabbitMQ AMQP
+    implementation 'org.springframework.boot:spring-boot-starter-amqp'
+    // STOMP Broker Relay에 필요한 Reactor Netty HTTP 클라이언트
+    implementation 'org.springframework.boot:spring-boot-starter-reactor-netty'
+
+    // (선택) Mac DNS warning 없애고 싶으면 – 버전은 Netty에 맞춰 조정
+    // runtimeOnly 'io.netty:netty-resolver-dns-native-macos:4.1.72.Final:osx-aarch_64'
 
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.19.2'
 

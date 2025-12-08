@@ -3,7 +3,6 @@ package com.zeebra.domain.order.service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -54,10 +53,6 @@ import lombok.extern.slf4j.Slf4j;
 public class OrderServiceImpl implements OrderService {
 
 	private static final int NO_POINTS_USED = 0;
-	private static final int RANDOM_NUMBER_BOUND = 100000;
-	private static final String ORDER_NUMBER_FORMAT = "%05d";
-	private static final String ORDER_NUMBER_DATE_FORMAT = "yyyyMMdd";
-	private static final String ORDER_NUMBER_TIME_FORMAT = "HHmm";
 	private static final int MAX_IDEMPOTENCY_KEY_LENGTH = 255;
 
 	private final OrderRepository orderRepository;
@@ -330,15 +325,16 @@ public class OrderServiceImpl implements OrderService {
 	private OrderItemResponse createAndSaveOrderItem(Long orderId, Long saleId, BigDecimal price, int quantity) {
 		ProductInfo productInfo = productInfoService.getProductInfoBySalesId(saleId);
 
-		OrderItem orderItem = OrderItem.createOrderItem(
-			orderId,
-			saleId,
-			productInfo.productName(),
-			price,
-			productInfo.productThumbnail(),
-			quantity,
-			price.multiply(BigDecimal.valueOf(quantity))
-		);
+			if (productInfo == null) {
+				throw new BusinessException(OrderErrorCode.PRODUCT_NOT_FOUND);
+			}
+
+			// T7: OrderItem 엔티티 생성
+			OrderItem orderItem = OrderItem.createOrderItem(
+					orderId, saleId, productInfo.productName(), price,
+					productInfo.productThumbnail(), quantity,
+					price.multiply(BigDecimal.valueOf(quantity))
+				);
 
 		OrderItem savedOrderItem = orderItemRepository.save(orderItem);
 

@@ -44,6 +44,7 @@ import com.zeebra.domain.order.repository.OrderRepository;
 import com.zeebra.domain.product.dto.OrderSalesItem;
 import com.zeebra.domain.product.entity.Sales;
 import com.zeebra.domain.product.entity.SalesStatus;
+import com.zeebra.domain.product.service.ProductInfoService;
 import com.zeebra.domain.product.service.ProductService;
 import com.zeebra.domain.product.service.SalesService;
 import com.zeebra.global.ErrorCode.CommonErrorCode;
@@ -68,6 +69,8 @@ public class OrderServiceUnitTest {
 	private CartService cartService;
 	@Mock
 	private ProductService productService;
+	@Mock
+	private ProductInfoService productInfoService;
 	@InjectMocks
 	private OrderServiceImpl orderService;
 
@@ -137,7 +140,7 @@ public class OrderServiceUnitTest {
 			.willAnswer(invocation -> invocation.getArgument(0));
 
 		ProductInfo productInfo = ProductInfo.of(1L, salesItem.productOptionId(), "상품 이름", "thumbnail.jpeg", List.of());
-		given(orderItemQueryRepository.findProductInfoBySaleId(salesItem.salesId())).willReturn(productInfo);
+		given(productInfoService.getProductInfoBySalesId(salesItem.salesId())).willReturn(productInfo);
 		given(orderItemRepository.save(any())).willAnswer(invocation -> invocation.getArgument(0));
 
 		//when
@@ -171,7 +174,7 @@ public class OrderServiceUnitTest {
 			.willAnswer(invocation -> invocation.getArgument(0));
 
 		ProductInfo productInfo = ProductInfo.of(1L, salesItem.productOptionId(), "상품 이름", "thumbnail.jpeg", List.of());
-		given(orderItemQueryRepository.findProductInfoBySaleId(salesItem.salesId())).willReturn(productInfo);
+		given(productInfoService.getProductInfoBySalesId(salesItem.salesId())).willReturn(productInfo);
 		given(orderItemRepository.save(any())).willAnswer(invocation -> invocation.getArgument(0));
 
 		//when
@@ -205,7 +208,7 @@ public class OrderServiceUnitTest {
 			.willAnswer(invocation -> invocation.getArgument(0));
 
 		ProductInfo productInfo = ProductInfo.of(1L, 1L, "상품 이름", "thumbnail.jpeg", List.of());
-		given(orderItemQueryRepository.findProductInfoBySaleId(salesItem.salesId())).willReturn(productInfo);
+		given(productInfoService.getProductInfoBySalesId(salesItem.salesId())).willReturn(productInfo);
 		given(orderItemRepository.save(any())).willAnswer(invocation -> invocation.getArgument(0));
 
 		//when

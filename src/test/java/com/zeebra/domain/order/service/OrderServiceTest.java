@@ -27,6 +27,7 @@ import com.zeebra.domain.order.dto.CreateOrderResponse;
 import com.zeebra.domain.order.dto.OrderInfo;
 import com.zeebra.domain.order.dto.OrderItemResponse;
 import com.zeebra.domain.order.dto.OrderResponse;
+import com.zeebra.domain.order.dto.ProductInfo;
 import com.zeebra.domain.order.dto.ReadOrderListResponse;
 import com.zeebra.domain.order.dto.SalesItem;
 import com.zeebra.domain.order.entity.Order;
@@ -43,12 +44,16 @@ import com.zeebra.domain.product.entity.SalesStatus;
 import com.zeebra.domain.product.repository.ProductOptionRepository;
 import com.zeebra.domain.product.repository.ProductRepository;
 import com.zeebra.domain.product.repository.SalesRepository;
+import com.zeebra.domain.product.service.ProductInfoService;
 import com.zeebra.global.ErrorCode.CommonErrorCode;
 import com.zeebra.global.exception.BusinessException;
 
 @ActiveProfiles("test")
 @SpringBootTest
 public class OrderServiceTest {
+
+	@MockitoBean
+	private ProductInfoService productInfoService;
 
 	@Autowired
 	private ProductRepository productRepository;
@@ -102,6 +107,17 @@ public class OrderServiceTest {
 		return cartItemRepository.save(new CartItem(cartId, productOptionId, price, quantity));
 	}
 
+	private void mockProductInfoService(Sales sales, ProductOption productOption, Product product) {
+		ProductInfo mockProductInfo = ProductInfo.of(
+			sales.getId(),
+			productOption.getId(),
+			product.getName(),
+			product.getThumbnail(),
+			List.of()
+		);
+		given(productInfoService.getProductInfoBySalesId(anyLong())).willReturn(mockProductInfo);
+	}
+
 	@DisplayName("장바구니 번호를 받아 장바구니 주문을 생성합니다.")
 	@Test
 	void createOrderByCartId(){
@@ -113,6 +129,8 @@ public class OrderServiceTest {
 		Cart cart = createCart(1L);
 		createCartItem(cart.getId(), productOption.getId(), BigDecimal.valueOf(60000), 1);
 		CreateOrderRequest request = CreateOrderRequest.fromCart("idem-key-001", cart.getId());
+
+		mockProductInfoService(sales, productOption, product);
 
 		//when
 		CreateOrderResponse response = orderService.createOrder(1L, request);
@@ -141,7 +159,7 @@ public class OrderServiceTest {
 		ProductOption productOption = createProductOption(product.getId());
 		Sales sales = createSales(productOption.getId(), BigDecimal.valueOf(60000), 1, SalesStatus.ON_SALE);
 		CreateOrderRequest request = CreateOrderRequest.fromDirect("idem-key-001", productOption.getId());
-
+		mockProductInfoService(sales, productOption, product);
 		//when
 		CreateOrderResponse response = orderService.createOrder(1L, request);
 
@@ -171,7 +189,7 @@ public class OrderServiceTest {
 		Trade trade = Trade.builder().chatRoom(ChatRoom.builder().saleId(sales.getId()).chatRoomType(ChatRoomType.DM).build()).price(BigDecimal.valueOf(50000)).build();
 		SalesItem salesItem = SalesItem.of(trade.getId(), sales.getId(), 1, BigDecimal.valueOf(50000));
 		CreateOrderRequest request = CreateOrderRequest.fromSalesItem("idem-key-001", salesItem);
-
+		mockProductInfoService(sales, productOption, product);
 		//when
 		CreateOrderResponse response = orderService.createOrder(1L, request);
 
@@ -201,7 +219,7 @@ public class OrderServiceTest {
 		Cart cart = createCart(1L);
 		createCartItem(cart.getId(), productOption.getId(), BigDecimal.valueOf(60000), 1);
 		CreateOrderRequest request = CreateOrderRequest.fromCart("idem-key-001", cart.getId());
-
+		mockProductInfoService(sales, productOption, product);
 		//when
 		CreateOrderResponse first = orderService.createOrder(1L, request);
 		Long orderCountAfterFirst = orderRepository.count();
@@ -347,6 +365,8 @@ public class OrderServiceTest {
 		String clientRequestId = "idem-key-001";
 		CreateOrderRequest request = CreateOrderRequest.fromCart(clientRequestId, cart.getId());
 
+		mockProductInfoService(sales, productOption, product);
+
 		CreateOrderResponse createOrderResponse = orderService.createOrder(memberId, request);
 		Long orderId = createOrderResponse.order().orderId();
 
@@ -379,6 +399,8 @@ public class OrderServiceTest {
 		String clientRequestId = "idem-key-001";
 		CreateOrderRequest request = CreateOrderRequest.fromCart(clientRequestId, cart.getId());
 
+		mockProductInfoService(sales, productOption, product);
+
 		CreateOrderResponse createOrderResponse = orderService.createOrder(1L, request);
 		Long orderId = createOrderResponse.order().orderId();
 
@@ -401,6 +423,8 @@ public class OrderServiceTest {
 
 		String clientRequestId = "idem-key-001";
 		CreateOrderRequest request = CreateOrderRequest.fromCart(clientRequestId, cart.getId());
+
+		mockProductInfoService(sales, productOption, product);
 
 		CreateOrderResponse createOrderResponse = orderService.createOrder(1L, request);
 		Long orderId = createOrderResponse.order().orderId();
@@ -449,6 +473,8 @@ public class OrderServiceTest {
 		CreateOrderRequest request1 = CreateOrderRequest.fromCart("idem-key-001", cart.getId());
 		CreateOrderRequest request2 = CreateOrderRequest.fromSalesItem("idem-key-002", salesItem);
 		CreateOrderRequest request3 = CreateOrderRequest.fromDirect("idem-key-003", productOption.getId());
+
+		mockProductInfoService(sales, productOption, product);
 
 		CreateOrderResponse createdOrder1 = orderService.createOrder(1L, request1);
 		CreateOrderResponse createdOrder2 = orderService.createOrder(1L, request2);
@@ -506,6 +532,8 @@ public class OrderServiceTest {
 		createCartItem(cart.getId(), productOption.getId(), BigDecimal.valueOf(60000), 1);
 		CreateOrderRequest request = CreateOrderRequest.fromCart("idem-key-001", cart.getId());
 
+		mockProductInfoService(sales, productOption, product);
+
 		CreateOrderResponse created = orderService.createOrder(1L, request);
 
 		Long orderId = created.order().orderId();
@@ -529,6 +557,7 @@ public class OrderServiceTest {
 		Cart cart = createCart(1L);
 		createCartItem(cart.getId(), productOption.getId(), BigDecimal.valueOf(60000), 1);
 		CreateOrderRequest request = CreateOrderRequest.fromCart("idem-key-001", cart.getId());
+		mockProductInfoService(sales, productOption, product);
 		CreateOrderResponse created = orderService.createOrder(1L, request);
 
 		String clientRequestId = "idem-key-002";
@@ -557,6 +586,7 @@ public class OrderServiceTest {
 		String clientRequestId = "idem-key-001";
 		CreateOrderRequest request = CreateOrderRequest.fromCart(clientRequestId, cart.getId());
 
+		mockProductInfoService(sales, productOption, product);
 		CreateOrderResponse created = orderService.createOrder(1L, request);
 		Long orderId = created.order().orderId();
 
@@ -575,6 +605,7 @@ public class OrderServiceTest {
 		Cart cart = createCart(1L);
 		createCartItem(cart.getId(), productOption.getId(), BigDecimal.valueOf(60000), 1);
 		CreateOrderRequest request = CreateOrderRequest.fromCart("idem-key-001", cart.getId());
+		mockProductInfoService(sales, productOption, product);
 		CreateOrderResponse created = orderService.createOrder(1L, request);
 		Long orderId = created.order().orderId();
 
@@ -599,6 +630,7 @@ public class OrderServiceTest {
 		Cart cart = createCart(1L);
 		createCartItem(cart.getId(), productOption.getId(), BigDecimal.valueOf(60000), 1);
 		CreateOrderRequest request = CreateOrderRequest.fromCart("idem-key-001", cart.getId());
+		mockProductInfoService(sales, productOption, product);
 		CreateOrderResponse created = orderService.createOrder(1L, request);
 		Long orderId = created.order().orderId();
 		Long orderItemId = created.order().orderItems().get(0).orderItemId();

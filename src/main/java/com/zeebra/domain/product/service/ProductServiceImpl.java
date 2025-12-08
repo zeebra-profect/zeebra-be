@@ -1,21 +1,23 @@
 package com.zeebra.domain.product.service;
 
-import co.elastic.clients.elasticsearch._types.FieldValue;
-import co.elastic.clients.elasticsearch._types.aggregations.*;
-import co.elastic.clients.elasticsearch._types.query_dsl.*;
+
 import com.zeebra.domain.brand.dto.BrandResponse;
-import com.zeebra.domain.category.dto.CategoryResponse;
 import com.zeebra.domain.product.search.ProductSearchHelper;
 import com.zeebra.domain.product.search.ProductSearchQueryBuilder;
+import org.opensearch.client.opensearch.OpenSearchClient;
+import org.opensearch.client.opensearch._types.SortOptions;
+import org.opensearch.client.opensearch._types.SortOrder;
+import org.opensearch.client.opensearch._types.aggregations.Aggregation;
+import org.opensearch.client.opensearch._types.aggregations.CompositeAggregationSource;
+import org.opensearch.client.opensearch._types.query_dsl.MultiMatchQuery;
+import org.opensearch.client.opensearch._types.query_dsl.Query;
+import org.opensearch.client.opensearch._types.query_dsl.TextQueryType;
+import org.opensearch.client.opensearch.core.SearchResponse;
+import org.opensearch.client.opensearch.core.search.Highlight;
+import org.opensearch.client.opensearch.core.search.Hit;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.elasticsearch.client.elc.ElasticsearchAggregations;
-import org.springframework.data.elasticsearch.client.elc.NativeQuery;
-import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
-import org.springframework.data.elasticsearch.core.SearchHit;
-import org.springframework.data.elasticsearch.core.SearchHits;
-import org.springframework.data.elasticsearch.core.query.FetchSourceFilterBuilder;
-import org.springframework.data.elasticsearch.core.query.HighlightQuery;
+
 import org.springframework.stereotype.Service;
 import com.zeebra.domain.member.entity.Member;
 import com.zeebra.domain.member.repository.MemberRepository;
@@ -30,9 +32,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Transactional(readOnly = true)
 @Service
@@ -48,9 +50,9 @@ public class ProductServiceImpl implements ProductService {
     private final OptionNameRepository optionNameRepository;
     private final MemberService memberService;
     private final ProductOptionRepository productOptionRepository;
-    private final ElasticsearchOperations elasticsearchOperations;
     private final ProductSearchQueryBuilder queryBuilder;
     private final ProductSearchHelper searchHelper;
+    private final OpenSearchClient openSearchClient;
 
     @Override
     public ApiResponse<ProductDetailResponse> getProductDetail(Long productId, Long colorOptionNameId) {
@@ -158,7 +160,10 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public ApiResponse<SuggestionListResponse> getSuggestions(String searchWord) {
-        Query multiMatchQuery = MultiMatchQuery.of(m -> m.query(searchWord)
+
+        Query multiMatchQuery = Query.of(q -> q
+                .multiMatch(m -> m
+                        .query(searchWord)
                         .type(TextQueryType.BoolPrefix)
                         .fields(
                                 "product_name",
@@ -166,23 +171,33 @@ public class ProductServiceImpl implements ProductService {
                                 "product_name.ngram",
                                 "brand_name",
                                 "category_name"
-                        ))
-                ._toQuery();
+                        )
+                )
+        );
 
-        NativeQuery nativeQuery = NativeQuery.builder()
-                .withQuery(multiMatchQuery)
-                .withPageable(PageRequest.of(0, 5))
-                .build();
+        // 2. OpenSearch 검색 실행 (Native Client 사용)
+        SearchResponse<ProductDocument> searchResponse = null;
+        try {
+            searchResponse = openSearchClient.search(s -> s
+                            .index("products")  // 인덱스 이름
+                            .query(multiMatchQuery)
+                            .from(0)
+                            .size(5)
+                    , ProductDocument.class
+            );
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
-        SearchHits<ProductDocument> searchHits = elasticsearchOperations.search(nativeQuery, ProductDocument.class);
-
-        List<String> suggestions = searchHits.getSearchHits().stream()
+        // 3. 결과 변환
+        List<String> suggestions = searchResponse.hits().hits().stream()
                 .map(hit -> {
-                    ProductDocument productDocument = hit.getContent();
+                    ProductDocument productDocument = hit.source();
                     return productDocument.getProductName();
                 })
                 .toList();
 
+        // 4. Response 생성
         SuggestionListResponse suggestionListResponse = new SuggestionListResponse(suggestions);
 
         return ApiResponse.success(suggestionListResponse);
@@ -198,53 +213,62 @@ public class ProductServiceImpl implements ProductService {
             Pageable pageable,
             String productSort
     ) {
-        // 1. Bool Query 생성
+        // 1. Function Score Query 생성
         Query functionScoreQuery = queryBuilder.buildFunctionScoreQuery(
                 keyWord, categoryIds, brandIds, minPrice, maxPrice
         );
 
-        log.info("ES Query: {}", functionScoreQuery);
+        log.info("OpenSearch Query: {}", functionScoreQuery);
 
-        // 정렬값 이넘으로 변경
+        // 2. 정렬값 이넘으로 변경
         ProductSort sort = ProductSort.from(productSort);
 
-        // 2. Highlight 쿼리 생성
-        HighlightQuery highlightQuery = searchHelper.buildHighlightQuery();
+        // 3. Highlight 생성
+        Highlight highlight = searchHelper.buildHighlight();
 
-        // 3. Native Query 생성 (size + 1로 조회)
-        NativeQuery nativeQuery = NativeQuery.builder()
-                .withQuery(functionScoreQuery)
-                .withHighlightQuery(highlightQuery)
-                .withPageable(PageRequest.of(
-                        pageable.getPageNumber(),
-                        pageable.getPageSize() + 1,
-                        searchHelper.buildSort(sort)
-                ))
-                .build();
+        // 4. OpenSearch 검색 실행 (size + 1로 hasNext 계산)
+        SearchResponse<ProductDocument> searchResponse = null;
+        try {
+            searchResponse = openSearchClient.search(s -> s
+                            .index("products")
+                            .query(functionScoreQuery)
+                            .highlight(highlight)
+                            .from(pageable.getPageNumber() * pageable.getPageSize())
+                            .size(pageable.getPageSize() + 1)
+                            .sort(searchHelper.buildSort(sort).stream()
+                                    .map(order -> SortOptions.of(so -> so
+                                            .field(f -> f
+                                                    .field(order.getProperty())
+                                                    .order(order.isAscending() ? SortOrder.Asc : SortOrder.Desc)
+                                            )
+                                    ))
+                                    .toList())
+                    , ProductDocument.class
+            );
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
-        // 4. 검색 실행
-        SearchHits<ProductDocument> searchHits =
-                elasticsearchOperations.search(nativeQuery, ProductDocument.class);
+        // 5. 결과 추출
+        List<Hit<ProductDocument>> hits = searchResponse.hits().hits();
 
-        List<SearchHit<ProductDocument>> hits = searchHits.getSearchHits();
-
-        // 5. hasNext 계산
+        // 6. hasNext 계산
         boolean hasNext = hits.size() > pageable.getPageSize();
-        List<SearchHit<ProductDocument>> resultHits = hasNext ?
+        List<Hit<ProductDocument>> resultHits = hasNext ?
                 hits.subList(0, pageable.getPageSize()) : hits;
 
-        // 6. 결과 변환
+        // 7. 결과 변환
         List<ProductSearchItem> productSearchItems =
                 searchHelper.convertToProductSearchItems(resultHits);
 
-        // 7. Pagination 생성
+        // 8. Pagination 생성
         SearchProductPagination pagination = new SearchProductPagination(
                 pageable.getPageNumber(),
                 pageable.getPageSize(),
                 hasNext
         );
 
-        // 8. Response 생성
+        // 9. Response 생성
         SearchProductResponse response = SearchProductResponse.of(
                 productSearchItems,
                 pagination
@@ -252,7 +276,6 @@ public class ProductServiceImpl implements ProductService {
 
         return ApiResponse.success(response);
     }
-
 
     @Override
     public ApiResponse<SearchBrandListResponse> searchedBrands(
@@ -262,36 +285,38 @@ public class ProductServiceImpl implements ProductService {
             BigDecimal minPrice,
             BigDecimal maxPrice
     ) {
+
         Query functionScoreQuery = queryBuilder.buildFunctionScoreQuery(
                 keyWord, categoryIds, brandIds, minPrice, maxPrice
         );
 
         // Composite Aggregation: brand_id + brand_name을 함께 그룹핑
-        Aggregation brandAggregation = Aggregation.of(a -> a
-                .composite(c -> c
-                        .size(1000)
-                        .sources(List.of(
-                                Map.of("brand_id", CompositeAggregationSource.of(s -> s
-                                        .terms(t -> t.field("brand_id"))
-                                )),
-                                Map.of("brand_name", CompositeAggregationSource.of(s -> s
-                                        .terms(t -> t.field("brand_name.keyword"))
-                                ))
-                        ))
-                )
-        );
+        SearchResponse<ProductDocument> searchResponse = null;
+        try {
+            searchResponse = openSearchClient.search(s -> s
+                            .index("products")
+                            .query(functionScoreQuery)
+                            .size(0)  // 문서는 안 가져옴 (aggregation만 필요)
+                            .aggregations("brand_agg", a -> a
+                                    .composite(c -> c
+                                            .size(1000)
+                                            .sources(List.of(
+                                                    Map.of("brand_id", CompositeAggregationSource.of(cs -> cs
+                                                            .terms(t -> t.field("brand_id"))
+                                                    )),
+                                                    Map.of("brand_name", CompositeAggregationSource.of(cs -> cs
+                                                            .terms(t -> t.field("brand_name.keyword"))
+                                                    ))
+                                            ))
+                                    )
+                            )
+                    , ProductDocument.class
+            );
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
-        NativeQuery nativeQuery = NativeQuery.builder()
-                .withQuery(functionScoreQuery)
-                .withAggregation("brand_agg", brandAggregation)
-                .withMaxResults(0)  // 문서는 안 가져옴 (aggregation만 필요)
-                .withTrackTotalHits(false)
-                .build();
-
-        SearchHits<ProductDocument> searchHits =
-                elasticsearchOperations.search(nativeQuery, ProductDocument.class);
-
-        List<BrandResponse> brandResponses = searchHelper.extractBrandInfoFromComposite(searchHits);
+        List<BrandResponse> brandResponses = searchHelper.extractBrandInfoFromComposite(searchResponse);
 
         return ApiResponse.success(new SearchBrandListResponse(brandResponses));
     }
@@ -304,36 +329,38 @@ public class ProductServiceImpl implements ProductService {
             BigDecimal minPrice,
             BigDecimal maxPrice
     ) {
+
         Query functionScoreQuery = queryBuilder.buildFunctionScoreQuery(
                 keyWord, categoryIds, brandIds, minPrice, maxPrice
         );
 
         // Composite Aggregation: category_id + category_name을 함께 그룹핑
-        Aggregation categoryAggregation = Aggregation.of(a -> a
-                .composite(c -> c
-                        .size(1000)
-                        .sources(List.of(
-                                Map.of("category_id", CompositeAggregationSource.of(s -> s
-                                        .terms(t -> t.field("category_id"))
-                                )),
-                                Map.of("category_name", CompositeAggregationSource.of(s -> s
-                                        .terms(t -> t.field("category_name.keyword"))
-                                ))
-                        ))
-                )
-        );
+        SearchResponse<ProductDocument> searchResponse = null;
+        try {
+            searchResponse = openSearchClient.search(s -> s
+                            .index("products")
+                            .query(functionScoreQuery)
+                            .size(0)  // 문서는 안 가져옴 (aggregation만 필요)
+                            .aggregations("category_agg", a -> a
+                                    .composite(c -> c
+                                            .size(1000)
+                                            .sources(List.of(
+                                                    Map.of("category_id", CompositeAggregationSource.of(cs -> cs
+                                                            .terms(t -> t.field("category_id"))
+                                                    )),
+                                                    Map.of("category_name", CompositeAggregationSource.of(cs -> cs
+                                                            .terms(t -> t.field("category_name.keyword"))
+                                                    ))
+                                            ))
+                                    )
+                            )
+                    , ProductDocument.class
+            );
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
-        NativeQuery nativeQuery = NativeQuery.builder()
-                .withQuery(functionScoreQuery)
-                .withAggregation("category_agg", categoryAggregation)
-                .withMaxResults(0)
-                .withTrackTotalHits(false)
-                .build();
-
-        SearchHits<ProductDocument> searchHits =
-                elasticsearchOperations.search(nativeQuery, ProductDocument.class);
-
-        List<CategoryResponseDto> categoryResponses = searchHelper.extractCategoryInfoFromComposite(searchHits);
+        List<CategoryResponseDto> categoryResponses = searchHelper.extractCategoryInfoFromComposite(searchResponse);
 
         return ApiResponse.success(new SearchCategoryListResponse(categoryResponses));
     }

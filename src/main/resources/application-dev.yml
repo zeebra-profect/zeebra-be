@@ -49,7 +49,17 @@ spring.jpa:
   hibernate.ddl-auto: update
   open-in-view: false
   properties:
-    hibernate.format_sql: true
+    hibernate:
+      dialect: org.hibernate.dialect.PostgreSQLDialect
+      format_sql: true
+      session.events.log.LOG_QUERIES_SLOWER_THAN_MS: 50
+      generate_statistics: false
+      flushMode: COMMIT
+      default_batch_fetch_size: 100
+      jdbc:
+        batch_size: 50
+      order_inserts: true
+      order_updates: true
   show-sql: false
 
 toss:
@@ -80,4 +90,3 @@ chat:
     system-password: ${STOMP_SYSTEM_PASSWORD}
     client-username: ${STOMP_CLIENT_USERNAME}
     client-password: ${STOMP_CLIENT_PASSWORD}
-

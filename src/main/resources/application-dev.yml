@@ -15,10 +15,8 @@ spring:
       port: ${SPRING_DATA_REDIS_PORT:6379}
       password: ${SPRING_DATA_REDIS_PASSWORD:}
 
-  elasticsearch:
+  opensearch:
     uris: ${ELK_URI}
-    connection-timeout: 3s
-    socket-timeout: 5s
     username: ${OPEN_SEARCH_USERNAME}
     password: ${OPEN_SEARCH_PASSWORD}
 

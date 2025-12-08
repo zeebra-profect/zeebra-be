@@ -18,13 +18,13 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class OpenSearchConfig {
 
-    @Value("${elasticsearch.uris}")
+    @Value("${opensearch.uris}")
     private String uri;
 
-    @Value("${elasticsearch.username}")
+    @Value("${opensearch.username}")
     private String username;
 
-    @Value("${elasticsearch.password}")
+    @Value("${opensearch.password}")
     private String password;
 
     @Bean

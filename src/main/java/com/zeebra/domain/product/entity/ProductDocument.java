@@ -1,7 +1,6 @@
 package com.zeebra.domain.product.entity;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
@@ -94,4 +93,6 @@ public class ProductDocument {
     @Field(type = FieldType.Date, format = DateFormat.date_hour_minute_second, name = "created_at")
     @JsonProperty("created_at")
     private LocalDateTime createdAt;
+
+
 }

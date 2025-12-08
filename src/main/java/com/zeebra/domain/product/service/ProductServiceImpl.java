@@ -230,7 +230,7 @@ public class ProductServiceImpl implements ProductService {
         SearchResponse<ProductDocument> searchResponse = null;
         try {
             searchResponse = openSearchClient.search(s -> s
-                            .index("products")
+                            .index("product")
                             .query(functionScoreQuery)
                             .highlight(highlight)
                             .from(pageable.getPageNumber() * pageable.getPageSize())

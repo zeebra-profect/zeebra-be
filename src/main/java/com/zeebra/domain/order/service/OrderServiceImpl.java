@@ -37,6 +37,7 @@ import com.zeebra.domain.order.repository.OrderItemRepository;
 import com.zeebra.domain.order.repository.OrderQueryRepository;
 import com.zeebra.domain.order.repository.OrderRepository;
 import com.zeebra.domain.product.dto.OrderSalesItem;
+import com.zeebra.domain.product.service.ProductInfoService;
 import com.zeebra.domain.product.service.ProductService;
 import com.zeebra.domain.product.service.SalesService;
 import com.zeebra.global.ErrorCode.CommonErrorCode;

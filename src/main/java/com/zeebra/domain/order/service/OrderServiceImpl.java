@@ -247,7 +247,9 @@ public class OrderServiceImpl implements OrderService {
 	private CreateOrderResponse createOrderFromProductOptionId(Long productOptionId, Long memberId, OrderType orderType, String idempotencyKey) {
 		productService.validateProductOptionId(productOptionId);
 
-		OrderSalesItem salesItem = salesService.findCheapestSalesByProductOptionId(productOptionId);
+		// try (Scope scope = span.makeCurrent()) {
+		// 	Span salesSpan = tracer.spanBuilder("db.selectCheapestSales")
+		// 		.startSpan();
 
   			// T1: 최저가 판매 조회
 			OrderSalesItem salesItem;

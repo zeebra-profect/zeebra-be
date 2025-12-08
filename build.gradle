@@ -99,6 +99,10 @@ dependencies {
 
     //RabbitMQ AMQP
     implementation 'org.springframework.boot:spring-boot-starter-amqp'
+    // STOMP Relay + Reactor Netty용
+    implementation 'io.projectreactor.netty:reactor-netty-core'
+    // 필요하면 (보통은 없어도 됨)
+    // implementation 'io.projectreactor.netty:reactor-netty-http'
 
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.19.2'
 

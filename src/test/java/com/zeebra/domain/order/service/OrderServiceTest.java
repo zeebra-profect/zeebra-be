@@ -9,11 +9,13 @@ import java.util.List;
 import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
@@ -54,9 +56,10 @@ import com.zeebra.global.exception.BusinessException;
 @SpringBootTest
 public class OrderServiceTest {
 
+	@Autowired
+	JdbcTemplate jdbcTemplate;
 	@MockitoBean
 	private ProductInfoService productInfoService;
-
 	@Autowired
 	private ProductRepository productRepository;
 	@Autowired
@@ -73,7 +76,6 @@ public class OrderServiceTest {
 	private OrderItemRepository orderItemRepository;
 	@Autowired
 	private OrderHistoryRepository orderHistoryRepository;
-
 	@Autowired
 	private OrderService orderService;
 
@@ -89,6 +91,11 @@ public class OrderServiceTest {
 		cartRepository.deleteAllInBatch();
 	}
 
+
+	@BeforeEach
+	void setUp() {
+		jdbcTemplate.execute("CREATE SEQUENCE IF NOT EXISTS order_number_seq START WITH 1 INCREMENT BY 1");
+	}
 	private Product createProduct(){
 		return productRepository.save(new Product(1L, 1L, "상품 이름", "테스트 상품", "Test_12A", "thumbnail_1.jpeg", List.of("product_1/1.jpeg", "product_1/2.jpeg")));
 	}

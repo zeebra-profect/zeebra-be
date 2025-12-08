@@ -1,22 +1,19 @@
 package com.zeebra.domain.product.search;
 
-import co.elastic.clients.elasticsearch._types.FieldValue;
-import co.elastic.clients.elasticsearch._types.aggregations.CompositeAggregate;
 import com.zeebra.domain.brand.dto.BrandResponse;
 import com.zeebra.domain.product.dto.CategoryResponseDto;
 import com.zeebra.domain.product.dto.ProductSearchItem;
 import com.zeebra.domain.product.entity.ProductDocument;
 import com.zeebra.domain.product.entity.ProductSort;
 import lombok.extern.slf4j.Slf4j;
+import org.opensearch.client.opensearch._types.FieldValue;
+import org.opensearch.client.opensearch._types.aggregations.Aggregate;
+import org.opensearch.client.opensearch._types.aggregations.CompositeAggregate;
+import org.opensearch.client.opensearch.core.SearchResponse;
+import org.opensearch.client.opensearch.core.search.Hit;
+import org.opensearch.client.opensearch.core.search.Highlight;
+import org.opensearch.client.opensearch.core.search.HighlightField;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.elasticsearch.client.elc.ElasticsearchAggregations;
-import org.springframework.data.elasticsearch.core.SearchHit;
-import org.springframework.data.elasticsearch.core.SearchHits;
-import org.springframework.data.elasticsearch.core.query.HighlightQuery;
-import org.springframework.data.elasticsearch.core.query.highlight.Highlight;
-import org.springframework.data.elasticsearch.core.query.highlight.HighlightField;
-import org.springframework.data.elasticsearch.core.query.highlight.HighlightFieldParameters;
-import org.springframework.data.elasticsearch.core.query.highlight.HighlightParameters;
 import org.springframework.stereotype.Component;
 
 import java.util.Collections;
@@ -28,35 +25,25 @@ import java.util.stream.Collectors;
 @Component
 public class ProductSearchHelper {
 
-    public HighlightQuery buildHighlightQuery() {
-        Highlight highlight = new Highlight(
-                HighlightParameters.builder()
-                        .withPreTags("<strong>")
-                        .withPostTags("</strong>")
-                        .withRequireFieldMatch(false)
-                        .build(),
-                List.of(
-                        new HighlightField("product_name",
-                                HighlightFieldParameters.builder()
-                                        .withNumberOfFragments(0)
-                                        .build()),
-                        new HighlightField("brand_name",
-                                HighlightFieldParameters.builder()
-                                        .withNumberOfFragments(0)
-                                        .build()),
-                        new HighlightField("category_name",
-                                HighlightFieldParameters.builder()
-                                        .withNumberOfFragments(0)
-                                        .build()),
-                        new HighlightField("description",
-                                HighlightFieldParameters.builder()
-                                        .withFragmentSize(150)
-                                        .withNumberOfFragments(3)
-                                        .build())
-                )
+    public Highlight buildHighlight() {
+        return Highlight.of(h -> h
+                .preTags("<strong>")
+                .postTags("</strong>")
+                .requireFieldMatch(false)
+                .fields("product_name", HighlightField.of(f -> f
+                        .numberOfFragments(0)
+                ))
+                .fields("brand_name", HighlightField.of(f -> f
+                        .numberOfFragments(0)
+                ))
+                .fields("category_name", HighlightField.of(f -> f
+                        .numberOfFragments(0)
+                ))
+                .fields("description", HighlightField.of(f -> f
+                        .fragmentSize(150)
+                        .numberOfFragments(3)
+                ))
         );
-
-        return new HighlightQuery(highlight, ProductDocument.class);
     }
 
     public Sort buildSort(ProductSort productSort) {
@@ -73,102 +60,89 @@ public class ProductSearchHelper {
         };
     }
 
-    public List<ProductSearchItem> convertToProductSearchItems(
-            List<SearchHit<ProductDocument>> hits
-    ) {
+    public List<ProductSearchItem> convertToProductSearchItems(List<Hit<ProductDocument>> hits) {
         return hits.stream()
                 .map(hit -> {
-                    ProductDocument product = hit.getContent();
-                    Map<String, List<String>> highlights = hit.getHighlightFields();
+                    ProductDocument product = hit.source();
+                    Map<String, List<String>> highlights = hit.highlight();
 
                     return new ProductSearchItem(
                             product.getProductId(),
-                            // camelCase로 변경! ⬇️⬇️⬇️
-                            getHighlight(highlights, "productName", product.getProductName()),
+                            getHighlight(highlights, "product_name", product.getProductName()),
                             product.getModelNumber(),
                             getHighlight(highlights, "description", product.getDescription()),
                             product.getBrandId(),
-                            getHighlight(highlights, "brandName", product.getBrandName()),
+                            getHighlight(highlights, "brand_name", product.getBrandName()),
                             product.getCategoryId(),
-                            getHighlight(highlights, "categoryName", product.getCategoryName()),
+                            getHighlight(highlights, "category_name", product.getCategoryName()),
                             product.getProductThumbnail(),
                             product.getImages(),
                             product.getMinPrice(),
                             product.getReviewCount(),
                             product.getFavoriteProductCount(),
                             product.getCreatedAt(),
-                            hit.getScore()
+                            hit.score() != null ? hit.score().floatValue() : 0.0f
                     );
                 })
                 .toList();
     }
 
-    public String getHighlight(
-            Map<String, List<String>> highlights,
-            String field,
-            String original
-    ) {
+    public String getHighlight(Map<String, List<String>> highlights, String field, String original) {
         if (highlights != null && highlights.containsKey(field) && !highlights.get(field).isEmpty()) {
-            String highlighted = highlights.get(field).get(0);
-            return highlighted;
+            return highlights.get(field).get(0);
         }
         return original != null ? original : "";
     }
 
-    public List<BrandResponse> extractBrandInfoFromComposite(SearchHits<ProductDocument> searchHits) {
-        ElasticsearchAggregations aggregations =
-                (ElasticsearchAggregations) searchHits.getAggregations();
+    public List<BrandResponse> extractBrandInfoFromComposite(SearchResponse<ProductDocument> searchResponse) {
+        Map<String, Aggregate> aggregations = searchResponse.aggregations();
 
-        if (aggregations == null) {
+        if (aggregations == null || aggregations.isEmpty()) {
             return Collections.emptyList();
         }
 
-        return aggregations.aggregations().stream()
-                .filter(agg -> "brand_agg".equals(agg.aggregation().getName()))
-                .findFirst()
-                .map(agg -> {
-                    CompositeAggregate compositeAgg = agg.aggregation().getAggregate().composite();
+        Aggregate brandAgg = aggregations.get("brand_agg");
+        if (brandAgg == null) {
+            return Collections.emptyList();
+        }
 
-                    return compositeAgg.buckets().array().stream()
-                            .map(bucket -> {
-                                Map<String, FieldValue> key = bucket.key();
+        CompositeAggregate compositeAgg = brandAgg.composite();
 
-                                // FieldValue에서 직접 추출
-                                Long brandId = key.get("brand_id").longValue();
-                                String brandName = key.get("brand_name").stringValue();
+        return compositeAgg.buckets().array().stream()
+                .map(bucket -> {
+                    Map<String, FieldValue> key = bucket.key();
 
-                                return new BrandResponse(brandId, brandName);
-                            })
-                            .collect(Collectors.toList());
+                    Long brandId = key.get("brand_id").longValue();
+                    String brandName = key.get("brand_name").stringValue();
+
+                    return new BrandResponse(brandId, brandName);
                 })
-                .orElse(Collections.emptyList());
+                .collect(Collectors.toList());
     }
 
-    public List<CategoryResponseDto> extractCategoryInfoFromComposite(SearchHits<ProductDocument> searchHits) {
-        ElasticsearchAggregations aggregations =
-                (ElasticsearchAggregations) searchHits.getAggregations();
+    public List<CategoryResponseDto> extractCategoryInfoFromComposite(SearchResponse<ProductDocument> searchResponse) {
+        Map<String, Aggregate> aggregations = searchResponse.aggregations();
 
-        if (aggregations == null) {
+        if (aggregations == null || aggregations.isEmpty()) {
             return Collections.emptyList();
         }
 
-        return aggregations.aggregations().stream()
-                .filter(agg -> "category_agg".equals(agg.aggregation().getName()))
-                .findFirst()
-                .map(agg -> {
-                    CompositeAggregate compositeAgg = agg.aggregation().getAggregate().composite();
+        Aggregate categoryAgg = aggregations.get("category_agg");
+        if (categoryAgg == null) {
+            return Collections.emptyList();
+        }
 
-                    return compositeAgg.buckets().array().stream()
-                            .map(bucket -> {
-                                Map<String, FieldValue> key = bucket.key();
+        CompositeAggregate compositeAgg = categoryAgg.composite();
 
-                                Long categoryId = key.get("category_id").longValue();
-                                String categoryName = key.get("category_name").stringValue();
+        return compositeAgg.buckets().array().stream()
+                .map(bucket -> {
+                    Map<String, FieldValue> key = bucket.key();
 
-                                return new CategoryResponseDto(categoryId, categoryName);
-                            })
-                            .collect(Collectors.toList());
+                    Long categoryId = key.get("category_id").longValue();
+                    String categoryName = key.get("category_name").stringValue();
+
+                    return new CategoryResponseDto(categoryId, categoryName);
                 })
-                .orElse(Collections.emptyList());
+                .collect(Collectors.toList());
     }
 }

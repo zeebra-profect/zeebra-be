@@ -4,6 +4,7 @@ import com.zeebra.global.security.jwt.JwtProvider;
 import com.zeebra.global.web.CookieUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -32,6 +33,21 @@ public class ChatWebSocketConfig implements WebSocketMessageBrokerConfigurer {
     private final CookieUtil cookieUtil;
     private final String ACCESS_TOKEN_COOKIE_NAME = "__Host-AT";
 
+    // RabbitMQ STOMP Relay 설정
+    @Value("${chat.stomp.relay-host}")
+    private String relayHost;
+    @Value("${chat.stomp.relay-port}")
+    private int relayPort;
+    @Value("${chat.stomp.system-username}")
+    private String systemUsername;
+    @Value("${chat.stomp.system-password}")
+    private String systemPassword;
+    @Value("${chat.stomp.client-username}")
+    private String clientUsername;
+    @Value("${chat.stomp.client-password}")
+    private String clientPassword;
+
+
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws/chat")
@@ -41,9 +57,16 @@ public class ChatWebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-        registry.enableSimpleBroker("/sub"); //구독자가 메세지 받을 경로
+        registry.setApplicationDestinationPrefixes("/pub"); //클라이언트 -> 서버
 
-        registry.setApplicationDestinationPrefixes("/pub"); //발행자가 메세지 보낼 경로
+        registry.enableStompBrokerRelay("/queue", "/topic")
+                .setRelayHost(relayHost)
+                .setRelayPort(relayPort)
+                .setSystemLogin(systemUsername)
+                .setSystemPasscode(systemPassword)
+                .setClientLogin(clientUsername)
+                .setClientPasscode(clientPassword)
+                .setVirtualHost("/");//구독자가 메세지 받을 경로
     }
 
     @Override
@@ -54,6 +77,7 @@ public class ChatWebSocketConfig implements WebSocketMessageBrokerConfigurer {
             public Message<?> preSend(Message<?> message, MessageChannel channel) {
                 StompHeaderAccessor accessor =
                         MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
+
 
                 // 4. STOMP "CONNECT" 프레임일 때만 실행
                 if (StompCommand.CONNECT.equals(accessor.getCommand())) {

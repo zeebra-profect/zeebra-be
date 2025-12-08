@@ -65,6 +65,7 @@ public class OrderServiceImpl implements OrderService {
 	private final OrderHistoryRepository orderHistoryRepository;
 	private final CartService cartService;
 	private final SalesService salesService;
+	private final ProductInfoService productInfoService;
 	private final ProductService productService;
 
 	@Transactional

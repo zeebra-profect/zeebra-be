@@ -5,5 +5,5 @@ import java.math.BigDecimal;
 import com.zeebra.domain.payment.dto.TossApprovalResponse;
 
 public interface TossPaymentService {
-	TossApprovalResponse approve(String paymentKey, String tossOrderId, BigDecimal amount);
+	TossApprovalResponse approve(String paymentKey, String tossOrderId, BigDecimal amount, boolean isTest);
 }

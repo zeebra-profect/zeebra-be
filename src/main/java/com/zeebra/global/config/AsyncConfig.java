@@ -117,11 +117,11 @@ public class AsyncConfig implements AsyncConfigurer {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         int corePoolSize = Runtime.getRuntime().availableProcessors();
 
-        executor.setCorePoolSize(Math.max(10, corePoolSize * 2)); //Core Pool 최소 10개 이상 보장
+        executor.setCorePoolSize(Math.max(50, corePoolSize * 2)); //Core Pool 최소 10개 이상 보장
 
-        executor.setMaxPoolSize(Math.max(20, corePoolSize * 4)); // 최대 스레드 수 : 트래픽 폭주 시 확장 * 4
+        executor.setMaxPoolSize(Math.max(100, corePoolSize * 4)); // 최대 스레드 수 : 트래픽 폭주 시 확장 * 4
 
-        executor.setQueueCapacity(1000); // 메세지 폭증 시 메세지 큐에서 버퍼링(1000rjsRKwl)
+        executor.setQueueCapacity(10000); // 메세지 폭증 시 메세지 큐에서 버퍼링(1000건 까지)
         executor.setKeepAliveSeconds(60);
         executor.setThreadNamePrefix("ChatSave-");
 

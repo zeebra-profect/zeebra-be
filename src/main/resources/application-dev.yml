@@ -25,6 +25,8 @@ spring:
     port: ${RABBITMQ_PORT}
     username: ${RABBITMQ_USERNAME}
     password: ${RABBITMQ_PASSWORD}
+    stomp:
+      pool-size: 1000
 
 server:
   port: 8080

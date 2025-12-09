@@ -22,7 +22,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
+import reactor.netty.resources.ConnectionProvider;
+import reactor.netty.tcp.TcpClient;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
@@ -64,8 +67,18 @@ public class ChatWebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void configureMessageBroker(MessageBrokerRegistry registry) {
         registry.setApplicationDestinationPrefixes("/pub"); //클라이언트 -> 서버
 
+        ConnectionProvider provider = ConnectionProvider.builder("custom-stomp-pool")
+                .maxConnections(poolSize)
+                .pendingAcquireMaxCount(5000) // 대기열 5000
+                .pendingAcquireTimeout(Duration.ofMillis(60000)) // 대기열 대기시간 60초
+                .build();
+
+        TcpClient nettyClient = TcpClient.create(provider)
+                .host(relayHost)
+                .port(relayPort);
+
         ReactorNettyTcpClient<byte[]> tcpClient = new ReactorNettyTcpClient<>(
-                client -> client.host(relayHost).port(relayPort),
+                nettyClient,
                 new StompReactorNettyCodec()
         );
 

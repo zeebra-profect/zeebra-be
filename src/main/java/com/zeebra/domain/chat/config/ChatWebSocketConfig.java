@@ -14,8 +14,10 @@ import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
+import org.springframework.messaging.simp.stomp.StompReactorNettyCodec;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
+import org.springframework.messaging.tcp.reactor.ReactorNettyTcpClient;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
@@ -55,11 +57,20 @@ public class ChatWebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 .withSockJS();
     }
 
+    @Value("${spring.rabbitmq.stomp.pool-size:1000}")
+    private int poolSize;
+
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
         registry.setApplicationDestinationPrefixes("/pub"); //클라이언트 -> 서버
 
+        ReactorNettyTcpClient<byte[]> tcpClient = new ReactorNettyTcpClient<>(
+                client -> client.host(relayHost).port(relayPort),
+                new StompReactorNettyCodec()
+        );
+
         registry.enableStompBrokerRelay("/queue", "/topic")
+                .setTcpClient(tcpClient)
                 .setRelayHost(relayHost)
                 .setRelayPort(relayPort)
                 .setSystemLogin(systemUsername)

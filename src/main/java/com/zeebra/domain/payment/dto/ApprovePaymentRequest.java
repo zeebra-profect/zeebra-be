@@ -9,6 +9,7 @@ public record ApprovePaymentRequest(
 	@NotBlank String paymentKey,
 	@NotBlank String tossOrderId,
 	@NotNull BigDecimal amount,
-	@NotBlank String clientRequestId
+	@NotBlank String clientRequestId,
+	boolean isTest
 ) {
 }

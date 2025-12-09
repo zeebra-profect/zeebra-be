@@ -85,7 +85,8 @@ public class PaymentServiceImpl implements PaymentService {
 		// 2단계: 토스 API 호출 (트랜잭션 외부)
 		TossApprovalResponse tossResponse;
 		try {
-			tossResponse = callTossApprovalApi(request.paymentKey(), request.tossOrderId(), request.amount());
+			tossResponse = callTossApprovalApi(request.paymentKey(), request.tossOrderId(), request.amount(),
+				request.isTest());
 		} catch (Exception e) {
 			paymentApprovalProcessor.handleApiCallException(payment, e, request.clientRequestId(), memberId);
 			throw new BusinessException(PaymentErrorCode.TOSS_API_ERROR);
@@ -123,8 +124,8 @@ public class PaymentServiceImpl implements PaymentService {
 
 	// ========== Private Methods ==========
 
-	private TossApprovalResponse callTossApprovalApi(String paymentKey, String tossOrderId, BigDecimal amount) {
-		return tossPaymentService.approve(paymentKey, tossOrderId, amount);
+	private TossApprovalResponse callTossApprovalApi(String paymentKey, String tossOrderId, BigDecimal amount, boolean isTest) {
+		return tossPaymentService.approve(paymentKey, tossOrderId, amount, isTest);
 	}
 
 	private Payment findPaymentByTossOrderId(String tossOrderId) {

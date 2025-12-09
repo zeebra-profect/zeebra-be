@@ -81,6 +81,15 @@ management:
       enabled: true
   security:
     enabled: false
+  metrics:
+    enable:
+      http: true
+      jvm: true
+      process: true
+      system: true
+      executor: true
+      hikaricp: true
+      tomcat: true
 
 chat:
   stomp:

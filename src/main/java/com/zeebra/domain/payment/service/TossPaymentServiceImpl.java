@@ -33,14 +33,16 @@ import lombok.extern.slf4j.Slf4j;
 public class TossPaymentServiceImpl implements TossPaymentService {
 
 	private static final String TOSS_PAYMENTS_BASE_URL = "https://api.tosspayments.com/v1/payments";
+	private static final String TOSS_FAKE_SERVER_URL = "http://localhost:8082";
 	private final RestTemplate restTemplate;
 	private final ObjectMapper objectMapper;
 	@Value("${toss.payments.secret-key}")
 	private String tossSecretKey;
 
 	@Override
-	public TossApprovalResponse approve(String paymentKey, String tossOrderId, BigDecimal amount) {
-		String url = TOSS_PAYMENTS_BASE_URL + "/confirm";
+	public TossApprovalResponse approve(String paymentKey, String tossOrderId, BigDecimal amount, boolean isTest) {
+		String baseUrl = isTest ? TOSS_FAKE_SERVER_URL : TOSS_PAYMENTS_BASE_URL;
+		String url = baseUrl + "/confirm";
 
 		try {
 

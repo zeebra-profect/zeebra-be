@@ -93,6 +93,4 @@ public class ProductDocument {
     @Field(type = FieldType.Date, format = DateFormat.date_hour_minute_second, name = "created_at")
     @JsonProperty("created_at")
     private LocalDateTime createdAt;
-
-
 }

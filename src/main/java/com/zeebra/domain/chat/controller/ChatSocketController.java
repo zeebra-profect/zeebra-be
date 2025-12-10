@@ -1,11 +1,14 @@
 package com.zeebra.domain.chat.controller;
 
+import com.zeebra.domain.chat.config.ChatAmqpConfig;
 import com.zeebra.domain.chat.dto.ChatMessageRequestDto;
 import com.zeebra.domain.chat.dto.ChatMessageResponseDto;
 import com.zeebra.domain.chat.service.ChatService;
 import com.zeebra.global.security.jwt.JwtProvider;
 import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cglib.core.Local;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -18,6 +21,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import java.security.Principal;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.concurrent.Executor;
 
 
 @Slf4j
@@ -27,16 +31,20 @@ public class ChatSocketController {
     private final ChatService chatService;
     private final SimpMessagingTemplate messagingTemplate;
 
+//    private final JwtProvider jwtProvider;
     private final MeterRegistry meterRegistry;
 
     private final Counter messageCounter;
     private final Timer messageTimer;
     private final Counter errorCounter;
+    private final RabbitTemplate rabbitTemplate;
 
     // MeterRegistry를 주입받아 생성자에서 메트릭을 한 번만 등록/초기화
-    public ChatSocketController(ChatService chatService, SimpMessagingTemplate messagingTemplate, MeterRegistry meterRegistry) {
+    public ChatSocketController(ChatService chatService, SimpMessagingTemplate messagingTemplate,
+                                RabbitTemplate rabbitTemplate, MeterRegistry meterRegistry) {
         this.chatService = chatService;
         this.messagingTemplate = messagingTemplate;
+        this.rabbitTemplate = rabbitTemplate;
         this.meterRegistry = meterRegistry;
 
         // Counter 한 번만 생성 및 등록
@@ -84,8 +92,8 @@ public class ChatSocketController {
 
             String currentMemberNickname = userPrincipal.getMemberNickname();
 
-            System.out.println("currentMemId : " + currentMemberId);
-            log.info(" [WebSocket] 메시지 수신: (Room: {}, User: {})", requestDto.getChatRoomId(), currentMemberId);
+//            System.out.println("currentMemId : " + currentMemberId);
+//            log.info(" [WebSocket] 메시지 수신: (Room: {}, User: {})", requestDto.getChatRoomId(), currentMemberId);
 
             ChatMessageResponseDto savedMessage = new ChatMessageResponseDto(
                     null,
@@ -99,12 +107,17 @@ public class ChatSocketController {
                     LocalDateTime.now()
             );
 
+            // Fire and Forget 패턴으로 convertAndSend가 블로킹 되지 않도록 비동기 스레드에 토스
+
             String destination = "/topic/chat.room." + savedMessage.roomId();
 
             //TODO: send 보내는게 락이 걸려서? 느릴수도있나?
             messagingTemplate.convertAndSend(destination, savedMessage);
 
-            chatService.saveMessageAsync(requestDto, currentMemberId); // 저장 비동기 처리
+            rabbitTemplate.convertAndSend(ChatAmqpConfig.CHAT_DB_EXCHANGE,
+                    ChatAmqpConfig.CHAT_DB_ROUTING_KEY, savedMessage);
+
+//            chatService.saveMessageAsync(requestDto, currentMemberId); // 저장 비동기 처리
 //            chatService.saveMessage(requestDto, currentMemberId); // 쿼리 dsl 테스트용 삭제하기
 
             isSuccess = true;

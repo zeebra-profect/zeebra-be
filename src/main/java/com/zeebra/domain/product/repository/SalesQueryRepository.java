@@ -25,6 +25,7 @@ import com.zeebra.domain.product.entity.QSales;
 import com.zeebra.domain.product.entity.Sales;
 import com.zeebra.domain.product.entity.SalesStatus;
 
+import jakarta.persistence.LockModeType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -205,6 +206,14 @@ public class SalesQueryRepository {
 			.collect(Collectors.toList());
 
 		return new PageImpl<>(detailResponses, pageable, total != null ? total : 0L);
+	}
+
+	public Sales findByIdForUpdate(Long salesId){
+		return queryFactory
+			.selectFrom(sales)
+			.where(sales.id.eq(salesId))
+			.setLockMode(LockModeType.PESSIMISTIC_WRITE)
+			.fetchOne();
 	}
 
 	private BooleanExpression memberIdEq(Long memberId) {

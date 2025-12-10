@@ -80,7 +80,7 @@ public class PaymentApprovalProcessor {
 		);
 
 		List<OrderItemResponse> orderItems = orderService.getOrderDetail(memberId, payment.getOrderId()).orderItems();
-		// salesService.reserveSales(orderItems);
+		salesService.reserveSales(orderItems);
 
 		log.info("[결제 승인 준비 완료] paymentId: {}, tossOrderId: {}, status: APPROVING",
 			payment.getId(), tossOrderId);
@@ -122,7 +122,7 @@ public class PaymentApprovalProcessor {
 		orderService.updateAllOrderItemsStatus(reloadedPayment.getOrderId(), OrderItemStatus.PAID);
 
 		List<OrderItemResponse> orderItems = orderService.getOrderDetail(memberId, payment.getOrderId()).orderItems();
-		// salesService.confirmSales(orderItems);
+		salesService.confirmSales(orderItems);
 
 		log.info("[Payment 승인 성공 + 이력 저장 완료] paymentId: {}, status: APPROVED", reloadedPayment.getId());
 	}
@@ -160,7 +160,7 @@ public class PaymentApprovalProcessor {
 		);
 
 		List<OrderItemResponse> orderItems = orderService.getOrderDetail(memberId, payment.getOrderId()).orderItems();
-		// salesService.cancelSales(orderItems);
+		salesService.cancelSales(orderItems);
 
 		log.warn("[Payment 승인 실패 + 이력 저장 완료] paymentId: {}, status: FAILED, reason: {}",
 			reloadedPayment.getId(), reloadedPayment.getFailureReason());
@@ -196,7 +196,7 @@ public class PaymentApprovalProcessor {
 		);
 
 		List<OrderItemResponse> orderItems = orderService.getOrderDetail(memberId, payment.getOrderId()).orderItems();
-		// salesService.cancelSales(orderItems);
+		salesService.cancelSales(orderItems);
 
 		log.error("[API 호출 예외 처리 완료] paymentId: {}, status: FAILED", reloadedPayment.getId());
 	}

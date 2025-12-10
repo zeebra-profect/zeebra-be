@@ -10,8 +10,6 @@ import java.util.NoSuchElementException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import com.zeebra.domain.product.entity.Product;
-import com.zeebra.domain.product.repository.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -27,18 +25,24 @@ import com.zeebra.domain.product.dto.SalesListResponse;
 import com.zeebra.domain.product.dto.SalesRequest;
 import com.zeebra.domain.product.dto.SalesResponse;
 import com.zeebra.domain.product.dto.UserSalesItem;
+import com.zeebra.domain.product.entity.Product;
 import com.zeebra.domain.product.entity.ProductOption;
 import com.zeebra.domain.product.entity.Sales;
 import com.zeebra.domain.product.entity.SalesStatus;
+import com.zeebra.domain.product.repository.ProductOptionRepository;
+import com.zeebra.domain.product.repository.ProductQueryRepository;
+import com.zeebra.domain.product.repository.ProductRepository;
+import com.zeebra.domain.product.repository.SalesQueryRepository;
+import com.zeebra.domain.product.repository.SalesRepository;
 import com.zeebra.global.ApiResponse;
 import com.zeebra.global.ErrorCode.CommonErrorCode;
 import com.zeebra.global.ErrorCode.OrderErrorCode;
+import com.zeebra.global.ErrorCode.SalesErrorCode;
 import com.zeebra.global.exception.BusinessException;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-@Transactional(readOnly = true)
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -235,25 +239,49 @@ public class SalesServiceImp implements SalesService {
 	@Transactional
 	public void reserveSales(List<OrderItemResponse> orderItems) {
 		orderItems.forEach(item -> {
-				Sales sales = salesRepository.findById(item.saleId()).orElseThrow();
-				sales.updateSalesStatus(SalesStatus.PENDING);
+				Sales sales = salesQueryRepository.findByIdForUpdate(item.saleId());
+				if(sales.getStock() < item.orderItemQuantity()){
+					sales.updateSalesStatus(SalesStatus.PENDING);
+				}
 			});
 	}
 
 	@Transactional
 	public void cancelSales(List<OrderItemResponse> orderItems) {
 		orderItems.forEach(item -> {
-				Sales sales = salesRepository.findById(item.saleId()).orElseThrow();
-				sales.updateSalesStatus(SalesStatus.ON_SALE);
+				Sales sales = salesQueryRepository.findByIdForUpdate(item.saleId());
+
+				sales.updateStock(sales.getStock() + item.orderItemQuantity());
+				if(sales.getStock() > 0){
+					sales.updateSalesStatus(SalesStatus.ON_SALE);
+				}
 			});
 	}
 
 	@Transactional
 	public void confirmSales(List<OrderItemResponse> orderItems) {
 		orderItems.forEach(item -> {
-				Sales sales = salesRepository.findById(item.saleId()).orElseThrow();
+			Sales sales = salesQueryRepository.findByIdForUpdate(item.saleId());
+
+
+			if (sales.getSalesStatus() != SalesStatus.PENDING
+				&& sales.getStock() < item.orderItemQuantity()) {
+				throw new BusinessException(SalesErrorCode.OUT_OF_STOCK);
+			}
+
+			if (sales.getStock() < item.orderItemQuantity()) {
+				throw new BusinessException(SalesErrorCode.OUT_OF_STOCK);
+			}
+
+			int newStock = sales.getStock() - item.orderItemQuantity();
+			sales.updateStock(newStock);
+
+			if (newStock <= 0) {
 				sales.updateSalesStatus(SalesStatus.CONFIRMED);
-				sales.updateStock(sales.getStock() - item.orderItemQuantity());
+			} else if (sales.getSalesStatus() == SalesStatus.PENDING) {
+				// 재고 충분해졌으면 다시 판매 가능 상태로 변경
+				sales.updateSalesStatus(SalesStatus.ON_SALE);
+			}
 				sales.updateSoldPrice(item.orderItemPrice());
 			});
 	}

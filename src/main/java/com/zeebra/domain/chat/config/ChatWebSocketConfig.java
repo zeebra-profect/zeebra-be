@@ -67,23 +67,8 @@ public class ChatWebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void configureMessageBroker(MessageBrokerRegistry registry) {
         registry.setApplicationDestinationPrefixes("/pub"); //클라이언트 -> 서버
 
-        ConnectionProvider provider = ConnectionProvider.builder("custom-stomp-pool")
-                .maxConnections(poolSize)
-                .pendingAcquireMaxCount(5000) // 대기열 5000
-                .pendingAcquireTimeout(Duration.ofMillis(60000)) // 대기열 대기시간 60초
-                .build();
-
-        TcpClient nettyClient = TcpClient.create(provider)
-                .host(relayHost)
-                .port(relayPort);
-
-        ReactorNettyTcpClient<byte[]> tcpClient = new ReactorNettyTcpClient<>(
-                nettyClient,
-                new StompReactorNettyCodec()
-        );
 
         registry.enableStompBrokerRelay("/queue", "/topic")
-                .setTcpClient(tcpClient)
                 .setRelayHost(relayHost)
                 .setRelayPort(relayPort)
                 .setSystemLogin(systemUsername)
@@ -95,6 +80,9 @@ public class ChatWebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
+
+        registration.taskExecutor().corePoolSize(32).maxPoolSize(128).queueCapacity(5000);
+
         registration.interceptors(new ChannelInterceptor() {
             @Override
             @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -140,5 +128,10 @@ public class ChatWebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
         });
 
+    }
+
+    @Override
+    public void configureClientOutboundChannel(ChannelRegistration registration) {
+        registration.taskExecutor().corePoolSize(32).maxPoolSize(128).queueCapacity(5000);
     }
 }

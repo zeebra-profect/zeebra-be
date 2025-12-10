@@ -97,7 +97,8 @@ public class ProductQueryRepository {
                 .join(optionCombination).on(optionCombination.productOptionId.eq(productOption.id))
                 .join(optionName).on(optionName.id.eq(optionCombination.optionNameId))
                 .where(productOption.productId.eq(productId),
-                        optionName.id.eq(colorOptionId))
+                        optionName.id.eq(colorOptionId),
+					sales.salesStatus.eq(SalesStatus.ON_SALE))
                 .fetchOne();
     }
 

@@ -93,12 +93,6 @@ dependencies {
     //JDBC
     implementation 'org.springframework.boot:spring-boot-starter-jdbc'
 
-    //예거
-    implementation 'io.opentelemetry:opentelemetry-api:1.49.0'
-    implementation 'io.opentelemetry:opentelemetry-sdk:1.49.0'
-    implementation 'io.opentelemetry.instrumentation:opentelemetry-spring-boot-starter:2.7.0'
-    implementation 'io.opentelemetry:opentelemetry-exporter-otlp:1.49.0'
-
     //kafka
 //    implementation 'org.springframework.kafka:spring-kafka'
 //    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"

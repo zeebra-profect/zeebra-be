@@ -43,6 +43,7 @@ import com.zeebra.global.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+@Transactional(readOnly = true)
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -54,6 +55,7 @@ public class SalesServiceImp implements SalesService {
     private final SalesQueryRepository salesQueryRepository;
     private final ProductQueryRepository productQueryRepository;
     private final ProductRepository productRepository;
+	private final StockRedisService stockRedisService;
 
     private Sales toSales(ProductOption productOption, Member member, SalesRequest request) {
         return new Sales(
@@ -236,54 +238,64 @@ public class SalesServiceImp implements SalesService {
 		 }
 	}
 
-	@Transactional
+	/**
+	 * 재고 예약 (결제 시작 시)
+	 * Redis에서 재고 선차감
+	 */
 	public void reserveSales(List<OrderItemResponse> orderItems) {
-		orderItems.forEach(item -> {
-				Sales sales = salesQueryRepository.findByIdForUpdate(item.saleId());
-				if(sales.getStock() < item.orderItemQuantity()){
-					sales.updateSalesStatus(SalesStatus.PENDING);
-				}
-			});
+		for (int i = 0; i < orderItems.size(); i++) {
+			OrderItemResponse item = orderItems.get(i);
+
+			boolean success = stockRedisService.decreaseStock(
+				item.saleId(),
+				item.orderItemQuantity()
+			);
+
+			if (!success) {
+				// 이미 차감한 것들 롤백
+				rollbackReservedStock(orderItems.subList(0, i));
+				throw new BusinessException(SalesErrorCode.OUT_OF_STOCK);
+			}
+		}
 	}
 
-	@Transactional
+	/**
+	 * 재고 복구 (결제 실패/취소 시)
+	 * Redis 재고 복구
+	 */
 	public void cancelSales(List<OrderItemResponse> orderItems) {
 		orderItems.forEach(item -> {
-				Sales sales = salesQueryRepository.findByIdForUpdate(item.saleId());
-
-				sales.updateStock(sales.getStock() + item.orderItemQuantity());
-				if(sales.getStock() > 0){
-					sales.updateSalesStatus(SalesStatus.ON_SALE);
-				}
-			});
+			stockRedisService.increaseStock(item.saleId(), item.orderItemQuantity());
+		});
 	}
 
+	/**
+	 * 판매 확정 (결제 성공 시)
+	 * DB에 최종 반영 (Redis는 이미 차감됨)
+	 */
 	@Transactional
 	public void confirmSales(List<OrderItemResponse> orderItems) {
 		orderItems.forEach(item -> {
-			Sales sales = salesQueryRepository.findByIdForUpdate(item.saleId());
+			Sales sales = salesRepository.findById(item.saleId())
+				.orElseThrow(() -> new BusinessException(SalesErrorCode.SALES_NOT_FOUND));
 
+			int redisStock = stockRedisService.getStock(item.saleId());
+			sales.updateStock(redisStock);
+			sales.updateSoldPrice(item.orderItemPrice());
 
-			if (sales.getSalesStatus() != SalesStatus.PENDING
-				&& sales.getStock() < item.orderItemQuantity()) {
-				throw new BusinessException(SalesErrorCode.OUT_OF_STOCK);
-			}
-
-			if (sales.getStock() < item.orderItemQuantity()) {
-				throw new BusinessException(SalesErrorCode.OUT_OF_STOCK);
-			}
-
-			int newStock = sales.getStock() - item.orderItemQuantity();
-			sales.updateStock(newStock);
-
-			if (newStock <= 0) {
+			if (redisStock <= 0) {
 				sales.updateSalesStatus(SalesStatus.CONFIRMED);
-			} else if (sales.getSalesStatus() == SalesStatus.PENDING) {
-				// 재고 충분해졌으면 다시 판매 가능 상태로 변경
-				sales.updateSalesStatus(SalesStatus.ON_SALE);
 			}
-				sales.updateSoldPrice(item.orderItemPrice());
-			});
+		});
+	}
+
+	/**
+	 * 예약 실패 시 이미 차감한 재고 롤백
+	 */
+	private void rollbackReservedStock(List<OrderItemResponse> reservedItems) {
+		reservedItems.forEach(item -> {
+			stockRedisService.increaseStock(item.saleId(), item.orderItemQuantity());
+		});
 	}
 
 	private void validateSalesAvailability(Map<Long, Integer> productOptionQuantityMap, List<OrderSalesItem> cheapestSales) {

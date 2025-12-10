@@ -1,5 +1,8 @@
 package com.zeebra.global.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.apache.hc.client5.http.auth.AuthScope;
 import org.apache.hc.client5.http.auth.UsernamePasswordCredentials;
 import org.apache.hc.client5.http.impl.auth.BasicCredentialsProvider;
@@ -67,9 +70,15 @@ public class OpenSearchConfig {
                 )
                 .build();
 
+        // ⭐ ObjectMapper 커스터마이징
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());  // Java 8 날짜/시간 타입 지원
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);  // ISO-8601 문자열 사용
+
+        // ⭐ 커스텀 ObjectMapper를 JacksonJsonpMapper에 주입
         OpenSearchTransport transport = new RestClientTransport(
                 restClient,
-                new JacksonJsonpMapper()
+                new JacksonJsonpMapper(objectMapper)  // 여기만 변경!
         );
 
         return new OpenSearchClient(transport);

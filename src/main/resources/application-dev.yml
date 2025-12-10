@@ -36,6 +36,10 @@ spring:
 server:
   port: 8080
   forward-headers-strategy: framework
+  tomcat:
+    mbean-registry:
+      enabled: true
+    accept-count: 1000
 
 
 jwt:
@@ -45,9 +49,15 @@ jwt:
 
 logging:
   level:
-    org.springdoc: DEBUG
-    org.springframework.web: DEBUG
-    org.springframework.http.converter: DEBUG
+    root: WARN
+    # Spring 관련
+    org.springframework: WARN
+    org.springframework.web: WARN
+    org.springframework.http: WARN
+    org.springframework.jdbc: WARN
+    # Hibernate Logging
+    org.hibernate.SQL: OFF
+    org.hibernate.type.descriptor.sql: OFF
 
 springdoc:
   packages-to-scan: com.zeebra
@@ -94,8 +104,10 @@ management:
       jvm: true
       process: true
       system: true
+      executor: true
       hikaricp: true
       tomcat: true
+
 
 
 chat:

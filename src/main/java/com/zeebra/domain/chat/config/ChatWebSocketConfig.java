@@ -14,13 +14,18 @@ import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
+import org.springframework.messaging.simp.stomp.StompReactorNettyCodec;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
+import org.springframework.messaging.tcp.reactor.ReactorNettyTcpClient;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
+import reactor.netty.resources.ConnectionProvider;
+import reactor.netty.tcp.TcpClient;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
@@ -55,9 +60,13 @@ public class ChatWebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 .withSockJS();
     }
 
+    @Value("${spring.rabbitmq.stomp.pool-size:1000}")
+    private int poolSize;
+
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
         registry.setApplicationDestinationPrefixes("/pub"); //클라이언트 -> 서버
+
 
         registry.enableStompBrokerRelay("/queue", "/topic")
                 .setRelayHost(relayHost)
@@ -71,6 +80,9 @@ public class ChatWebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
+
+        registration.taskExecutor().corePoolSize(32).maxPoolSize(128).queueCapacity(5000);
+
         registration.interceptors(new ChannelInterceptor() {
             @Override
             @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -116,5 +128,10 @@ public class ChatWebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
         });
 
+    }
+
+    @Override
+    public void configureClientOutboundChannel(ChannelRegistration registration) {
+        registration.taskExecutor().corePoolSize(32).maxPoolSize(128).queueCapacity(5000);
     }
 }

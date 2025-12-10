@@ -13,7 +13,7 @@ spring:
     redis:
       host: ${SPRING_DATA_REDIS_HOST}
       port: ${SPRING_DATA_REDIS_PORT:6379}
-      password: ${SPRING_DATA_REDIS_PASSWORD:}
+      password: ${SPRING_DATA_REDIS_PASSWORD}
 
   opensearch:
     uris: ${ELK_URI}
@@ -25,6 +25,13 @@ spring:
     port: ${RABBITMQ_PORT}
     username: ${RABBITMQ_USERNAME}
     password: ${RABBITMQ_PASSWORD}
+    stomp:
+      pool-size: 1000
+    listener:
+      simple:
+        concurrency: 10
+        max-concurrency: 50
+        prefetch: 100
 
 server:
   port: 8080
@@ -101,6 +108,8 @@ management:
       executor: true
       hikaricp: true
       tomcat: true
+
+
 
 chat:
   stomp:

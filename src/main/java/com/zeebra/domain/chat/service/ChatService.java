@@ -56,4 +56,9 @@ public interface ChatService {
      */
     @Transactional
     TradeResponseDto proposeTrade(Long chatRoomId, TradeRequestDto tradeRequestDto, Long currentMemberId);
+
+    @Transactional
+    void saveFromResponse(ChatMessageResponseDto requestDto);
 }
+
+

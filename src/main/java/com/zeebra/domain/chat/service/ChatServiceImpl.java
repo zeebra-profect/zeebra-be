@@ -167,6 +167,20 @@ public class ChatServiceImpl implements ChatService {
         return ChatMessageResponseDto.from(savedMessage, null);
     }
 
+    @Override
+    @Transactional
+    public void saveFromResponse(ChatMessageResponseDto responseDto) {
+        ChatMessageRequestDto req = new ChatMessageRequestDto();
+
+        req.setChatRoomId(responseDto.roomId());
+        req.setMessageType(responseDto.messageType());
+        req.setContent(responseDto.content());
+        req.setImageUrl(responseDto.imageUrl());
+
+        Long senderId = responseDto.senderMemberId();
+
+        saveMessage(req, senderId);
+    }
 
 
 

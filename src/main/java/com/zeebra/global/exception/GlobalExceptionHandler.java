@@ -1,5 +1,6 @@
 package com.zeebra.global.exception;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -78,8 +79,22 @@ public class GlobalExceptionHandler {
 		ErrorCode errorCode = ex.getErrorCode();
 		String message = ex.getMessage();
 
-		log.error("[비즈니스 예외] 발생: 코드 = {}, 메시지 = {}",
-			errorCode.getCode(), message);
+		StackTraceElement origin = Arrays.stream(ex.getStackTrace())
+			.filter(st -> st.getClassName().startsWith("com.zeebra"))
+			.findFirst()
+			.orElse(null);
+
+		if (origin != null) {
+			log.error("[비즈니스 예외 발생] code={}, message={}, at {}.{}(line {})",
+				ex.getErrorCode(),
+				ex.getMessage(),
+				origin.getClassName(),
+				origin.getMethodName(),
+				origin.getLineNumber()
+			);
+		} else {
+			log.error("[비즈니스 예외 발생] code={}, message={}", ex.getErrorCode(), ex.getMessage());
+		}
 
 		if (isDevelopment()) {
 			log.debug("Error details - code: {}, message: {}",

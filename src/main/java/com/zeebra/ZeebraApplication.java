@@ -12,4 +12,5 @@ public class ZeebraApplication {
 		SpringApplication.run(ZeebraApplication.class, args);
 	}
 
+
 }

@@ -27,6 +27,11 @@ spring:
     password: ${RABBITMQ_PASSWORD}
     stomp:
       pool-size: 1000
+    listener:
+      simple:
+        concurrency: 10
+        max-concurrency: 50
+        prefetch: 100
 
 server:
   port: 8080
@@ -102,6 +107,8 @@ management:
       executor: true
       hikaricp: true
       tomcat: true
+
+
 
 chat:
   stomp:

@@ -1,7 +1,6 @@
 package com.zeebra.global.config;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.data.redis.LettuceClientConfigurationBuilderCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -44,6 +43,16 @@ public class Redisconfig {
 		redisTemplate.setHashKeySerializer(new StringRedisSerializer());
 		redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
         redisTemplate.afterPropertiesSet();
+		return redisTemplate;
+	}
+
+	@Bean(name = "stockRedisTemplate")
+	public RedisTemplate<String, String> stockRedisTemplate(RedisConnectionFactory redisConnectionFactory) {
+		RedisTemplate<String, String> redisTemplate = new RedisTemplate<>();
+		redisTemplate.setConnectionFactory(redisConnectionFactory);
+		redisTemplate.setKeySerializer(new StringRedisSerializer());
+		redisTemplate.setValueSerializer(new StringRedisSerializer());
+		redisTemplate.afterPropertiesSet();
 		return redisTemplate;
 	}
 }

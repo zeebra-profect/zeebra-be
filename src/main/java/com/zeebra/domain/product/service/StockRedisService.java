@@ -2,6 +2,7 @@ package com.zeebra.domain.product.service;
 
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Service;
@@ -11,11 +12,9 @@ import com.zeebra.domain.product.repository.SalesRepository;
 import com.zeebra.global.ErrorCode.SalesErrorCode;
 import com.zeebra.global.exception.BusinessException;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class StockRedisService {
 	private static final String STOCK_KEY_PREFIX = "sales:stock:";
@@ -29,8 +28,16 @@ public class StockRedisService {
             return -1
         end
         """;
+
 	private final RedisTemplate<String, String> redisTemplate;
 	private final SalesRepository salesRepository;
+
+	public StockRedisService(
+		@Qualifier("stockRedisTemplate") RedisTemplate<String, String> redisTemplate,
+		SalesRepository salesRepository) {
+		this.redisTemplate = redisTemplate;
+		this.salesRepository = salesRepository;
+	}
 
 	/**
 	 * 재고 차감 (주문/결제 시)
